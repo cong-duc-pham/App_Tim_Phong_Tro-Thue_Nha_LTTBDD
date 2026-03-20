@@ -1,0 +1,111 @@
+name: ung_dung_tim_kiem_tro
+description: "Ứng dụng tìm kiếm phòng trọ - Nhóm 3 thành viên"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # -------------------------------------------------------
+  # ĐIỀU HƯỚNG (Navigation)
+  # -------------------------------------------------------
+  go_router: ^13.0.0                # Điều hướng khai báo, dễ quản lý route
+
+  # -------------------------------------------------------
+  # QUẢN LÝ STATE
+  # -------------------------------------------------------
+  flutter_bloc: ^8.1.5              # BLoC pattern - quản lý state toàn app
+  equatable: ^2.0.5                 # So sánh object trong BLoC
+
+  # -------------------------------------------------------
+  # LOCAL DATABASE (SQLite)
+  # -------------------------------------------------------
+  sqflite: ^2.3.2                   # SQLite cho Flutter (local DB chính)
+  path: ^1.9.0                      # Lấy đường dẫn file DB
+  path_provider: ^2.1.2             # Lấy thư mục lưu trữ thiết bị
+
+  # -------------------------------------------------------
+  # SHARED PREFERENCES (lưu token, cài đặt nhỏ)
+  # -------------------------------------------------------
+  shared_preferences: ^2.2.2        # Lưu trạng thái onboarding, token đăng nhập
+
+  # -------------------------------------------------------
+  # UI & DESIGN
+  # -------------------------------------------------------
+  flutter_svg: ^2.0.10+1            # Hiển thị icon SVG
+  cached_network_image: ^3.3.1      # Load ảnh từ URL + cache tự động
+  shimmer: ^3.0.0                   # Hiệu ứng loading skeleton
+  smooth_page_indicator: ^1.1.0     # Indicator cho onboarding slides
+  carousel_slider: ^4.2.1           # Banner slider trang chủ
+  flutter_rating_bar: ^4.0.1        # Thanh đánh giá sao (review phòng)
+  badges: ^3.1.2                    # Badge thông báo trên icon
+  lottie: ^3.1.0                    # Animation JSON (splash screen, empty state)
+
+  # -------------------------------------------------------
+  # FORM & VALIDATION
+  # -------------------------------------------------------
+  flutter_form_builder: ^9.3.0      # Quản lý form đăng ký, đăng tin
+  form_builder_validators: ^10.0.1  # Validate email, SĐT, giá tiền,...
+
+  # -------------------------------------------------------
+  # BẢN ĐỒ & VỊ TRÍ GPS
+  # -------------------------------------------------------
+  geolocator: ^11.0.0               # Lấy vị trí GPS người dùng
+  flutter_map: ^6.1.0               # Hiển thị bản đồ (OpenStreetMap - miễn phí)
+  latlong2: ^0.9.0                  # Tính khoảng cách giữa 2 tọa độ
+
+  # -------------------------------------------------------
+  # HÌNH ẢNH
+  # -------------------------------------------------------
+  image_picker: ^1.0.7              # Chọn ảnh từ thư viện hoặc chụp mới
+  flutter_image_compress: ^2.1.0    # Nén ảnh trước khi lưu
+
+  # -------------------------------------------------------
+  # ĐỊNH DẠNG & TIỆN ÍCH
+  # -------------------------------------------------------
+  intl: ^0.19.0                     # Format tiền VNĐ, ngày tháng tiếng Việt
+  timeago: ^3.6.1                   # Hiển thị "5 phút trước", "hôm qua",...
+  url_launcher: ^6.2.5              # Mở link, gọi điện, nhắn tin ngoài app
+  permission_handler: ^11.3.0       # Xin quyền camera, vị trí, thông báo
+
+  # -------------------------------------------------------
+  # THÔNG BÁO
+  # -------------------------------------------------------
+  flutter_local_notifications: ^17.1.2  # Thông báo local (nhắc thanh toán,...)
+
+  # -------------------------------------------------------
+  # ICON
+  # -------------------------------------------------------
+  cupertino_icons: ^1.0.6           # Icon iOS style
+  flutter_iconly: ^1.0.2            # Bộ icon đẹp cho app bất động sản
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # -------------------------------------------------------
+  # CODE GENERATION
+  # -------------------------------------------------------
+  build_runner: ^2.4.8              # Chạy code generation
+  flutter_lints: ^3.0.0             # Chuẩn lint code cho nhóm
+
+flutter:
+  uses-material-design: true
+
+  # Khai báo assets - thêm file vào đây trước khi dùng
+  assets:
+    - assets/images/                # Ảnh tĩnh (logo, onboarding,...)
+    - assets/icons/                 # Icon SVG
+    - assets/animations/            # File Lottie JSON
+
+  # Khai báo font chữ (tuỳ chọn)
+  # fonts:
+  #   - family: BeVietnamPro
+  #     fonts:
+  #       - asset: assets/fonts/BeVietnamPro-Regular.ttf
+  #       - asset: assets/fonts/BeVietnamPro-Bold.ttf
+  #         weight: 700
