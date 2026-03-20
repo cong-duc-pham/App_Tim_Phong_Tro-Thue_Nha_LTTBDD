@@ -1,0 +1,55 @@
+# ============================================================
+#  FLUTTER - .gitignore
+#  Dành cho nhóm 3 thành viên, dùng local DB
+# ============================================================
+
+# Flutter/Dart build output
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+
+# Android
+android/.gradle/
+android/local.properties
+android/key.properties          # ⚠️ File chứa keystore - KHÔNG được commit
+android/app/google-services.json # ⚠️ Firebase config - KHÔNG được commit
+*.jks                            # ⚠️ Keystore file
+
+# iOS
+ios/.symlinks/
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/Generated.xcconfig
+ios/Pods/
+ios/GoogleService-Info.plist     # ⚠️ Firebase config iOS - KHÔNG được commit
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+Thumbs.db
+
+# Coverage & Test
+coverage/
+.test_results/
+
+# Local database file (SQLite) - không share file db cá nhân
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Environment / Config nhạy cảm
+.env
+.env.local
+.env.development
+.env.production
+lib/core/constants/app_secrets.dart   # API keys, secret strings
+
+# Misc
+*.log
+pubspec.lock                          # Có thể commit nếu muốn lock version
