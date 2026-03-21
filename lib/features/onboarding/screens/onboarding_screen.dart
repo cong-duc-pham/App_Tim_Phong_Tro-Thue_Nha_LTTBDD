@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_constants.dart';
+import '../../../core/constants/app_text_styles.dart';
 
 // ─── Model dữ liệu từng slide ───────────────────────────────────────────────
 
@@ -40,7 +43,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  static const Color _primary = Color(0xFF0057D9);
+  static const Color _primary = AppColors.primary;
 
   late final List<OnboardingData> _slides = [
     OnboardingData(
@@ -78,7 +81,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _onNext() {
     if (_currentPage < _slides.length - 1) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 400),
+        duration: AppConstants.animSlow,
         curve: Curves.easeInOut,
       );
     } else {
@@ -90,8 +93,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _finishOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('onboarding_done', true);
-    if (mounted) context.go('/login');
+    await prefs.setBool(AppConstants.keyOnboardingDone, true);
+    if (mounted) context.go(AppConstants.routeHome);
   }
 
   @override
@@ -207,47 +210,26 @@ class _BottomSheet extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
               color: slide.tagBg,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(AppConstants.radiusFull),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(slide.tagIcon, size: 13, color: slide.tagText),
                 const SizedBox(width: 5),
-                Text(
-                  slide.tag,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: slide.tagText,
-                  ),
-                ),
+                Text(slide.tag,
+                    style: AppTextStyles.onboardingTag.copyWith(
+                      color: slide.tagText,
+                    )),
               ],
             ),
           ),
           const SizedBox(height: 10),
-
           // Title
-          Text(
-            slide.title,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF0F172A),
-              height: 1.25,
-            ),
-          ),
+          Text(slide.title, style: AppTextStyles.onboardingTitle),
           const SizedBox(height: 10),
-
           // Description
-          Text(
-            slide.description,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFF64748B),
-              height: 1.6,
-            ),
-          ),
+          Text(slide.description, style: AppTextStyles.onboardingDesc),
           const SizedBox(height: 22),
 
           // Buttons
@@ -256,25 +238,12 @@ class _BottomSheet extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: onNext,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 0,
-              ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    'Bắt đầu ngay',
-                    style: TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w700),
-                  ),
+                  Text('Bắt đầu ngay', style: AppTextStyles.btnPrimary),
                   SizedBox(width: 6),
-                  Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white),
                 ],
               ),
             ),
@@ -284,34 +253,15 @@ class _BottomSheet extends StatelessWidget {
             children: [
               TextButton(
                 onPressed: onSkip,
-                child: const Text(
-                  'Bỏ qua',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF94A3B8),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                child: const Text('Bỏ qua', style: AppTextStyles.btnSkip),
               ),
               ElevatedButton(
                 onPressed: onNext,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 28, vertical: 13),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  elevation: 0,
-                ),
                 child: const Row(
                   children: [
-                    Text('Tiếp theo',
-                        style: TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w700)),
+                    Text('Tiếp theo', style: AppTextStyles.btnPrimary),
                     SizedBox(width: 4),
-                    Icon(Icons.arrow_forward_ios_rounded, size: 13),
+                    Icon(Icons.arrow_forward_ios_rounded, size: 13, color: Colors.white),
                   ],
                 ),
               ),
