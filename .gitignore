@@ -9,6 +9,7 @@ build/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
+.agent
 
 # Android
 android/.gradle/

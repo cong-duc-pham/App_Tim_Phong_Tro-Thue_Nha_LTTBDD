@@ -48,8 +48,8 @@ dependencies:
   # -------------------------------------------------------
   # FORM & VALIDATION
   # -------------------------------------------------------
-  flutter_form_builder: ^9.3.0      # Quản lý form đăng ký, đăng tin
-  form_builder_validators: ^10.0.1  # Validate email, SĐT, giá tiền,...
+  # form_builder_validators bị xóa do conflict intl với Flutter SDK
+  # Dùng validator tự viết trong lib/core/utils/validators.dart
 
   # -------------------------------------------------------
   # BẢN ĐỒ & VỊ TRÍ GPS
@@ -97,10 +97,10 @@ flutter:
   uses-material-design: true
 
   # Khai báo assets - thêm file vào đây trước khi dùng
-  assets:
-    - assets/images/                # Ảnh tĩnh (logo, onboarding,...)
-    - assets/icons/                 # Icon SVG
-    - assets/animations/            # File Lottie JSON
+#  assets:
+#    - assets/images/                # Ảnh tĩnh (logo, onboarding,...)
+#    - assets/icons/                 # Icon SVG
+#    - assets/animations/            # File Lottie JSON
 
   # Khai báo font chữ (tuỳ chọn)
   # fonts:
