@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/onboarding/screens/splash_screen.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
+import '../../features/home/screens/home_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -17,16 +18,18 @@ final appRouter = GoRouter(
       builder: (_, __) => const OnboardingScreen(),
     ),
     GoRoute(
-      path: '/login',
-      builder: (_, __) => const _PlaceholderScreen(title: 'Đăng nhập'),
+      path: '/home',
+      builder: (_, __) => const HomeScreen(),
     ),
     GoRoute(
-      path: '/home',
-      builder: (_, __) => const _PlaceholderScreen(title: 'Trang chủ'),
+      path: '/login',
+      // TODO: thay bằng LoginScreen() sau khi tạo
+      builder: (_, __) => const _PlaceholderScreen(title: 'Đăng nhập'),
     ),
   ],
 );
 
+// Màn hình tạm - xóa khi đã tạo screen thật
 class _PlaceholderScreen extends StatelessWidget {
   final String title;
   const _PlaceholderScreen({required this.title});
@@ -48,3 +51,27 @@ class _PlaceholderScreen extends StatelessWidget {
     );
   }
 }
+
+
+// // Màn hình tạm - xóa khi đã tạo screen thật
+// class _PlaceholderScreen extends StatelessWidget {
+//   final String title;
+//   const _PlaceholderScreen({required this.title});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       backgroundColor: const Color(0xFF0057D9),
+//       body: Center(
+//         child: Text(
+//           title,
+//           style: const TextStyle(
+//             color: Colors.white,
+//             fontSize: 24,
+//             fontWeight: FontWeight.bold,
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }

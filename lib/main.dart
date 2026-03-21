@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'core/constants/app_router.dart';
+import 'core/theme/app_theme.dart';
 
 void main() {
   runApp(const MyApp());
@@ -15,12 +16,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'Swings House',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF0057D9),
-        ),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
       routerConfig: appRouter,
     );
   }

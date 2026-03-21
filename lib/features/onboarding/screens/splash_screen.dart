@@ -2,6 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_constants.dart';
+import '../../../core/constants/app_text_styles.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -35,9 +38,9 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Chuyển sang onboarding sau 2.5 giây (dùng go_router)
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) context.go('/onboarding');
+    // Chuyển sang onboarding sau khi splash xong
+    Future.delayed(AppConstants.splashDuration, () {
+      if (mounted) context.go(AppConstants.routeOnboarding);
     });
   }
 
@@ -50,16 +53,13 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0057D9),
+      backgroundColor: AppColors.primary,
       body: Stack(
         children: [
-          // Vòng tròn trang trí nền
           Positioned(
-            top: -80,
-            right: -80,
+            top: -80, right: -80,
             child: Container(
-              width: 280,
-              height: 280,
+              width: 280, height: 280,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withValues(alpha: 0.06),
@@ -67,18 +67,15 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ),
           Positioned(
-            bottom: -60,
-            left: -60,
+            bottom: -60, left: -60,
             child: Container(
-              width: 220,
-              height: 220,
+              width: 220, height: 220,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withValues(alpha: 0.06),
               ),
             ),
           ),
-          // Nội dung chính
           Center(
             child: FadeTransition(
               opacity: _fadeAnim,
@@ -89,61 +86,30 @@ class _SplashScreenState extends State<SplashScreen>
                   children: [
                     // Logo SW
                     Container(
-                      width: 90,
-                      height: 90,
+                      width: 90, height: 90,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(AppConstants.radiusXl),
                       ),
                       alignment: Alignment.center,
-                      child: const Text(
-                        'SW',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0057D9),
-                          letterSpacing: 1,
-                        ),
-                      ),
+                      child: const Text('SW', style: AppTextStyles.splashLogo),
                     ),
                     const SizedBox(height: 20),
-                    // Tên app
-                    const Text(
-                      'SWINGS HOUSE',
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: 2,
-                      ),
-                    ),
+                    const Text('SWINGS HOUSE', style: AppTextStyles.splashAppName),
                     const SizedBox(height: 8),
-                    // Tagline
-                    Text(
-                      'Time to change your life',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.75),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
+                    const Text('Time to change your life', style: AppTextStyles.splashTagline),
                   ],
                 ),
               ),
             ),
           ),
-          // Loading indicator dưới cùng
           Positioned(
-            bottom: 60,
-            left: 0,
-            right: 0,
+            bottom: 60, left: 0, right: 0,
             child: FadeTransition(
               opacity: _fadeAnim,
               child: Center(
                 child: SizedBox(
-                  width: 24,
-                  height: 24,
+                  width: 24, height: 24,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.5,
                     valueColor: AlwaysStoppedAnimation<Color>(
