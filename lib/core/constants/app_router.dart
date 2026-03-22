@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/onboarding/screens/splash_screen.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/listing/screens/listing_screens.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -20,6 +21,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/home',
       builder: (_, __) => const HomeScreen(),
+    ),
+    GoRoute(
+      path: '/listing',
+      builder: (_, __) => const PostListingScreen(),
     ),
     GoRoute(
       path: '/login',
