@@ -1718,6 +1718,11 @@ class _BottomNav extends StatelessWidget {
                 const SizedBox(width: 6),
                 Icon(
                   isLast
+
+
+
+
+
                       ? Icons.check_circle_outline
                       : Icons.arrow_forward_ios,
                   size: 16,
