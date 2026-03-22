@@ -487,7 +487,7 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 GestureDetector(
-                  onTap: () {},
+                  onTap: () => context.push('/listing'),
                   child: Container(
                     width: AppConstants.navAddBtnSize, height: AppConstants.navAddBtnSize,
                     margin: const EdgeInsets.only(bottom: 2),
