@@ -17,7 +17,7 @@ class RoomType {
   const RoomType({required this.id, required this.name, required this.icon});
 }
 
-/// slot_index 0 = anh bia, 1-5 = anh phu
+/// slot_index 0 = ảnh bìa, 1-5 = ảnh phụ
 class ImageSlot {
   final int slotIndex;
   File?   file;
@@ -40,7 +40,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
   int _currentStep = 0;
   static const int _totalSteps = 5;
 
-  // 6 slot anh co dinh (slot_index 0-5)
+  // 6 slot ảnh cố định (slot_index 0-5)
   final List<ImageSlot> _slots =
   List.generate(6, (i) => ImageSlot(slotIndex: i));
 
@@ -68,22 +68,22 @@ class _PostListingScreenState extends State<PostListingScreen> {
   String? _selectedWard;
 
   final _roomTypes = const [
-    RoomType(id: 1, name: 'Phong tro SV',   icon: Icons.bed_outlined),
-    RoomType(id: 2, name: 'Can ho DV',       icon: Icons.apartment_outlined),
-    RoomType(id: 3, name: 'O ghep',          icon: Icons.people_outline),
-    RoomType(id: 4, name: 'Nha nguyen can',  icon: Icons.home_outlined),
+    RoomType(id: 1, name: 'Phòng trọ SV',   icon: Icons.bed_outlined),
+    RoomType(id: 2, name: 'Căn hộ DV',       icon: Icons.apartment_outlined),
+    RoomType(id: 3, name: 'Ở ghép',          icon: Icons.people_outline),
+    RoomType(id: 4, name: 'Nhà nguyên căn',  icon: Icons.home_outlined),
   ];
 
-  final _provinces = const ['TP. Ho Chi Minh', 'Ha Noi', 'Da Nang', 'Can Tho'];
-  final _districts = const ['Quan 1','Quan 2','Quan 3','Binh Thanh','Go Vap','Tan Binh'];
-  final _wards     = const ['Phuong 1','Phuong 2','Phuong 3','Phuong Ben Nghe','Phuong Da Kao'];
+  final _provinces = const ['TP. Hồ Chí Minh', 'Hà Nội', 'Đà Nẵng', 'Cần Thơ'];
+  final _districts = const ['Quận 1','Quận 2','Quận 3','Bình Thạnh','Gò Vấp','Tân Bình'];
+  final _wards     = const ['Phường 1','Phường 2','Phường 3','Phường Bến Nghé','Phường Đa Kao'];
 
   final _stepTitles = const [
-    'Loai hinh & Tieu de',
-    'Anh phong (6 anh)',
-    'Dia chi',
-    'Chi tiet phong',
-    'Gia & Tien ich',
+    'Loại hình & Tiêu đề',
+    'Ảnh phòng (6 ảnh)',
+    'Địa chỉ',
+    'Chi tiết phòng',
+    'Giá & Tiện ích',
   ];
 
   @override
@@ -102,7 +102,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
   void _next() { if (_currentStep < _totalSteps - 1) _goTo(_currentStep + 1); }
   void _prev() { if (_currentStep > 0) _goTo(_currentStep - 1); }
 
-  /// Gia lap chon anh - thuc te tich hop image_picker o day
+  /// Giả lập chọn ảnh - thực tế tích hợp image_picker ở đây
   void _pickImage(int idx) {
     setState(() {
       _slots[idx].file = File('picked_$idx');
@@ -130,7 +130,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
       content: const Row(children: [
         Icon(Icons.check_circle, color: Colors.white),
         SizedBox(width: 12),
-        Text('Dang tin thanh cong! Dang cho xet duyet.'),
+        Text('Đăng tin thành công! Đang chờ xét duyệt.'),
       ]),
       backgroundColor: AppColors.success,
       behavior: SnackBarBehavior.floating,
@@ -189,13 +189,13 @@ class _PostListingScreenState extends State<PostListingScreen> {
     );
   }
 
-  // ── Step 1: Loai hinh & Tieu de ──────────────
+  // ── Step 1: Loại hình & Tiêu đề ──────────────
   Widget _buildStep1() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionCard(
-          title: 'Loai hinh phong',
+          title: 'Loại hình phòng',
           icon: Icons.category_outlined,
           child: GridView.count(
             crossAxisCount: 2,
@@ -246,21 +246,21 @@ class _PostListingScreenState extends State<PostListingScreen> {
         ),
         const SizedBox(height: 14),
         _SectionCard(
-          title: 'Thong tin co ban',
+          title: 'Thông tin cơ bản',
           icon: Icons.edit_outlined,
           child: Column(children: [
             _InputField(
               ctrl: _titleCtrl,
-              label: 'Tieu de tin dang',
-              hint: 'VD: Phong tro full noi that Binh Thanh gia re',
+              label: 'Tiêu đề tin đăng',
+              hint: 'VD: Phòng trọ full nội thất Bình Thạnh giá rẻ',
               maxLength: 200,
               maxLines: 2,
             ),
             const SizedBox(height: 14),
             _InputField(
               ctrl: _descCtrl,
-              label: 'Mo ta chi tiet',
-              hint: 'Mo ta dac diem noi bat, tien ich xung quanh...',
+              label: 'Mô tả chi tiết',
+              hint: 'Mô tả đặc điểm nổi bật, tiện ích xung quanh...',
               maxLines: 4,
               maxLength: 2000,
             ),
@@ -269,9 +269,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
               value: _isFeatured,
               onChanged: (v) => setState(() => _isFeatured = v),
               icon: Icons.workspace_premium_outlined,
-              activeColor: AppColors.tagHot,           // was AppColors.orange
-              title: 'Tin VIP / Noi bat',
-              subtitle: 'Hien thi uu tien, tiep can nhieu nguoi hon',
+              activeColor: AppColors.tagHot,
+              title: 'Tin VIP / Nổi bật',
+              subtitle: 'Hiển thị ưu tiên, tiếp cận nhiều người hơn',
             ),
           ]),
         ),
@@ -279,12 +279,12 @@ class _PostListingScreenState extends State<PostListingScreen> {
     );
   }
 
-  // ── Step 2: ANH PHONG ────────────────────────
+  // ── Step 2: ẢNH PHÒNG ────────────────────────
   Widget _buildStepImages() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Banner huong dan
+        // Banner hướng dẫn
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
@@ -309,16 +309,16 @@ class _PostListingScreenState extends State<PostListingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Anh phong - toi da 6 anh',
+                    Text('Ảnh phòng - tối đa 6 ảnh',
                         style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 14,
                             color: AppColors.textPrimary)),
                     SizedBox(height: 4),
                     Text(
-                      '- Anh dau tien (Slot 1) la ANH BIA hien thi tren danh sach\n'
-                          '- Dinh dang JPG/PNG, toi da 5 MB moi anh\n'
-                          '- Nhan gio de dat anh phu thanh anh bia',
+                      '- Ảnh đầu tiên (Slot 1) là ẢNH BÌA hiển thị trên danh sách\n'
+                          '- Định dạng JPG/PNG, tối đa 5 MB mỗi ảnh\n'
+                          '- Nhấn giữ để đặt ảnh phụ thành ảnh bìa',
                       style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,
@@ -336,7 +336,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Danh sach anh',
+            const Text('Danh sách ảnh',
                 style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 15,
@@ -351,7 +351,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                '$_filledCount / 6 anh',
+                '$_filledCount / 6 ảnh',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -365,7 +365,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
         ),
         const SizedBox(height: 12),
 
-        // Slot 0: Anh bia (to)
+        // Slot 0: Ảnh bìa (to)
         _ImageSlotCard(
           slot: _slots[0],
           isCoverLayout: true,
@@ -374,7 +374,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
         ),
         const SizedBox(height: 10),
 
-        // Slot 1-5: Anh phu (grid 2 cot)
+        // Slot 1-5: Ảnh phụ (grid 2 cột)
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -409,7 +409,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
             SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Meo: Anh sang, ro net, chup tu nhieu goc giup tang 3x luot lien he!',
+                'Mẹo: Ảnh sáng, rõ nét, chụp từ nhiều góc giúp tăng 3x lượt liên hệ!',
                 style: TextStyle(
                     fontSize: 12, color: AppColors.successText, height: 1.4),
               ),
@@ -420,17 +420,17 @@ class _PostListingScreenState extends State<PostListingScreen> {
     );
   }
 
-  // ── Step 3: Dia chi ──────────────────────────
+  // ── Step 3: Địa chỉ ──────────────────────────
   Widget _buildStep3() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionCard(
-          title: 'Dia chi phong',
+          title: 'Địa chỉ phòng',
           icon: Icons.location_on_outlined,
           child: Column(children: [
             _DropdownField(
-              label: 'Tinh / Thanh pho',
+              label: 'Tỉnh / Thành phố',
               value: _selectedProvince,
               items: _provinces,
               onChanged: (v) => setState(() {
@@ -441,7 +441,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
             ),
             const SizedBox(height: 14),
             _DropdownField(
-              label: 'Quan / Huyen',
+              label: 'Quận / Huyện',
               value: _selectedDistrict,
               items: _districts,
               enabled: _selectedProvince != null,
@@ -452,7 +452,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
             ),
             const SizedBox(height: 14),
             _DropdownField(
-              label: 'Phuong / Xa',
+              label: 'Phường / Xã',
               value: _selectedWard,
               items: _wards,
               enabled: _selectedDistrict != null,
@@ -461,8 +461,8 @@ class _PostListingScreenState extends State<PostListingScreen> {
             const SizedBox(height: 14),
             _InputField(
               ctrl: _streetCtrl,
-              label: 'Dia chi chi tiet',
-              hint: 'So nha, ten duong...',
+              label: 'Địa chỉ chi tiết',
+              hint: 'Số nhà, tên đường...',
               prefixIcon: Icons.edit_location_alt_outlined,
             ),
           ]),
@@ -473,39 +473,39 @@ class _PostListingScreenState extends State<PostListingScreen> {
     );
   }
 
-  // ── Step 4: Chi tiet ─────────────────────────
+  // ── Step 4: Chi tiết ─────────────────────────
   Widget _buildStep4() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionCard(
-          title: 'Dien tich & Tang',
+          title: 'Diện tích & Tầng',
           icon: Icons.straighten_outlined,
           child: Column(children: [
             Row(children: [
               Expanded(child: _InputField(
-                  ctrl: _areaCtrl, label: 'Dien tich (m2)',
+                  ctrl: _areaCtrl, label: 'Diện tích (m2)',
                   hint: '25', keyboardType: TextInputType.number, suffixText: 'm2')),
               const SizedBox(width: 12),
               Expanded(child: _InputField(
-                  ctrl: _maxOccupantsCtrl, label: 'So nguoi toi da',
-                  hint: '1', keyboardType: TextInputType.number, suffixText: 'nguoi')),
+                  ctrl: _maxOccupantsCtrl, label: 'Số người tối đa',
+                  hint: '1', keyboardType: TextInputType.number, suffixText: 'người')),
             ]),
             const SizedBox(height: 14),
             Row(children: [
               Expanded(child: _InputField(
-                  ctrl: _floorCtrl, label: 'Tang',
-                  hint: '3', keyboardType: TextInputType.number, suffixText: 'tang')),
+                  ctrl: _floorCtrl, label: 'Tầng',
+                  hint: '3', keyboardType: TextInputType.number, suffixText: 'tầng')),
               const SizedBox(width: 12),
               Expanded(child: _InputField(
-                  ctrl: _totalFloorsCtrl, label: 'Tong so tang',
-                  hint: '5', keyboardType: TextInputType.number, suffixText: 'tang')),
+                  ctrl: _totalFloorsCtrl, label: 'Tổng số tầng',
+                  hint: '5', keyboardType: TextInputType.number, suffixText: 'tầng')),
             ]),
           ]),
         ),
         const SizedBox(height: 14),
         _SectionCard(
-          title: 'Ngay co the vao o',
+          title: 'Ngày có thể vào ở',
           icon: Icons.calendar_today_outlined,
           child: _DatePickerTile(
             date: _availableFrom,
@@ -528,64 +528,64 @@ class _PostListingScreenState extends State<PostListingScreen> {
         ),
         const SizedBox(height: 14),
         _SectionCard(
-          title: 'Chinh sach',
+          title: 'Chính sách',
           icon: Icons.policy_outlined,
           child: _ToggleTile(
             value: _allowPet,
             onChanged: (v) => setState(() => _allowPet = v),
             icon: Icons.pets_outlined,
             activeColor: AppColors.success,
-            title: 'Cho phep nuoi thu cung',
-            subtitle: 'Cho, meo, thu nho...',
+            title: 'Cho phép nuôi thú cưng',
+            subtitle: 'Chó, mèo, thú nhỏ...',
           ),
         ),
       ],
     );
   }
 
-  // ── Step 5: Gia & Preview ────────────────────
+  // ── Step 5: Giá & Preview ────────────────────
   Widget _buildStep5() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionCard(
-          title: 'Gia thue',
+          title: 'Giá thuê',
           icon: Icons.payments_outlined,
           child: _InputField(
             ctrl: _priceCtrl,
-            label: 'Gia thue moi thang (VND)',
+            label: 'Giá thuê mỗi tháng (VND)',
             hint: '3500000',
             keyboardType: TextInputType.number,
-            suffixText: 'd/thang',
+            suffixText: 'đ/tháng',
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             isLarge: true,
           ),
         ),
         const SizedBox(height: 14),
         _SectionCard(
-          title: 'Chi phi dich vu',
+          title: 'Chi phí dịch vụ',
           icon: Icons.receipt_long_outlined,
           child: Column(children: [
             Row(children: [
               Expanded(child: _InputField(
-                  ctrl: _electricCtrl, label: 'Dien (d/kWh)',
+                  ctrl: _electricCtrl, label: 'Điện (đ/kWh)',
                   hint: '3500', keyboardType: TextInputType.number,
                   prefixIcon: Icons.bolt_outlined)),
               const SizedBox(width: 12),
               Expanded(child: _InputField(
-                  ctrl: _waterCtrl, label: 'Nuoc (d/m3)',
+                  ctrl: _waterCtrl, label: 'Nước (đ/m3)',
                   hint: '15000', keyboardType: TextInputType.number,
                   prefixIcon: Icons.water_drop_outlined)),
             ]),
             const SizedBox(height: 14),
             Row(children: [
               Expanded(child: _InputField(
-                  ctrl: _internetCtrl, label: 'Internet (d/thang)',
+                  ctrl: _internetCtrl, label: 'Internet (đ/tháng)',
                   hint: '100000', keyboardType: TextInputType.number,
                   prefixIcon: Icons.wifi_outlined)),
               const SizedBox(width: 12),
               Expanded(child: _InputField(
-                  ctrl: _parkingCtrl, label: 'Gui xe (d/thang)',
+                  ctrl: _parkingCtrl, label: 'Gửi xe (đ/tháng)',
                   hint: '100000', keyboardType: TextInputType.number,
                   prefixIcon: Icons.directions_car_outlined)),
             ]),
@@ -595,14 +595,14 @@ class _PostListingScreenState extends State<PostListingScreen> {
         _PreviewCard(
           coverSlot: _slots[0],
           title: _titleCtrl.text.isEmpty
-              ? 'Tieu de chua nhap'
+              ? 'Tiêu đề chưa nhập'
               : _titleCtrl.text,
-          typeName: _selectedType?.name ?? 'Chua chon loai hinh',
+          typeName: _selectedType?.name ?? 'Chưa chọn loại hình',
           price: _priceCtrl.text.isEmpty
               ? '---'
-              : '${_priceCtrl.text} d/thang',
+              : '${_priceCtrl.text} đ/tháng',
           address: _streetCtrl.text.isEmpty
-              ? 'Chua nhap dia chi'
+              ? 'Chưa nhập địa chỉ'
               : _streetCtrl.text,
           isFeatured: _isFeatured,
           imageCount: _filledCount,
@@ -664,15 +664,15 @@ class _ImageSlotCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Anh hoac placeholder
+              // Ảnh hoặc placeholder
               if (hasImage)
                 _SlotImage(file: slot.file)
               else
                 _EmptySlot(isCover: isCoverLayout, slotIndex: slot.slotIndex),
 
-              // Overlay khi co anh
+              // Overlay khi có ảnh
               if (hasImage) ...[
-                // Gradient duoi
+                // Gradient dưới
                 Positioned(
                   bottom: 0, left: 0, right: 0,
                   child: Container(
@@ -690,7 +690,7 @@ class _ImageSlotCard extends StatelessWidget {
                   ),
                 ),
 
-                // Badge bia
+                // Badge bìa
                 if (isCoverLayout)
                   Positioned(
                     top: 10, left: 10,
@@ -698,7 +698,7 @@ class _ImageSlotCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.tagHot,          // was AppColors.orange
+                        color: AppColors.tagHot,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [BoxShadow(
                           color: AppColors.tagHot.withValues(alpha: 0.4),
@@ -709,7 +709,7 @@ class _ImageSlotCard extends StatelessWidget {
                       child: const Row(children: [
                         Icon(Icons.star_rounded, color: Colors.white, size: 12),
                         SizedBox(width: 4),
-                        Text('Anh bia', style: TextStyle(
+                        Text('Ảnh bìa', style: TextStyle(
                             color: Colors.white,
                             fontSize: 11,
                             fontWeight: FontWeight.w700)),
@@ -717,12 +717,12 @@ class _ImageSlotCard extends StatelessWidget {
                     ),
                   ),
 
-                // So slot
+                // Số slot
                 Positioned(
                   bottom: 8, left: 10,
                   child: Text(
                     isCoverLayout
-                        ? 'Slot 1 (Bia)'
+                        ? 'Slot 1 (Bìa)'
                         : 'Slot ${slot.slotIndex + 1}',
                     style: const TextStyle(
                         color: Colors.white,
@@ -738,8 +738,8 @@ class _ImageSlotCard extends StatelessWidget {
                     if (!isCoverLayout && onMakeCover != null) ...[
                       _ActionBtn(
                         icon: Icons.star_border_rounded,
-                        color: AppColors.tagHot,          // was AppColors.orange
-                        tooltip: 'Dat lam anh bia',
+                        color: AppColors.tagHot,
+                        tooltip: 'Đặt làm ảnh bìa',
                         onTap: onMakeCover!,
                       ),
                       const SizedBox(width: 5),
@@ -747,14 +747,14 @@ class _ImageSlotCard extends StatelessWidget {
                     _ActionBtn(
                       icon: Icons.edit_outlined,
                       color: AppColors.primary,
-                      tooltip: 'Thay anh',
+                      tooltip: 'Thay ảnh',
                       onTap: onPick,
                     ),
                     const SizedBox(width: 5),
                     _ActionBtn(
                       icon: Icons.delete_outline,
                       color: AppColors.error,
-                      tooltip: 'Xoa',
+                      tooltip: 'Xoá',
                       onTap: onRemove,
                     ),
                   ]),
@@ -780,8 +780,8 @@ class _SlotImage extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppColors.illus1.withValues(alpha: 0.8),   // was primaryLight 0.6
-              AppColors.illus2.withValues(alpha: 0.6),   // was accent 0.4
+              AppColors.illus1.withValues(alpha: 0.8),
+              AppColors.illus2.withValues(alpha: 0.6),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -811,7 +811,7 @@ class _EmptySlot extends StatelessWidget {
           height: isCover ? 54 : 40,
           decoration: BoxDecoration(
             color: isCover
-                ? AppColors.primaryLight.withValues(alpha: 0.5)  // was primary 0.12
+                ? AppColors.primaryLight.withValues(alpha: 0.5)
                 : AppColors.border.withValues(alpha: 0.5),
             shape: BoxShape.circle,
           ),
@@ -819,15 +819,15 @@ class _EmptySlot extends StatelessWidget {
             isCover
                 ? Icons.add_photo_alternate_outlined
                 : Icons.add_a_photo_outlined,
-            color: isCover ? AppColors.primary : AppColors.textMuted,  // was textHint
+            color: isCover ? AppColors.primary : AppColors.textMuted,
             size: isCover ? 26 : 20,
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          isCover ? 'Them anh bia' : 'Anh ${slotIndex + 1}',
+          isCover ? 'Thêm ảnh bìa' : 'Ảnh ${slotIndex + 1}',
           style: TextStyle(
-            color: isCover ? AppColors.primary : AppColors.textMuted,  // was textHint
+            color: isCover ? AppColors.primary : AppColors.textMuted,
             fontSize: isCover ? 13 : 11,
             fontWeight: isCover ? FontWeight.w700 : FontWeight.normal,
           ),
@@ -835,8 +835,8 @@ class _EmptySlot extends StatelessWidget {
         if (isCover) ...[
           const SizedBox(height: 3),
           const Text(
-            'Nhan de chon tu thu vien',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 11),  // was textHint
+            'Nhấn để chọn từ thư viện',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 11),
           ),
         ],
       ],
@@ -894,7 +894,6 @@ class _Header extends StatelessWidget {
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [AppColors.primaryDark, AppColors.primary, AppColors.primaryMedium],
-          // was: primaryDark, primary, primaryLight — swapped end to primaryMedium for gradient feel
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -921,12 +920,12 @@ class _Header extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Dang tin cho thue',
+                  const Text('Đăng tin cho thuê',
                       style: TextStyle(
                           color: Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.w700)),
-                  Text('Buoc ${step + 1}/$total - $title',
+                  Text('Bước ${step + 1}/$total - $title',
                       style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.8), fontSize: 12)),
                 ],
@@ -942,7 +941,7 @@ class _Header extends StatelessWidget {
               child: const Row(children: [
                 Icon(Icons.help_outline, color: Colors.white, size: 14),
                 SizedBox(width: 4),
-                Text('Tro giup',
+                Text('Trợ giúp',
                     style: TextStyle(color: Colors.white, fontSize: 12)),
               ]),
             ),
@@ -955,7 +954,7 @@ class _Header extends StatelessWidget {
 
 class _StepBar extends StatelessWidget {
   final int current, total;
-  static const _labels = ['Loai hinh', 'Anh', 'Dia chi', 'Chi tiet', 'Gia ca'];
+  static const _labels = ['Loại hình', 'Ảnh', 'Địa chỉ', 'Chi tiết', 'Giá cả'];
   const _StepBar({required this.current, required this.total});
 
   @override
@@ -1092,7 +1091,7 @@ class _SectionCard extends StatelessWidget {
               Container(
                 width: 32, height: 32,
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withValues(alpha: 0.5),  // was primary 0.1
+                  color: AppColors.primaryLight.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, color: AppColors.primary, size: 18),
@@ -1163,7 +1162,7 @@ class _InputField extends StatelessWidget {
             hintText: hint,
             counterText: '',
             hintStyle: const TextStyle(
-                color: AppColors.textMuted, fontSize: 13),    // was textHint
+                color: AppColors.textMuted, fontSize: 13),
             suffixText: suffixText,
             suffixStyle: const TextStyle(
                 color: AppColors.textSecondary, fontSize: 12),
@@ -1223,9 +1222,9 @@ class _DropdownField extends StatelessWidget {
         DropdownButtonFormField<String>(
           value: value,
           onChanged: enabled ? onChanged : null,
-          hint: Text('Chon $label',
+          hint: Text('Chọn $label',
               style: const TextStyle(
-                  color: AppColors.textMuted, fontSize: 13)),     // was textHint
+                  color: AppColors.textMuted, fontSize: 13)),
           items: items
               .map((e) => DropdownMenuItem(
             value: e,
@@ -1356,19 +1355,19 @@ class _DatePickerTile extends StatelessWidget {
         ),
         child: Row(children: [
           Icon(Icons.event_available_outlined,
-              color: date != null ? AppColors.primary : AppColors.textMuted,  // was textHint
+              color: date != null ? AppColors.primary : AppColors.textMuted,
               size: 20),
           const SizedBox(width: 10),
           Text(
             date != null
-                ? 'Ngay ${date!.day.toString().padLeft(2, '0')}/'
+                ? 'Ngày ${date!.day.toString().padLeft(2, '0')}/'
                 '${date!.month.toString().padLeft(2, '0')}/'
                 '${date!.year}'
-                : 'Chon ngay co the vao o',
+                : 'Chọn ngày có thể vào ở',
             style: TextStyle(
               color: date != null
                   ? AppColors.textPrimary
-                  : AppColors.textMuted,   // was textHint
+                  : AppColors.textMuted,
               fontWeight: date != null
                   ? FontWeight.w600
                   : FontWeight.normal,
@@ -1379,7 +1378,7 @@ class _DatePickerTile extends StatelessWidget {
           Icon(Icons.keyboard_arrow_down_rounded,
               color: date != null
                   ? AppColors.primary
-                  : AppColors.textMuted),  // was textHint
+                  : AppColors.textMuted),
         ]),
       ),
     );
@@ -1406,7 +1405,7 @@ class _MapPlaceholder extends StatelessWidget {
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.infoBg, AppColors.primaryLight],  // was hardcoded blues
+                colors: [AppColors.infoBg, AppColors.primaryLight],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -1435,7 +1434,7 @@ class _MapPlaceholder extends StatelessWidget {
                       color: Colors.white, size: 24),
                 ),
                 const SizedBox(height: 8),
-                const Text('Cham de chon vi tri tren ban do',
+                const Text('Chạm để chọn vị trí trên bản đồ',
                     style: TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w600,
@@ -1504,14 +1503,14 @@ class _PreviewCard extends StatelessWidget {
               Container(
                 width: 32, height: 32,
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight.withValues(alpha: 0.5),  // was primary 0.1
+                  color: AppColors.primaryLight.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.preview_outlined,
                     color: AppColors.primary, size: 18),
               ),
               const SizedBox(width: 10),
-              const Text('Xem truoc tin dang',
+              const Text('Xem trước tin đăng',
                   style: TextStyle(
                       fontWeight: FontWeight.w700, fontSize: 14)),
             ]),
@@ -1540,8 +1539,8 @@ class _PreviewCard extends StatelessWidget {
                         decoration: const BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              AppColors.illus1,   // was primaryLight 0.3
-                              AppColors.catBlue,  // was accent 0.15
+                              AppColors.illus1,
+                              AppColors.catBlue,
                             ],
                           ),
                         ),
@@ -1572,7 +1571,7 @@ class _PreviewCard extends StatelessWidget {
                           color: Colors.black.withValues(alpha: 0.65),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text('$imageCount anh',
+                        child: Text('$imageCount ảnh',
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 9,
@@ -1591,7 +1590,7 @@ class _PreviewCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: AppColors.tagVip,   // was AppColors.orange
+                            color: AppColors.tagVip,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text('VIP',
@@ -1632,7 +1631,7 @@ class _PreviewCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryLight.withValues(alpha: 0.5), // was primary 0.1
+                          color: AppColors.primaryLight.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(typeName,
@@ -1685,7 +1684,7 @@ class _BottomNav extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: onPrev,
               icon: const Icon(Icons.arrow_back_ios, size: 14),
-              label: const Text('Quay lai'),
+              label: const Text('Quay lại'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary,
                 side: const BorderSide(color: AppColors.primary),
@@ -1713,7 +1712,7 @@ class _BottomNav extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(isLast ? 'Dang tin ngay' : 'Tiep theo',
+                Text(isLast ? 'Đăng tin ngay' : 'Tiếp theo',
                     style: const TextStyle(
                         fontWeight: FontWeight.w700, fontSize: 15)),
                 const SizedBox(width: 6),
