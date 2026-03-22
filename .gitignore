@@ -9,7 +9,6 @@ build/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
-.agent
 
 # Android
 android/.gradle/
@@ -54,3 +53,29 @@ lib/core/constants/app_secrets.dart   # API keys, secret strings
 # Misc
 *.log
 pubspec.lock                          # Có thể commit nếu muốn lock version
+
+# ─── .NET / Visual Studio ────────────────────────────────────────────────────
+
+# Build output
+backend/**/bin/
+backend/**/obj/
+
+# Visual Studio files (gây lỗi permission khi git add)
+backend/**/.vs/
+**/.vs/
+*.vsidx
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ASP.NET Core sensitive config
+backend/**/appsettings.Development.json
+
+# NuGet
+backend/**/project.assets.json
+backend/**/.nuget/
+
+# Publish output
+backend/**/publish/
+backend/**/out/
