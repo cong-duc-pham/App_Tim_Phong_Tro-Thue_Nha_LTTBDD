@@ -148,6 +148,13 @@ class _PostListingScreenState extends State<PostListingScreen> {
           step: _currentStep,
           total: _totalSteps,
           title: _stepTitles[_currentStep],
+          onBack: () {
+            if (_currentStep > 0) {
+              _prev();
+            } else {
+              Navigator.of(context).pop();
+            }
+          },
         ),
         _StepBar(current: _currentStep, total: _totalSteps),
         Expanded(
@@ -886,7 +893,8 @@ class _ActionBtn extends StatelessWidget {
 class _Header extends StatelessWidget {
   final int step, total;
   final String title;
-  const _Header({required this.step, required this.total, required this.title});
+  final VoidCallback onBack;
+  const _Header({required this.step, required this.total, required this.title, required this.onBack});
 
   @override
   Widget build(BuildContext context) {
@@ -904,7 +912,7 @@ class _Header extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Row(children: [
             GestureDetector(
-              onTap: () {},
+              onTap: onBack,
               child: Container(
                 width: 38, height: 38,
                 decoration: BoxDecoration(
@@ -1718,11 +1726,6 @@ class _BottomNav extends StatelessWidget {
                 const SizedBox(width: 6),
                 Icon(
                   isLast
-
-
-
-
-
                       ? Icons.check_circle_outline
                       : Icons.arrow_forward_ios,
                   size: 16,
