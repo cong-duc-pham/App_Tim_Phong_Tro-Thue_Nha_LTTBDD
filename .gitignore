@@ -1,19 +1,21 @@
 # ============================================================
-#  FLUTTER - .gitignore
-#  Dành cho nhóm 3 thành viên, dùng local DB
+#  FLUTTER & ASP.NET CORE MONOREPO - .gitignore
+#  Dành cho nhóm 3 thành viên, đồ án BTLAppMobile
 # ============================================================
 
-# Flutter/Dart build output
+# ─── 1. FLUTTER / DART ──────────────────────────────────────
 build/
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
+.pub-cache/
+.pub/
 
 # Android
 android/.gradle/
 android/local.properties
-android/key.properties          # ⚠️ File chứa keystore - KHÔNG được commit
+android/key.properties           # ⚠️ File chứa keystore - KHÔNG được commit
 android/app/google-services.json # ⚠️ Firebase config - KHÔNG được commit
 *.jks                            # ⚠️ Keystore file
 
@@ -24,58 +26,67 @@ ios/Flutter/Generated.xcconfig
 ios/Pods/
 ios/GoogleService-Info.plist     # ⚠️ Firebase config iOS - KHÔNG được commit
 
-# IDE
-.idea/
-.vscode/
-*.iml
-*.ipr
-*.iws
-.DS_Store
-Thumbs.db
-
 # Coverage & Test
 coverage/
 .test_results/
-
-# Local database file (SQLite) - không share file db cá nhân
-*.db
-*.db-journal
-*.db-shm
-*.db-wal
 
 # Environment / Config nhạy cảm
 .env
 .env.local
 .env.development
 .env.production
-lib/core/constants/app_secrets.dart   # API keys, secret strings
+!.env.example                    # ✅ NÊN commit file example để team biết cần các biến gì
+lib/core/constants/app_secrets.dart
 
-# Misc
-*.log
-pubspec.lock                          # Có thể commit nếu muốn lock version
+# ─── 2. ASP.NET CORE / C# ───────────────────────────────────
+# Build & Publish output (Dùng Regex [Bb] để bắt mọi cấp thư mục)
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Pp]ublish/
+project.assets.json
 
-# ─── .NET / Visual Studio ────────────────────────────────────────────────────
-
-# Build output
-backend/**/bin/
-backend/**/obj/
-
-# Visual Studio files (gây lỗi permission khi git add)
-backend/**/.vs/
-**/.vs/
-*.vsidx
-*.suo
+# Visual Studio files (Tránh conflict khó chịu khi push code)
+.vs/
 *.user
 *.userosscache
 *.sln.docstates
+*.suo
+*.vsidx
+
+# Local Database (Bổ sung file data của SQL Server)
+*.mdf
+*.ldf
+*.ndf
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
 
 # ASP.NET Core sensitive config
-backend/**/appsettings.Development.json
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
 
-# NuGet
-backend/**/project.assets.json
-backend/**/.nuget/
+# ─── 3. IDE, OS & LOGS ──────────────────────────────────────
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
 
-# Publish output
-backend/**/publish/
-backend/**/out/
+# ⚠️ VS Code: Bỏ comment dòng dưới nếu KHÔNG muốn share file cấu hình VS Code (.vscode) cho team. 
+# Khuyên dùng: Nên để lại (không ignore) nếu bạn muốn share file tasks.json hoặc launch.json để cả team bấm 1 nút chạy cả 2 project.
+#.vscode/
+
+# OS generated files (Mac & Windows)
+.DS_Store
+.DS_Store?
+._*
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs & Dumps
+*.log
+*.crash
