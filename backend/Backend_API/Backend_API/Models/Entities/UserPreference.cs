@@ -1,0 +1,19 @@
+namespace Backend_API.Models.Entities;
+
+public class UserPreference
+{
+    public long PrefId { get; set; }
+    public long UserId { get; set; }
+    public string? PreferredArea { get; set; }
+    public decimal? MinPrice { get; set; }
+    public decimal? MaxPrice { get; set; }
+    public bool? AllowPet { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+    public int SearchRadiusKm { get; set; } = 5;
+    public bool OnboardingDone { get; set; } = false;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    public User User { get; set; } = null!;
+}
