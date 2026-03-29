@@ -83,6 +83,14 @@ dependencies:
   cupertino_icons: ^1.0.6           # Icon iOS style
   flutter_iconly: ^1.0.2            # Bộ icon đẹp cho app bất động sản
 
+  # -------------------------------------------------------
+  # KẾT NỐI BACKEND API & KIẾN TRÚC
+  # -------------------------------------------------------
+  dio: ^5.4.0                       # Gọi API ASP.NET Core
+  get_it: ^7.6.7                    # Quản lý Dependency Injection
+  flutter_secure_storage: ^9.0.0    # Lưu trữ JWT Token an toàn
+  json_annotation: ^4.8.1           # Đánh dấu class để parse JSON
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -92,6 +100,7 @@ dev_dependencies:
   # -------------------------------------------------------
   build_runner: ^2.4.8              # Chạy code generation
   flutter_lints: ^3.0.0             # Chuẩn lint code cho nhóm
+  json_serializable: ^6.7.1         # Tự động generate code parse JSON
 
 flutter:
   uses-material-design: true
@@ -109,34 +118,3 @@ flutter:
   #       - asset: assets/fonts/BeVietnamPro-Regular.ttf
   #       - asset: assets/fonts/BeVietnamPro-Bold.ttf
   #         weight: 700
-  dependencies:
-  flutter:
-    sdk: flutter
-
-  # --- CÁC PACKAGE CŨ CỦA BẠN GIỮ NGUYÊN ---
-  go_router: ^13.0.0
-  flutter_bloc: ^8.1.5
-  equatable: ^2.0.5
-  # ... (Giữ nguyên phần UI, Bản đồ, Hình ảnh, Định dạng...) ...
-
-  # =======================================================
-  # THÊM MỚI: KẾT NỐI BACKEND API & KIẾN TRÚC
-  # =======================================================
-  dio: ^5.4.0                     # Gọi API ASP.NET Core
-  get_it: ^7.6.7                  # Quản lý Dependency Injection
-  flutter_secure_storage: ^9.0.0  # Lưu trữ JWT Token an toàn
-  json_annotation: ^4.8.1         # Đánh dấu class để parse JSON
-  
-  # (Tùy chọn cho sau này) signalr_netcore: ^1.3.5  # Nếu làm tính năng Chat Real-time
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-
-  build_runner: ^2.4.8
-  flutter_lints: ^3.0.0
-
-  # =======================================================
-  # THÊM MỚI: TỰ ĐỘNG GENERATE CODE
-  # =======================================================
-  json_serializable: ^6.7.1       # Tự động viết code parse JSON (file .g.dart)
