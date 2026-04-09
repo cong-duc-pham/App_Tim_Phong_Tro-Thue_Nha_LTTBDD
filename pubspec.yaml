@@ -90,6 +90,9 @@ dependencies:
   get_it: ^7.6.7                    # Quản lý Dependency Injection
   flutter_secure_storage: ^9.0.0    # Lưu trữ JWT Token an toàn
   json_annotation: ^4.8.1           # Đánh dấu class để parse JSON
+  firebase_core: ^4.6.0
+  firebase_auth: ^6.3.0
+  cloud_firestore: ^6.2.0
 
 dev_dependencies:
   flutter_test:
