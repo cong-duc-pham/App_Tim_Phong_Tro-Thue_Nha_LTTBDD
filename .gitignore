@@ -90,3 +90,7 @@ Thumbs.db
 # Logs & Dumps
 *.log
 *.crash
+
+# Firebase Admin SDK Private Keys
+*firebase-adminsdk*.json
+

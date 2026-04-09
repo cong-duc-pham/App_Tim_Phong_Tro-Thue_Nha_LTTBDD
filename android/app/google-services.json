@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "59875388196",
+    "project_id": "app-tim-phong-tro-thue-n-dacfe",
+    "storage_bucket": "app-tim-phong-tro-thue-n-dacfe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:59875388196:android:c555817db4e357ce73a1b1",
+        "android_client_info": {
+          "package_name": "com.example.ung_dung_tim_kiem_tro"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCunJ3NTZYv3sASJWjxOJlzbKEpHQACWKM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

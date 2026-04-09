@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Backend_API.Models.Entities;
 
-public partial class Notification
+public partial class VwPendingFcmNotification
 {
     public long NotifId { get; set; }
 
@@ -19,15 +19,11 @@ public partial class Notification
 
     public string? RefType { get; set; }
 
-    public bool? IsRead { get; set; }
-
-    public string? FcmStatus { get; set; }
-
-    public DateTime? FcmSentAt { get; set; }
-
-    public string? FcmErrorMsg { get; set; }
-
     public DateTime? SentAt { get; set; }
 
-    public virtual User User { get; set; } = null!;
+    public string DeviceToken { get; set; } = null!;
+
+    public string DeviceType { get; set; } = null!;
+
+    public long DeviceId { get; set; }
 }
