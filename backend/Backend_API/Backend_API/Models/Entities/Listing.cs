@@ -1,94 +1,119 @@
+﻿using System;
+using System.Collections.Generic;
+
 namespace Backend_API.Models.Entities;
 
-public class ListingStatus
-{
-    public int StatusId { get; set; }
-    public string StatusName { get; set; } = string.Empty;
-    public ICollection<Listing> Listings { get; set; } = new List<Listing>();
-}
-
-public class Listing
+public partial class Listing
 {
     public long ListingId { get; set; }
-    public long LandlordId { get; set; }
-    public int TypeId { get; set; }
-    public int StatusId { get; set; }
-    public string Title { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public decimal Price { get; set; }
-    public decimal Area { get; set; }
-    public int? Floor { get; set; }
-    public int? TotalFloors { get; set; }
-    public int MaxOccupants { get; set; } = 1;
 
-    // Địa chỉ
+    public long LandlordId { get; set; }
+
+    public int TypeId { get; set; }
+
+    public int StatusId { get; set; }
+
+    public string Title { get; set; } = null!;
+
+    public string? Description { get; set; }
+
+    public decimal Price { get; set; }
+
+    public decimal Area { get; set; }
+
+    public int? Floor { get; set; }
+
+    public int? TotalFloors { get; set; }
+
+    public int? MaxOccupants { get; set; }
+
     public int? ProvinceId { get; set; }
+
     public int? DistrictId { get; set; }
+
     public int? WardId { get; set; }
-    public string StreetAddress { get; set; } = string.Empty;
+
+    public string StreetAddress { get; set; } = null!;
+
     public double? Latitude { get; set; }
+
     public double? Longitude { get; set; }
 
-    // Trạng thái & nhãn
-    public bool IsVerified { get; set; } = false;
-    public bool IsFeatured { get; set; } = false;
-    public bool IsNew { get; set; } = true;
-    public bool AllowPet { get; set; } = false;
+    public bool? IsVerified { get; set; }
 
-    // Chi phí dịch vụ
+    public bool? IsFeatured { get; set; }
+
+    public bool? IsNew { get; set; }
+
+    public bool? AllowPet { get; set; }
+
+    public string? Image0 { get; set; }
+
+    public string? Image1 { get; set; }
+
+    public string? Image2 { get; set; }
+
+    public string? Image3 { get; set; }
+
+    public string? Image4 { get; set; }
+
+    public string? Image5 { get; set; }
+
+    public string? StorageFolder { get; set; }
+
     public decimal? ElectricPrice { get; set; }
+
     public decimal? WaterPrice { get; set; }
+
     public decimal? InternetPrice { get; set; }
+
     public decimal? ParkingPrice { get; set; }
 
-    // Thống kê
-    public int ViewCount { get; set; } = 0;
-    public int SaveCount { get; set; } = 0;
+    public int? ViewCount { get; set; }
 
-    // Thời hạn
-    public DateTime? AvailableFrom { get; set; }
+    public int? SaveCount { get; set; }
+
+    public DateOnly? AvailableFrom { get; set; }
+
     public DateTime? ExpiredAt { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation
-    public User Landlord { get; set; } = null!;
-    public RoomType RoomType { get; set; } = null!;
-    public ListingStatus Status { get; set; } = null!;
-    public Province? Province { get; set; }
-    public District? District { get; set; }
-    public Ward? Ward { get; set; }
-    public ICollection<ListingImage> Images { get; set; } = new List<ListingImage>();
-    public ICollection<ListingAmenity> Amenities { get; set; } = new List<ListingAmenity>();
-    public ICollection<Review> Reviews { get; set; } = new List<Review>();
-}
+    public DateTime? CreatedAt { get; set; }
 
-public class ListingImage
-{
-    public long ImageId { get; set; }
-    public long ListingId { get; set; }
-    public string ImageUrl { get; set; } = string.Empty;
-    public bool IsCover { get; set; } = false;
-    public int SortOrder { get; set; } = 0;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public Listing Listing { get; set; } = null!;
-}
+    public DateTime? UpdatedAt { get; set; }
 
-public class ListingAmenity
-{
-    public long Id { get; set; }
-    public long ListingId { get; set; }
-    public int AmenityId { get; set; }
-    public Listing Listing { get; set; } = null!;
-    public Amenity Amenity { get; set; } = null!;
-}
+    public virtual ICollection<Banner> Banners { get; set; } = new List<Banner>();
 
-public class Favorite
-{
-    public long FavoriteId { get; set; }
-    public long UserId { get; set; }
-    public long ListingId { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public User User { get; set; } = null!;
-    public Listing Listing { get; set; } = null!;
+    public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
+
+    public virtual District? District { get; set; }
+
+    public virtual ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
+
+    public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
+
+    public virtual User Landlord { get; set; } = null!;
+
+    public virtual ICollection<ListingAmenity> ListingAmenities { get; set; } = new List<ListingAmenity>();
+
+    public virtual ICollection<ListingImage> ListingImages { get; set; } = new List<ListingImage>();
+
+    public virtual ICollection<ListingPostPackage> ListingPostPackages { get; set; } = new List<ListingPostPackage>();
+
+    public virtual ICollection<ListingPriceHistory> ListingPriceHistories { get; set; } = new List<ListingPriceHistory>();
+
+    public virtual ICollection<ListingVideo> ListingVideos { get; set; } = new List<ListingVideo>();
+
+    public virtual Province? Province { get; set; }
+
+    public virtual ICollection<Report> Reports { get; set; } = new List<Report>();
+
+    public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
+
+    public virtual ListingStatus Status { get; set; } = null!;
+
+    public virtual RoomType Type { get; set; } = null!;
+
+    public virtual ICollection<ViewHistory> ViewHistories { get; set; } = new List<ViewHistory>();
+
+    public virtual Ward? Ward { get; set; }
 }

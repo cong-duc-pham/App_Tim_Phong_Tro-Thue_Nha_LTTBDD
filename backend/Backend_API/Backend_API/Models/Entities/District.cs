@@ -1,0 +1,21 @@
+﻿using System;
+using System.Collections.Generic;
+
+namespace Backend_API.Models.Entities;
+
+public partial class District
+{
+    public int DistrictId { get; set; }
+
+    public int ProvinceId { get; set; }
+
+    public string DistrictName { get; set; } = null!;
+
+    public string? DistrictCode { get; set; }
+
+    public virtual ICollection<Listing> Listings { get; set; } = new List<Listing>();
+
+    public virtual Province Province { get; set; } = null!;
+
+    public virtual ICollection<Ward> Wards { get; set; } = new List<Ward>();
+}
