@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using Backend_API.Data;
+using Backend_API.Models.Entities;
 using Backend_API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,7 +35,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // ── Database (EF Core + SQL Server)
-builder.Services.AddDbContext<AppDbContext>(options =>
+builder.Services.AddDbContext<PhongTroDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ── JWT Authentication
