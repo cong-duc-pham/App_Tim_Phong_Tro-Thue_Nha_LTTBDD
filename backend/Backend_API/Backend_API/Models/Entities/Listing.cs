@@ -59,7 +59,7 @@ public partial class Listing
 
     public string? Image5 { get; set; }
 
-    public string? StorageFolder { get; set; }
+    public string? CloudinaryFolder { get; set; }
 
     public decimal? ElectricPrice { get; set; }
 

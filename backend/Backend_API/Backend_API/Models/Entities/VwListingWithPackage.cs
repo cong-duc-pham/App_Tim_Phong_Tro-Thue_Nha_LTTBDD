@@ -21,7 +21,7 @@ public partial class VwListingWithPackage
 
     public string? CoverImage { get; set; }
 
-    public string? StorageFolder { get; set; }
+    public string? CloudinaryFolder { get; set; }
 
     public int? ViewCount { get; set; }
 

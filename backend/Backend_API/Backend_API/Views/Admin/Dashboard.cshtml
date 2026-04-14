@@ -1,0 +1,93 @@
+@model Backend_API.Models.ViewModels.Admin.AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">Tổng Users / Users Firebase</div>
+                <div class="h4 mb-0">@Model.TotalUsers / @Model.TotalFirebaseUsers</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">Tổng Listings đang active</div>
+                <div class="h4 mb-0">@Model.TotalActiveListings</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">Doanh thu tháng này</div>
+                <div class="h4 mb-0">@Model.RevenueThisMonth.ToString("N0") đ</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">FCM gửi thành công / thất bại</div>
+                <div class="h4 mb-0">@Model.FcmSentCount / @Model.FcmFailedCount</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white fw-semibold">User mới 30 ngày</div>
+            <div class="card-body">
+                <canvas id="newUsersChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white fw-semibold">Doanh thu 30 ngày</div>
+            <div class="card-body">
+                <canvas id="revenueChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Last30DayLabels));
+        const newUsersData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.NewUsers30Days));
+        const revenueData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Revenue30Days));
+
+        new Chart(document.getElementById("newUsersChart"), {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "Users mới",
+                    data: newUsersData,
+                    borderColor: "#0d6efd",
+                    backgroundColor: "rgba(13,110,253,0.15)",
+                    tension: 0.3,
+                    fill: true
+                }]
+            }
+        });
+
+        new Chart(document.getElementById("revenueChart"), {
+            type: "bar",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "Doanh thu",
+                    data: revenueData,
+                    backgroundColor: "#198754"
+                }]
+            }
+        });
+    </script>
+}

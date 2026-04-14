@@ -11,7 +11,7 @@ public partial class ReviewImage
 
     public string ImageUrl { get; set; } = null!;
 
-    public string? StoragePath { get; set; }
+    public string? CloudinaryPublicId { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 

@@ -1,0 +1,35 @@
+name: phongtro-prod
+
+services:
+  api:
+    image: phongtro-api:latest
+    container_name: phongtro-api
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Production
+      # Nếu có reverse proxy TLS phía trước, có thể set thêm ForwardedHeaders trong app
+    ports:
+      - "${API_PORT:-5000}:8080"
+    volumes:
+      # Mount Firebase service account read-only
+      - ${FIREBASE_CREDENTIAL_FILE}:/app/secrets/firebase-adminsdk.json:ro
+      # Persist ASP.NET DataProtection keys (khuyên dùng cho production)
+      - dpkeys:/root/.aspnet/DataProtection-Keys
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - phongtro-net
+
+networks:
+  phongtro-net:
+    driver: bridge
+
+volumes:
+  dpkeys:

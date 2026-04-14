@@ -1,0 +1,74 @@
+@model Backend_API.Models.ViewModels.Admin.AdminStorageViewModel
+@{
+    ViewData["Title"] = "Quản lý Cloudinary Storage";
+}
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" action="/admin/storage" class="row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label">Filter: ref_type</label>
+                <input type="text" name="ref_type" value="@Model.RefType" class="form-control" placeholder="listing / review / avatar..." />
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label">Filter: user_id</label>
+                <input type="number" name="user_id" value="@Model.UserId" class="form-control" placeholder="Nhập user id" />
+            </div>
+            <div class="col-12 col-md-4">
+                <button type="submit" class="btn btn-primary">Lọc</button>
+                <a href="/admin/storage" class="btn btn-outline-secondary">Xóa lọc</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white fw-semibold">Danh sách files</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#ID</th>
+                        <th>User</th>
+                        <th>ref_type</th>
+                        <th>Public ID</th>
+                        <th>file_size_kb</th>
+                        <th>format</th>
+                        <th>Ngày tạo</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Files.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">Không có file phù hợp.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var file in Model.Files)
+                        {
+                            <tr>
+                                <td>@file.FileId</td>
+                                <td>@file.UserName (#@file.UserId)</td>
+                                <td>@(file.RefType ?? "-")</td>
+                                <td><code>@file.PublicId</code></td>
+                                <td>@(file.FileSizeKb?.ToString() ?? "-")</td>
+                                <td>@(file.Format ?? "-")</td>
+                                <td>@(file.CreatedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                                <td class="text-end">
+                                    <form method="post" action="/admin/storage/@file.FileId/delete?ref_type=@Model.RefType&user_id=@Model.UserId">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Xóa file</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -17,7 +17,7 @@ public partial class Message
 
     public string? FileUrl { get; set; }
 
-    public string? StoragePath { get; set; }
+    public string? CloudinaryPublicId { get; set; }
 
     public bool? IsRead { get; set; }
 
