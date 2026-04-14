@@ -1,0 +1,16 @@
+**/.dockerignore
+**/.vs
+**/.vscode
+**/.idea
+**/bin
+**/obj
+**/publish
+**/.git
+**/.gitignore
+**/node_modules
+**/*.user
+**/*.suo
+**/build_output.txt
+**/errors.txt
+**/Thumbs.db
+**/.DS_Store

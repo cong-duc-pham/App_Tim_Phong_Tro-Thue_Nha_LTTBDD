@@ -1,0 +1,72 @@
+@model Backend_API.Models.ViewModels.Admin.AdminReportsViewModel
+@{
+    ViewData["Title"] = "Xử lý Báo cáo";
+}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white fw-semibold">Danh sách pending</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#ID</th>
+                        <th>Lý do</th>
+                        <th>Mô tả</th>
+                        <th>Người báo cáo</th>
+                        <th>Đối tượng</th>
+                        <th>Ngày tạo</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Reports.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">Không có báo cáo pending.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var report in Model.Reports)
+                        {
+                            <tr>
+                                <td>@report.ReportId</td>
+                                <td>@report.Reason</td>
+                                <td>@(string.IsNullOrWhiteSpace(report.Description) ? "-" : report.Description)</td>
+                                <td>@report.ReporterName</td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(report.ListingTitle))
+                                    {
+                                        <span>Tin: @report.ListingTitle</span>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(report.TargetUserName))
+                                    {
+                                        <span>User: @report.TargetUserName</span>
+                                    }
+                                    else
+                                    {
+                                        <span>-</span>
+                                    }
+                                </td>
+                                <td>@(report.CreatedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-2">
+                                        <form method="post" action="/admin/reports/@report.ReportId/resolve">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-success">Resolve</button>
+                                        </form>
+                                        <form method="post" action="/admin/reports/@report.ReportId/dismiss">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">Dismiss</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
