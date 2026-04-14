@@ -47,7 +47,7 @@ public partial class User
 
     public virtual ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
 
-    public virtual ICollection<FirebaseStorageFile> FirebaseStorageFiles { get; set; } = new List<FirebaseStorageFile>();
+    public virtual ICollection<CloudinaryFile> CloudinaryFiles { get; set; } = new List<CloudinaryFile>();
 
     public virtual ICollection<FirebaseTokenLog> FirebaseTokenLogs { get; set; } = new List<FirebaseTokenLog>();
 

@@ -9,11 +9,15 @@ public partial class ListingVideo
 
     public long ListingId { get; set; }
 
-    public string VideoUrl { get; set; } = null!;
+    public string CloudinaryUrl { get; set; } = null!;
 
-    public string? StoragePath { get; set; }
+    public string? CloudinaryPublicId { get; set; }
 
-    public string? Thumbnail { get; set; }
+    public string? ThumbnailUrl { get; set; }
+
+    public int? DurationSec { get; set; }
+
+    public int? FileSizeKb { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 

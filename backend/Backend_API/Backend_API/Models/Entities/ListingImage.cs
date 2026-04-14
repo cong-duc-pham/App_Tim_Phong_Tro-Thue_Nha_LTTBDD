@@ -9,9 +9,17 @@ public partial class ListingImage
 
     public long ListingId { get; set; }
 
-    public string ImageUrl { get; set; } = null!;
+    public string CloudinaryUrl { get; set; } = null!;
 
-    public string? StoragePath { get; set; }
+    public string? CloudinaryPublicId { get; set; }
+
+    public string? SecureUrl { get; set; }
+
+    public int? Width { get; set; }
+
+    public int? Height { get; set; }
+
+    public string? Format { get; set; }
 
     public bool? IsCover { get; set; }
 
