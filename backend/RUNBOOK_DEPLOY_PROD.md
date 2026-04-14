@@ -23,8 +23,14 @@ JwtSettings__Issuer=PhongTroAPI
 JwtSettings__Audience=PhongTroApp
 JwtSettings__ExpireHours=24
 Firebase__ProjectId=app-tim-phong-tro-thue-n-dacfe
-Firebase__StorageBucket=app-tim-phong-tro-thue-n-dacfe.appspot.com
 FIREBASE_CREDENTIALS_JSON=<full JSON content of firebase-adminsdk.json>
+Cloudinary__CloudName=<cloud-name>
+Cloudinary__ApiKey=<api-key>
+Cloudinary__ApiSecret=<api-secret>
+Cloudinary__UploadPreset=phongtro_unsigned
+Cloudinary__ListingUploadPreset=phongtro_listing_unsigned
+Cloudinary__AvatarUploadPreset=phongtro_avatar_unsigned
+Cloudinary__ChatUploadPreset=phongtro_chat_unsigned
 Swagger__Enabled=true
 Cors__AllowedOrigins__0=https://your-production-domain.com
 ```
@@ -47,8 +53,14 @@ docker run -d `
   -e JwtSettings__Audience="PhongTroApp" `
   -e JwtSettings__ExpireHours="24" `
   -e Firebase__ProjectId="app-tim-phong-tro-thue-n-dacfe" `
-  -e Firebase__StorageBucket="app-tim-phong-tro-thue-n-dacfe.appspot.com" `
   -e FIREBASE_CREDENTIALS_JSON="<service-account-json>" `
+  -e Cloudinary__CloudName="<cloud-name>" `
+  -e Cloudinary__ApiKey="<api-key>" `
+  -e Cloudinary__ApiSecret="<api-secret>" `
+  -e Cloudinary__UploadPreset="phongtro_unsigned" `
+  -e Cloudinary__ListingUploadPreset="phongtro_listing_unsigned" `
+  -e Cloudinary__AvatarUploadPreset="phongtro_avatar_unsigned" `
+  -e Cloudinary__ChatUploadPreset="phongtro_chat_unsigned" `
   -e Swagger__Enabled="true" `
   -e Cors__AllowedOrigins__0="https://your-production-domain.com" `
   phongtro-api:latest
@@ -65,7 +77,7 @@ Setup:
 ```powershell
 Set-Location .\backend
 Copy-Item .env.prod.example .env.prod
-# chỉnh giá trị thực tế trong .env.prod (DB/JWT/Firebase/CORS)
+# chỉnh giá trị thực tế trong .env.prod (DB/JWT/Firebase/Cloudinary/CORS)
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 ```
 
