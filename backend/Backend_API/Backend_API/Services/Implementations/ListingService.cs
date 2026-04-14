@@ -12,6 +12,7 @@ namespace Backend_API.Services.Implementations
 
         // StatusId cứng (tra cứu từ bảng ListingStatuses)
         private const int STATUS_ACTIVE = 1;
+        private const int STATUS_PENDING = 2;
         private const int STATUS_HIDDEN = 5;
 
         public ListingService(PhongTroDbContext context)
@@ -25,11 +26,14 @@ namespace Backend_API.Services.Implementations
         public async Task<ListingResponseDto> CreateListingAsync(long landlordId, ListingCreateDto dto)
         {
             // Tạo Listing mới
+            var hasCoverImage = !string.IsNullOrWhiteSpace(dto.Image0);
+
             var listing = new Listing
             {
                 LandlordId   = landlordId,
                 TypeId       = dto.TypeId,
-                StatusId     = STATUS_ACTIVE,
+                // Business rule: nếu chưa có ảnh cover thì để pending chờ bổ sung/duyệt
+                StatusId     = hasCoverImage ? STATUS_ACTIVE : STATUS_PENDING,
                 Title        = dto.Title,
                 Description  = dto.Description,
                 Price        = dto.Price,
