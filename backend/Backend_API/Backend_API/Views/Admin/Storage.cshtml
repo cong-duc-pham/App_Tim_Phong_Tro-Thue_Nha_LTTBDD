@@ -32,9 +32,9 @@
                         <th>#ID</th>
                         <th>User</th>
                         <th>ref_type</th>
-                        <th>Path</th>
+                        <th>Public ID</th>
                         <th>file_size_kb</th>
-                        <th>mime_type</th>
+                        <th>format</th>
                         <th>Ngày tạo</th>
                         <th class="text-end">Action</th>
                     </tr>
@@ -54,9 +54,9 @@
                                 <td>@file.FileId</td>
                                 <td>@file.UserName (#@file.UserId)</td>
                                 <td>@(file.RefType ?? "-")</td>
-                                <td><code>@file.StoragePath</code></td>
+                                <td><code>@file.PublicId</code></td>
                                 <td>@(file.FileSizeKb?.ToString() ?? "-")</td>
-                                <td>@(file.MimeType ?? "-")</td>
+                                <td>@(file.Format ?? "-")</td>
                                 <td>@(file.CreatedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
                                 <td class="text-end">
                                     <form method="post" action="/admin/storage/@file.FileId/delete?ref_type=@Model.RefType&user_id=@Model.UserId">

@@ -267,7 +267,7 @@ namespace Backend_API.Controllers.MVC
         [HttpGet("storage")]
         public async Task<IActionResult> Storage([FromQuery(Name = "ref_type")] string? refType, [FromQuery(Name = "user_id")] long? userId)
         {
-            var query = _context.FirebaseStorageFiles
+            var query = _context.CloudinaryFiles
                 .Include(x => x.User)
                 .Where(x => x.IsActive == true);
 
@@ -290,10 +290,10 @@ namespace Backend_API.Controllers.MVC
                     FileId = x.FileId,
                     UserId = x.UserId,
                     UserName = x.User.FullName,
-                    StoragePath = x.StoragePath,
-                    FileType = x.FileType,
+                    PublicId = x.PublicId,
+                    ResourceType = x.ResourceType,
                     FileSizeKb = x.FileSizeKb,
-                    MimeType = x.MimeType,
+                    Format = x.Format,
                     RefType = x.RefType,
                     RefId = x.RefId,
                     CreatedAt = x.CreatedAt
@@ -313,7 +313,7 @@ namespace Backend_API.Controllers.MVC
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteStorageFile(long id, [FromQuery(Name = "ref_type")] string? refType, [FromQuery(Name = "user_id")] long? userId)
         {
-            var file = await _context.FirebaseStorageFiles
+            var file = await _context.CloudinaryFiles
                 .FirstOrDefaultAsync(x => x.FileId == id && x.IsActive == true);
 
             if (file == null)
@@ -321,7 +321,7 @@ namespace Backend_API.Controllers.MVC
                 return NotFound();
             }
 
-            await _cloudinaryStorageHelper.DeleteFileAsync(file.StoragePath);
+            await _cloudinaryStorageHelper.DeleteFileAsync(file.PublicId);
             file.IsActive = false;
             file.DeletedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();

@@ -29,7 +29,7 @@ public partial class PhongTroDbContext : DbContext
 
     public virtual DbSet<Favorite> Favorites { get; set; }
 
-    public virtual DbSet<FirebaseStorageFile> FirebaseStorageFiles { get; set; }
+    public virtual DbSet<CloudinaryFile> CloudinaryFiles { get; set; }
 
     public virtual DbSet<FirebaseTokenLog> FirebaseTokenLogs { get; set; }
 
@@ -178,9 +178,9 @@ public partial class PhongTroDbContext : DbContext
                 .HasDefaultValue(0)
                 .HasColumnName("sort_order");
             entity.Property(e => e.StartDate).HasColumnName("start_date");
-            entity.Property(e => e.StoragePath)
+            entity.Property(e => e.CloudinaryPublicId)
                 .HasMaxLength(300)
-                .HasColumnName("storage_path");
+                .HasColumnName("cloudinary_public_id");
             entity.Property(e => e.Title)
                 .HasMaxLength(200)
                 .HasColumnName("title");
@@ -249,10 +249,16 @@ public partial class PhongTroDbContext : DbContext
                 .HasDefaultValue(0)
                 .HasColumnName("new_users_firebase");
             entity.Property(e => e.StatDate).HasColumnName("stat_date");
-            entity.Property(e => e.StorageUploadMb)
+            entity.Property(e => e.CloudinaryDeleteCount)
+                .HasDefaultValue(0)
+                .HasColumnName("cloudinary_delete_count");
+            entity.Property(e => e.CloudinaryUploadCount)
+                .HasDefaultValue(0)
+                .HasColumnName("cloudinary_upload_count");
+            entity.Property(e => e.CloudinaryUploadMb)
                 .HasDefaultValue(0m)
                 .HasColumnType("decimal(10, 2)")
-                .HasColumnName("storage_upload_mb");
+                .HasColumnName("cloudinary_upload_mb");
             entity.Property(e => e.TotalRevenue)
                 .HasDefaultValue(0m)
                 .HasColumnType("decimal(18, 0)")
@@ -304,50 +310,64 @@ public partial class PhongTroDbContext : DbContext
                 .HasConstraintName("FK__Favorites__user___3864608B");
         });
 
-        modelBuilder.Entity<FirebaseStorageFile>(entity =>
+        modelBuilder.Entity<CloudinaryFile>(entity =>
         {
-            entity.HasKey(e => e.FileId).HasName("PK__Firebase__07D884C630606A84");
+            entity.HasKey(e => e.FileId).HasName("PK__Cloudina__07D884C60275D3F7");
 
-            entity.HasIndex(e => new { e.RefType, e.RefId }, "IX_StorageFiles_Ref");
+            entity.HasIndex(e => new { e.RefType, e.RefId }, "IX_CloudinaryFiles_Ref");
 
-            entity.HasIndex(e => new { e.UserId, e.FileType }, "IX_StorageFiles_User");
+            entity.HasIndex(e => new { e.UserId, e.ResourceType }, "IX_CloudinaryFiles_User");
 
-            entity.HasIndex(e => e.StoragePath, "UQ__Firebase__C0CCF79EEDA55BA1").IsUnique();
+            entity.HasIndex(e => e.PublicId, "UQ__Cloudina__3C21A5C7D53E2919").IsUnique();
 
             entity.Property(e => e.FileId).HasColumnName("file_id");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnName("created_at");
             entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
-            entity.Property(e => e.DownloadUrl)
+            entity.Property(e => e.DeliveryUrl)
                 .HasMaxLength(500)
-                .HasColumnName("download_url");
+                .HasColumnName("delivery_url");
             entity.Property(e => e.FileSizeKb).HasColumnName("file_size_kb");
-            entity.Property(e => e.FileType)
+            entity.Property(e => e.Folder)
+                .HasMaxLength(255)
+                .HasColumnName("folder");
+            entity.Property(e => e.Format)
                 .HasMaxLength(20)
                 .IsUnicode(false)
-                .HasColumnName("file_type");
+                .HasColumnName("format");
+            entity.Property(e => e.Height).HasColumnName("height");
             entity.Property(e => e.IsActive)
                 .HasDefaultValue(true)
                 .HasColumnName("is_active");
-            entity.Property(e => e.MimeType)
-                .HasMaxLength(50)
-                .IsUnicode(false)
-                .HasColumnName("mime_type");
+            entity.Property(e => e.PublicId)
+                .HasMaxLength(300)
+                .HasColumnName("public_id");
             entity.Property(e => e.RefId).HasColumnName("ref_id");
             entity.Property(e => e.RefType)
                 .HasMaxLength(50)
                 .IsUnicode(false)
                 .HasColumnName("ref_type");
-            entity.Property(e => e.StoragePath)
-                .HasMaxLength(300)
-                .HasColumnName("storage_path");
+            entity.Property(e => e.ResourceType)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("resource_type");
+            entity.Property(e => e.SecureUrl)
+                .HasMaxLength(500)
+                .HasColumnName("secure_url");
+            entity.Property(e => e.UploadStatus)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasDefaultValue("uploaded")
+                .HasColumnName("upload_status");
             entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.Width).HasColumnName("width");
+            entity.Property(e => e.DurationSec).HasColumnName("duration_sec");
 
-            entity.HasOne(d => d.User).WithMany(p => p.FirebaseStorageFiles)
+            entity.HasOne(d => d.User).WithMany(p => p.CloudinaryFiles)
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__FirebaseS__user___245D67DE");
+                .HasConstraintName("FK__Cloudinar__user___245D67DE");
         });
 
         modelBuilder.Entity<FirebaseTokenLog>(entity =>
@@ -513,9 +533,9 @@ public partial class PhongTroDbContext : DbContext
                 .HasDefaultValue(0)
                 .HasColumnName("save_count");
             entity.Property(e => e.StatusId).HasColumnName("status_id");
-            entity.Property(e => e.StorageFolder)
+            entity.Property(e => e.CloudinaryFolder)
                 .HasMaxLength(200)
-                .HasColumnName("storage_folder");
+                .HasColumnName("cloudinary_folder");
             entity.Property(e => e.StreetAddress)
                 .HasMaxLength(300)
                 .HasColumnName("street_address");
@@ -591,19 +611,28 @@ public partial class PhongTroDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnName("created_at");
-            entity.Property(e => e.ImageUrl)
+            entity.Property(e => e.CloudinaryPublicId)
+                .HasMaxLength(300)
+                .HasColumnName("cloudinary_public_id");
+            entity.Property(e => e.CloudinaryUrl)
                 .HasMaxLength(500)
-                .HasColumnName("image_url");
+                .HasColumnName("cloudinary_url");
+            entity.Property(e => e.Format)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("format");
+            entity.Property(e => e.Height).HasColumnName("height");
             entity.Property(e => e.IsCover)
                 .HasDefaultValue(false)
                 .HasColumnName("is_cover");
             entity.Property(e => e.ListingId).HasColumnName("listing_id");
+            entity.Property(e => e.SecureUrl)
+                .HasMaxLength(500)
+                .HasColumnName("secure_url");
             entity.Property(e => e.SortOrder)
                 .HasDefaultValue(0)
                 .HasColumnName("sort_order");
-            entity.Property(e => e.StoragePath)
-                .HasMaxLength(300)
-                .HasColumnName("storage_path");
+            entity.Property(e => e.Width).HasColumnName("width");
 
             entity.HasOne(d => d.Listing).WithMany(p => p.ListingImages)
                 .HasForeignKey(d => d.ListingId)
@@ -687,16 +716,18 @@ public partial class PhongTroDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnName("created_at");
-            entity.Property(e => e.ListingId).HasColumnName("listing_id");
-            entity.Property(e => e.StoragePath)
+            entity.Property(e => e.CloudinaryPublicId)
                 .HasMaxLength(300)
-                .HasColumnName("storage_path");
-            entity.Property(e => e.Thumbnail)
+                .HasColumnName("cloudinary_public_id");
+            entity.Property(e => e.CloudinaryUrl)
                 .HasMaxLength(500)
-                .HasColumnName("thumbnail");
-            entity.Property(e => e.VideoUrl)
+                .HasColumnName("cloudinary_url");
+            entity.Property(e => e.DurationSec).HasColumnName("duration_sec");
+            entity.Property(e => e.FileSizeKb).HasColumnName("file_size_kb");
+            entity.Property(e => e.ListingId).HasColumnName("listing_id");
+            entity.Property(e => e.ThumbnailUrl)
                 .HasMaxLength(500)
-                .HasColumnName("video_url");
+                .HasColumnName("thumbnail_url");
 
             entity.HasOne(d => d.Listing).WithMany(p => p.ListingVideos)
                 .HasForeignKey(d => d.ListingId)
@@ -731,9 +762,9 @@ public partial class PhongTroDbContext : DbContext
             entity.Property(e => e.SentAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnName("sent_at");
-            entity.Property(e => e.StoragePath)
+            entity.Property(e => e.CloudinaryPublicId)
                 .HasMaxLength(300)
-                .HasColumnName("storage_path");
+                .HasColumnName("cloudinary_public_id");
 
             entity.HasOne(d => d.Conv).WithMany(p => p.Messages)
                 .HasForeignKey(d => d.ConvId)
@@ -1038,9 +1069,9 @@ public partial class PhongTroDbContext : DbContext
                 .HasMaxLength(500)
                 .HasColumnName("image_url");
             entity.Property(e => e.ReviewId).HasColumnName("review_id");
-            entity.Property(e => e.StoragePath)
+            entity.Property(e => e.CloudinaryPublicId)
                 .HasMaxLength(300)
-                .HasColumnName("storage_path");
+                .HasColumnName("cloudinary_public_id");
 
             entity.HasOne(d => d.Review).WithMany(p => p.ReviewImages)
                 .HasForeignKey(d => d.ReviewId)
@@ -1393,9 +1424,9 @@ public partial class PhongTroDbContext : DbContext
                 .HasMaxLength(30)
                 .IsUnicode(false)
                 .HasColumnName("status_name");
-            entity.Property(e => e.StorageFolder)
+            entity.Property(e => e.CloudinaryFolder)
                 .HasMaxLength(200)
-                .HasColumnName("storage_folder");
+                .HasColumnName("cloudinary_folder");
             entity.Property(e => e.StreetAddress)
                 .HasMaxLength(300)
                 .HasColumnName("street_address");

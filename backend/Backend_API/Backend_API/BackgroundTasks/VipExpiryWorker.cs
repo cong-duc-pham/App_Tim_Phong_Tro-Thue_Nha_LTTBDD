@@ -160,13 +160,13 @@ namespace Backend_API.BackgroundTasks
             _logger.LogInformation("VipExpiryWorker Task2: sent {Count} warning notification(s).", expiringPackages.Count);
         }
 
-        // Task 3: Dọn file Firebase Storage mồ côi
+        // Task 3: Dọn file Cloudinary mồ côi
         private async Task CleanupOrphanStorageFilesAsync(
             PhongTroDbContext context,
             CloudinaryStorageHelper storageHelper,
             CancellationToken ct)
         {
-            var orphans = new List<(long FileId, string StoragePath)>();
+            var orphans = new List<(long FileId, string PublicId)>();
             var conn = context.Database.GetDbConnection();
             var shouldClose = false;
             if (conn.State != System.Data.ConnectionState.Open)
@@ -176,22 +176,22 @@ namespace Backend_API.BackgroundTasks
             }
 
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "EXEC sp_GetOrphanStorageFiles";
+            cmd.CommandText = "EXEC sp_GetOrphanCloudinaryFiles";
             await using var reader = await cmd.ExecuteReaderAsync(ct);
 
             var fileIdOrdinal = TryGetOrdinal(reader, "file_id")
                 ?? TryGetOrdinal(reader, "FileId")
-                ?? throw new Exception("sp_GetOrphanStorageFiles thiếu cột file_id/FileId.");
+                ?? throw new Exception("sp_GetOrphanCloudinaryFiles thiếu cột file_id/FileId.");
 
-            var storagePathOrdinal = TryGetOrdinal(reader, "storage_path")
-                ?? TryGetOrdinal(reader, "StoragePath")
-                ?? throw new Exception("sp_GetOrphanStorageFiles thiếu cột storage_path/StoragePath.");
+            var publicIdOrdinal = TryGetOrdinal(reader, "public_id")
+                ?? TryGetOrdinal(reader, "PublicId")
+                ?? throw new Exception("sp_GetOrphanCloudinaryFiles thiếu cột public_id/PublicId.");
 
             while (await reader.ReadAsync(ct))
             {
                 var fileId = reader.GetInt64(fileIdOrdinal);
-                var storagePath = reader.GetString(storagePathOrdinal);
-                orphans.Add((fileId, storagePath));
+                var publicId = reader.GetString(publicIdOrdinal);
+                orphans.Add((fileId, publicId));
             }
 
             if (shouldClose)
@@ -201,14 +201,14 @@ namespace Backend_API.BackgroundTasks
 
             foreach (var item in orphans)
             {
-                await storageHelper.DeleteFileAsync(item.StoragePath);
+                await storageHelper.DeleteFileAsync(item.PublicId);
 
-                var record = await context.FirebaseStorageFiles
+                var record = await context.CloudinaryFiles
                     .FirstOrDefaultAsync(f => f.FileId == item.FileId, ct);
 
                 if (record != null)
                 {
-                    context.FirebaseStorageFiles.Remove(record);
+                    context.CloudinaryFiles.Remove(record);
                 }
             }
 

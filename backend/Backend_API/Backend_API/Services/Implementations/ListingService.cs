@@ -49,7 +49,7 @@ namespace Backend_API.Services.Implementations
                 Image3       = dto.Image3,
                 Image4       = dto.Image4,
                 Image5       = dto.Image5,
-                StorageFolder = dto.StorageFolder,
+                CloudinaryFolder = dto.CloudinaryFolder,
                 ElectricPrice = dto.ElectricPrice,
                 WaterPrice   = dto.WaterPrice,
                 InternetPrice = dto.InternetPrice,
@@ -79,22 +79,29 @@ namespace Backend_API.Services.Implementations
                 await _context.ListingAmenities.AddRangeAsync(amenities);
             }
 
-            // Ghi nhận các Firebase Storage files (ref_type='listing')
-            var imageUrls = new[] { dto.Image0, dto.Image1, dto.Image2, dto.Image3, dto.Image4, dto.Image5 }
+            // Ghi nhận các Cloudinary files (ref_type='listing')
+            var imageFiles = new[] { dto.Image0, dto.Image1, dto.Image2, dto.Image3, dto.Image4, dto.Image5 }
                             .Where(url => !string.IsNullOrEmpty(url))
-                            .Select(url => new FirebaseStorageFile
+                            .Select(url =>
                             {
-                                UserId      = landlordId,
-                                StoragePath = ExtractStoragePath(url!),
-                                DownloadUrl = url!,
-                                FileType    = "image",
-                                MimeType    = "image/jpeg",
-                                RefType     = "listing",
-                                RefId       = listing.ListingId,
-                                IsActive    = true,
-                                CreatedAt   = DateTime.UtcNow
+                                var publicId = ExtractPublicIdFromCloudinaryUrl(url!);
+                                return new CloudinaryFile
+                                {
+                                    UserId = landlordId,
+                                    PublicId = publicId,
+                                    SecureUrl = url!,
+                                    DeliveryUrl = url!,
+                                    ResourceType = "image",
+                                    Format = GetFormatFromUrl(url!),
+                                    Folder = GetFolderFromPublicId(publicId),
+                                    RefType = "listing",
+                                    RefId = listing.ListingId,
+                                    IsActive = true,
+                                    UploadStatus = "uploaded",
+                                    CreatedAt = DateTime.UtcNow
+                                };
                             });
-            await _context.FirebaseStorageFiles.AddRangeAsync(imageUrls);
+            await _context.CloudinaryFiles.AddRangeAsync(imageFiles);
 
             await _context.SaveChangesAsync();
 
@@ -172,7 +179,7 @@ namespace Backend_API.Services.Implementations
             listing.UpdatedAt = DateTime.UtcNow;
 
             // Đánh dấu toàn bộ file ảnh là inactive → Background Job sẽ xóa sau 24h
-            var files = await _context.FirebaseStorageFiles
+            var files = await _context.CloudinaryFiles
                 .Where(f => f.RefType == "listing" && f.RefId == listingId && f.IsActive == true)
                 .ToListAsync();
 
@@ -437,24 +444,53 @@ namespace Backend_API.Services.Implementations
             };
         }
 
-        /// <summary>
-        /// Trích xuất storage path từ Firebase download URL.
-        /// URL dạng: ...firebasestorage.../o/listings%2Fimg.jpg?alt=media
-        /// </summary>
-        private static string ExtractStoragePath(string downloadUrl)
+        private static string ExtractPublicIdFromCloudinaryUrl(string url)
         {
             try
             {
-                var uri   = new Uri(downloadUrl);
-                var parts = uri.AbsolutePath.Split("/o/");
-                return parts.Length > 1
-                    ? Uri.UnescapeDataString(parts[1].Split('?')[0])
-                    : downloadUrl;
+                var uri = new Uri(url);
+                var path = uri.AbsolutePath.Trim('/');
+                var uploadMarker = "/upload/";
+                var idx = path.IndexOf(uploadMarker, StringComparison.OrdinalIgnoreCase);
+                if (idx >= 0)
+                {
+                    var rest = path[(idx + uploadMarker.Length)..];
+                    if (rest.StartsWith("v") && rest.Contains('/'))
+                    {
+                        var firstSlash = rest.IndexOf('/');
+                        var versionPart = rest[..firstSlash];
+                        if (versionPart.Length > 1 && int.TryParse(versionPart[1..], out _))
+                        {
+                            rest = rest[(firstSlash + 1)..];
+                        }
+                    }
+
+                    var dotIndex = rest.LastIndexOf('.');
+                    return dotIndex > 0 ? rest[..dotIndex] : rest;
+                }
             }
             catch
             {
-                return downloadUrl;
+                // ignore
             }
+
+            return url;
+        }
+
+        private static string? GetFolderFromPublicId(string publicId)
+        {
+            var slash = publicId.LastIndexOf('/');
+            return slash > 0 ? publicId[..slash] : null;
+        }
+
+        private static string? GetFormatFromUrl(string url)
+        {
+            var dot = url.LastIndexOf('.');
+            if (dot < 0 || dot == url.Length - 1) return null;
+            var ext = url[(dot + 1)..];
+            var q = ext.IndexOf('?');
+            if (q >= 0) ext = ext[..q];
+            return ext.ToLowerInvariant();
         }
     }
 }
