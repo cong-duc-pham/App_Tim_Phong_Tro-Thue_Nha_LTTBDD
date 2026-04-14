@@ -25,7 +25,11 @@ public partial class DailyStat
 
     public int? FcmFailedCount { get; set; }
 
-    public decimal? StorageUploadMb { get; set; }
+    public int? CloudinaryUploadCount { get; set; }
+
+    public decimal? CloudinaryUploadMb { get; set; }
+
+    public int? CloudinaryDeleteCount { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 }

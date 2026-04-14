@@ -1,0 +1,74 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isImage() {
+      return request.resource != null
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    function isMax10Mb() {
+      return request.resource != null
+        && request.resource.size <= 10 * 1024 * 1024;
+    }
+
+    // ================================================================
+    // PHASE 9.2 - SECURITY BASELINE
+    // 1) Chỉ user đã login mới upload
+    // 2) Upload đúng folder của chính mình (uid trong path)
+    // 3) Giới hạn dung lượng file <= 10MB
+    // ================================================================
+
+    // Avatar: users/{uid}/avatars/{file}
+    match /users/{uid}/avatars/{allPaths=**} {
+      allow read: if true;
+      allow write: if isSignedIn()
+                    && request.auth.uid == uid
+                    && isImage()
+                    && isMax10Mb();
+    }
+
+    // Listing images: users/{uid}/listings/{listingId}/{file}
+    match /users/{uid}/listings/{listingId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isSignedIn()
+                    && request.auth.uid == uid
+                    && isImage()
+                    && isMax10Mb();
+    }
+
+    // Chat attachments: users/{uid}/chat/{conversationId}/{file}
+    match /users/{uid}/chat/{conversationId}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn()
+                    && request.auth.uid == uid
+                    && isMax10Mb();
+    }
+
+    // Legacy paths (migration): read-only để tránh ghi sai cấu trúc mới
+    match /listings/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /avatars/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /chat/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Deny-by-default cho toàn bộ path khác
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
