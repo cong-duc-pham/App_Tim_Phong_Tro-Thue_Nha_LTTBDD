@@ -1,0 +1,377 @@
+{
+  "info": {
+    "_postman_id": "2d09f3ad-dc61-41b0-9225-d9c2f2a0d89f",
+    "name": "PhongTro API - Phase 9",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Regression collection for Auth, Listing, Chat, Payment flows."
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.environment.get('runSuffix')) {",
+          "  pm.environment.set('runSuffix', Date.now().toString());",
+          "}",
+          "if (!pm.environment.get('registerEmail')) {",
+          "  pm.environment.set('registerEmail', `phase9_${pm.environment.get('runSuffix')}@example.com`);",
+          "}",
+          "if (!pm.environment.get('registerPhone')) {",
+          "  const suffix = pm.environment.get('runSuffix').slice(-8);",
+          "  pm.environment.set('registerPhone', `09${suffix}`);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Phase9 Tester\",\n  \"email\": \"{{registerEmail}}\",\n  \"phone\": \"{{registerPhone}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/register"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(true);",
+                  "pm.environment.set('accessToken', res.data.accessToken);",
+                  "pm.environment.set('refreshToken', res.data.refreshToken);",
+                  "pm.environment.set('userId', res.data.userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{registerEmail}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(true);",
+                  "pm.environment.set('accessToken', res.data.accessToken);",
+                  "pm.environment.set('refreshToken', res.data.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/refresh-token"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(true);",
+                  "pm.environment.set('accessToken', res.data.accessToken);",
+                  "pm.environment.set('refreshToken', res.data.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Firebase Login (manual token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firebaseToken\": \"{{firebaseToken}}\",\n  \"deviceToken\": \"{{deviceToken}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/firebase-login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Listing",
+      "item": [
+        {
+          "name": "Get Listings",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/listings"
+          }
+        },
+        {
+          "name": "Create Listing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Tin test phase 9\",\n  \"description\": \"Listing for API regression\",\n  \"price\": 2500000,\n  \"area\": 20,\n  \"typeId\": 1,\n  \"provinceId\": 1,\n  \"districtId\": 1,\n  \"wardId\": 1,\n  \"streetAddress\": \"123 Test Street\",\n  \"amenityIds\": [1]\n}"
+            },
+            "url": "{{baseUrl}}/api/listings"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(201);",
+                  "const res = pm.response.json();",
+                  "pm.expect(res.success).to.eql(true);",
+                  "pm.environment.set('listingId', res.data.listingId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Listing Signed Upload URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileName\": \"cover.jpg\",\n  \"contentType\": \"image/jpeg\",\n  \"uploadType\": \"cover\",\n  \"expiresInMinutes\": 15\n}"
+            },
+            "url": "{{baseUrl}}/api/storage/listings/{{listingId}}/signed-upload-url"
+          }
+        },
+        {
+          "name": "Search Listings",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/listings?keyword=test&minPrice=1000000&maxPrice=5000000&page=1&pageSize=10"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Chat",
+      "item": [
+        {
+          "name": "Get Conversations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/conversations"
+          }
+        },
+        {
+          "name": "Create Conversation (manual landlord)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listingId\": {{listingId}},\n  \"landlordId\": {{landlordId}}\n}"
+            },
+            "url": "{{baseUrl}}/api/conversations"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const res = pm.response.json();",
+                  "  if (res.success && res.data && res.data.convId) {",
+                  "    pm.environment.set('conversationId', res.data.convId);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/conversations/{{conversationId}}/messages?page=1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Payment",
+      "item": [
+        {
+          "name": "Get Packages",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/packages"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const res = pm.response.json();",
+                  "  if (res.success && Array.isArray(res.data) && res.data.length > 0) {",
+                  "    pm.environment.set('packageId', res.data[0].packageId);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Purchase Package",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listingId\": {{listingId}},\n  \"packageId\": {{packageId}}\n}"
+            },
+            "url": "{{baseUrl}}/api/packages/purchase"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const res = pm.response.json();",
+                  "  if (res.success && res.data && res.data.invoiceCode) {",
+                  "    pm.environment.set('invoiceCode', res.data.invoiceCode);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My Invoices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/packages/my-invoices"
+          }
+        },
+        {
+          "name": "Payment Callback (MoMo simulation)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/payment/momo/callback?transactionRef={{invoiceCode}}"
+          }
+        }
+      ]
+    }
+  ]
+}
