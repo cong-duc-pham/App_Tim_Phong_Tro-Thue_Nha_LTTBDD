@@ -345,7 +345,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () {}),
                   const SizedBox(width: 10),
                   GestureDetector(
-                    onTap: () => context.go(AppConstants.routeLogin),
+                    onTap: () => context.go(AppConstants.routeProfile),
                     child: Container(
                       width: 36,
                       height: 36,
@@ -1139,7 +1139,7 @@ class _HomeScreenState extends State<HomeScreen> {
             active: _navIndex == 4,
             onTap: () {
               setState(() => _navIndex = 4);
-              context.go(AppConstants.routeLogin);
+              context.go(AppConstants.routeProfile);
             },
           ),
         ],
