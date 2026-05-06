@@ -2,10 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../features/onboarding/screens/splash_screen.dart';
-import '../../features/onboarding/screens/onboarding_screen.dart';
-import '../../features/home/screens/home_screen.dart';
-import '../../features/listing/screens/listing_screens.dart';
+import '../../screens/onboarding/splash_screen.dart';
+import '../../screens/onboarding/onboarding_screen.dart';
+import '../../screens/home/home_screen.dart';
+import '../../screens/listing/listing_create_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 
 final appRouter = GoRouter(
