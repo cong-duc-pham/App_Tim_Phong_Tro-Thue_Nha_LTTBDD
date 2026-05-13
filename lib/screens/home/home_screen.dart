@@ -1,4 +1,4 @@
-﻿// lib/screens/home/home_screen.dart
+// lib/screens/home/home_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -1106,7 +1106,10 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icons.favorite_border_rounded,
               label: 'Yêu thích',
               active: _navIndex == 1,
-              onTap: () => setState(() => _navIndex = 1)),
+              onTap: () {
+                setState(() => _navIndex = 1);
+                context.go(AppConstants.routeFavorites);
+              }),
           Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
