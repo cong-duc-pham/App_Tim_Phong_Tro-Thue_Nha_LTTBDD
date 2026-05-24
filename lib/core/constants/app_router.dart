@@ -8,6 +8,8 @@ import '../../screens/home/home_screen.dart';
 import '../../screens/listing/listing_create_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/profile/favorites_screen.dart';
+import '../../screens/auth/login_screen.dart';
+import '../../screens/auth/register_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -17,8 +19,8 @@ final appRouter = GoRouter(
     GoRoute(path: '/home',       builder: (_, __) => const HomeScreen()),
     GoRoute(path: '/listing',    builder: (_, __) => const PostListingScreen()),
     GoRoute(path: '/profile',    builder: (_, __) => const ProfileScreen()),
-    GoRoute(path: '/login',      builder: (_, __) => const _PlaceholderScreen(title: 'Đăng nhập')),
-    GoRoute(path: '/register',   builder: (_, __) => const _PlaceholderScreen(title: 'Đăng ký')),
+    GoRoute(path: '/login',      builder: (_, __) => const LoginScreen()),
+    GoRoute(path: '/register',   builder: (_, __) => const RegisterScreen()),
     GoRoute(path: '/favorites',  builder: (_, __) => const FavoritesScreen()),
     GoRoute(path: '/chat',       builder: (_, __) => const _PlaceholderScreen(title: 'Tin nhắn')),
   ],
