@@ -1,5 +1,6 @@
 // lib/repositories/auth_repository.dart
 
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -17,7 +18,7 @@ class AuthRepository {
 
   User? get currentUser => _auth.currentUser;
 
-  /// Đăng nhập bằng email + password
+  /// Dang nhap bang email + password.
   Future<UserCredential> signInWithEmailAndPassword({
     required String email,
     required String password,
@@ -28,7 +29,7 @@ class AuthRepository {
     );
   }
 
-  /// Đăng ký tài khoản mới
+  /// Dang ky tai khoan moi.
   Future<UserCredential> createUserWithEmailAndPassword({
     required String fullName,
     required String email,
@@ -40,29 +41,32 @@ class AuthRepository {
       password: password,
     );
 
-    // Cập nhật tên hiển thị
-    await credential.user?.updateDisplayName(fullName);
-
-    // Lưu thông tin người dùng vào Firestore
-    await _firestore.collection('users').doc(credential.user!.uid).set({
-      'uid': credential.user!.uid,
-      'fullName': fullName,
-      'email': email.trim(),
-      'phone': phone.trim(),
-      'role': 'tenant', // Người thuê mặc định
-      'createdAt': FieldValue.serverTimestamp(),
-      'avatar': null,
-    });
+    // The Auth user has already been created. If profile sync fails,
+    // registration should still be treated as successful.
+    try {
+      await credential.user?.updateDisplayName(fullName);
+      await _firestore.collection('users').doc(credential.user!.uid).set({
+        'uid': credential.user!.uid,
+        'fullName': fullName.trim(),
+        'email': email.trim(),
+        'phone': phone.trim(),
+        'role': 'tenant',
+        'createdAt': FieldValue.serverTimestamp(),
+        'avatar': null,
+      }, SetOptions(merge: true));
+    } on FirebaseException catch (e) {
+      debugPrint('Firebase profile sync failed: ${e.code} - ${e.message}');
+    }
 
     return credential;
   }
 
-  /// Đăng xuất
+  /// Dang xuat.
   Future<void> signOut() async {
     await _auth.signOut();
   }
 
-  /// Gửi email đặt lại mật khẩu
+  /// Gui email dat lai mat khau.
   Future<void> sendPasswordResetEmail(String email) async {
     await _auth.sendPasswordResetEmail(email: email.trim());
   }
