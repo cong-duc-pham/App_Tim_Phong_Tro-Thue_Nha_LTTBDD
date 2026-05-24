@@ -236,7 +236,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'v1.0.0',
                   style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                 ),
-                onTap: () {},
+                onTap: () => context.push(AppConstants.routeAbout),
               ),
             ],
           )),
