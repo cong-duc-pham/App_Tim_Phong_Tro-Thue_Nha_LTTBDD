@@ -102,11 +102,12 @@ namespace Backend_API.Services.Implementations
         public async Task<LoginResponseDto> LoginWithFirebaseAsync(string firebaseToken)
         {
             // 1. Xác thực Firebase Token
-            var (uid, email, name, picture) = await _firebaseHelper.VerifyIdToken(firebaseToken);
+            var (uid, email, name, picture, provider) = await _firebaseHelper.VerifyIdToken(firebaseToken);
             
             // Theo như yêu cầu: gọi SP upsert
             // Đối số của SP thường theo thứ tự: uid, email, name, picture
-            await _context.Database.ExecuteSqlInterpolatedAsync($"EXEC sp_UpsertFirebaseUser {uid}, {email}, {name}, {picture}");
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"EXEC sp_UpsertFirebaseUser {uid}, {email}, {name}, {picture}, {provider}, {uid}, {firebaseToken}");
 
             // Load lại User vừa Upsert xong
             var user = await _context.Users

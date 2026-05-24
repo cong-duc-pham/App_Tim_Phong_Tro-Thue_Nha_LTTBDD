@@ -88,8 +88,18 @@ class _RegisterScreenState extends State<RegisterScreen>
         backgroundColor: AppColors.bgPage,
         body: BlocListener<AuthBloc, AuthState>(
           listener: (context, state) {
-            if (state is AuthAuthenticated) {
-              context.go(AppConstants.routeHome);
+            if (state is AuthRegisterSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Đăng ký thành công. Vui lòng đăng nhập.'),
+                  backgroundColor: AppColors.success,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                  ),
+                ),
+              );
+              context.go(AppConstants.routeLogin);
             } else if (state is AuthFailure) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
