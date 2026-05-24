@@ -20,7 +20,7 @@ namespace Backend_API.Helpers
             }
         }
 
-        public async Task<(string uid, string email, string name, string picture)> VerifyIdToken(string firebaseToken)
+        public async Task<(string uid, string email, string name, string picture, string provider)> VerifyIdToken(string firebaseToken)
         {
             if (string.IsNullOrEmpty(firebaseToken))
                 throw new ArgumentException("Token rỗng", nameof(firebaseToken));
@@ -44,7 +44,15 @@ namespace Backend_API.Helpers
             decodedToken.Claims.TryGetValue("picture", out object? picObj);
             string picture = picObj?.ToString() ?? string.Empty;
 
-            return (uid, email, name, picture);
+            string provider = "password";
+            if (decodedToken.Claims.TryGetValue("firebase", out object? firebaseObj)
+                && firebaseObj is IReadOnlyDictionary<string, object> firebaseClaims
+                && firebaseClaims.TryGetValue("sign_in_provider", out object? providerObj))
+            {
+                provider = providerObj?.ToString() ?? provider;
+            }
+
+            return (uid, email, name, picture, provider);
         }
     }
 }

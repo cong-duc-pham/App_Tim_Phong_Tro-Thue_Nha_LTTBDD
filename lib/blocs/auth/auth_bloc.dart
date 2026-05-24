@@ -2,6 +2,7 @@
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../repositories/auth_repository.dart';
 
@@ -36,6 +37,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       ));
     } on FirebaseAuthException catch (e) {
       emit(AuthFailure(message: _mapFirebaseError(e.code)));
+    } on FirebaseException catch (e) {
+      emit(AuthFailure(message: _mapFirebaseServiceError(e)));
     } catch (_) {
       emit(const AuthFailure(message: 'Đã xảy ra lỗi. Vui lòng thử lại.'));
     }
@@ -47,18 +50,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(const AuthLoading());
     try {
-      final credential = await _authRepository.createUserWithEmailAndPassword(
+      await _authRepository.createUserWithEmailAndPassword(
         fullName: event.fullName,
         email: event.email,
         password: event.password,
         phone: event.phone,
       );
-      emit(AuthAuthenticated(
-        userId: credential.user!.uid,
-        email: credential.user!.email ?? '',
-      ));
+      await _authRepository.signOut();
+      emit(const AuthRegisterSuccess());
     } on FirebaseAuthException catch (e) {
       emit(AuthFailure(message: _mapFirebaseError(e.code)));
+    } on FirebaseException catch (e) {
+      emit(AuthFailure(message: _mapFirebaseServiceError(e)));
     } catch (_) {
       emit(const AuthFailure(message: 'Đã xảy ra lỗi. Vui lòng thử lại.'));
     }
@@ -104,6 +107,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         return 'Lỗi kết nối mạng. Kiểm tra internet của bạn.';
       default:
         return 'Đã xảy ra lỗi. Vui lòng thử lại.';
+    }
+  }
+
+  String _mapFirebaseServiceError(FirebaseException e) {
+    switch (e.code) {
+      case 'permission-denied':
+        return 'Không có quyền ghi dữ liệu. Kiểm tra Firestore Rules.';
+      case 'unavailable':
+        return 'Dịch vụ Firebase tạm thời không khả dụng. Vui lòng thử lại.';
+      case 'not-found':
+        return 'Chưa tìm thấy cấu hình/dữ liệu Firebase cần thiết.';
+      default:
+        return e.message ?? 'Lỗi Firebase (${e.code}). Vui lòng thử lại.';
     }
   }
 }
