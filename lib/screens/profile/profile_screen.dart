@@ -1,6 +1,8 @@
 // lib/screens/profile/profile_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
@@ -57,11 +59,81 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _user = _mockUser;
-  bool _isLoggedIn = true; // thay bằng auth state thật
+  late _UserInfo _user;
+  bool _isLoggedIn = false;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUser();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) {
+      if (!mounted) return;
+      setState(() {
+        _isLoggedIn = false;
+        _isLoading = false;
+      });
+      return;
+    }
+
+    final fallbackName = firebaseUser.displayName?.trim().isNotEmpty == true
+        ? firebaseUser.displayName!.trim()
+        : (firebaseUser.email?.split('@').first ?? 'Người dùng');
+
+    var userInfo = _UserInfo(
+      fullName: fallbackName,
+      email: firebaseUser.email ?? '',
+      phone: firebaseUser.phoneNumber ?? '',
+      role: 'tenant',
+      isVerified: firebaseUser.emailVerified,
+      avatarUrl: firebaseUser.photoURL,
+      createdAt: firebaseUser.metadata.creationTime ?? DateTime.now(),
+    );
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .get();
+      final data = doc.data();
+      if (data != null) {
+        final createdAt = data['createdAt'];
+        userInfo = _UserInfo(
+          fullName: (data['fullName'] as String?)?.trim().isNotEmpty == true
+              ? (data['fullName'] as String).trim()
+              : fallbackName,
+          email: (data['email'] as String?) ?? firebaseUser.email ?? '',
+          phone: (data['phone'] as String?) ?? firebaseUser.phoneNumber ?? '',
+          role: (data['role'] as String?) ?? 'tenant',
+          isVerified: (data['isVerified'] as bool?) ?? firebaseUser.emailVerified,
+          avatarUrl: (data['avatar'] as String?) ?? firebaseUser.photoURL,
+          createdAt: createdAt is Timestamp
+              ? createdAt.toDate()
+              : firebaseUser.metadata.creationTime ?? DateTime.now(),
+          favoritesCount: (data['favoritesCount'] as num?)?.toInt() ?? 0,
+          listingsCount: (data['listingsCount'] as num?)?.toInt() ?? 0,
+          reviewsCount: (data['reviewsCount'] as num?)?.toInt() ?? 0,
+        );
+      }
+    } catch (_) {
+      // Giữ dữ liệu từ Firebase Auth nếu Firestore chưa sẵn sàng.
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _user = userInfo;
+      _isLoggedIn = true;
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) return _buildLoading();
     if (!_isLoggedIn) return _buildNotLoggedIn();
 
     return Scaffold(
@@ -513,6 +585,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ── Not logged in state ───────────────────────────────────────────────────
 
+  Widget _buildLoading() {
+    return const Scaffold(
+      backgroundColor: AppColors.bgPage,
+      body: Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+  }
+
   Widget _buildNotLoggedIn() {
     return Scaffold(
       backgroundColor: AppColors.bgPage,
@@ -615,9 +696,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: const Text('Hủy'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
+              await FirebaseAuth.instance.signOut();
+              if (!mounted) return;
               setState(() => _isLoggedIn = false);
+              context.go(AppConstants.routeLogin);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
