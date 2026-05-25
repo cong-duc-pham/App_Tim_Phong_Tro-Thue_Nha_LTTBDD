@@ -1,10 +1,10 @@
-// lib/features/onboarding/screens/splash_screen.dart
+﻿// lib/screens/onboarding/splash_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_constants.dart';
-import '../../../core/constants/app_text_styles.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_constants.dart';
+import '../../core/constants/app_text_styles.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
