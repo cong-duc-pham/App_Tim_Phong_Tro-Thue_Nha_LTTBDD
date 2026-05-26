@@ -16,6 +16,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       : _authRepository = authRepository,
         super(const AuthInitial()) {
     on<AuthLoginRequested>(_onLoginRequested);
+    on<AuthGoogleLoginRequested>(_onGoogleLoginRequested);
+    on<AuthFacebookLoginRequested>(_onFacebookLoginRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthCheckRequested>(_onCheckRequested);
@@ -41,6 +43,48 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthFailure(message: _mapFirebaseServiceError(e)));
     } catch (_) {
       emit(const AuthFailure(message: 'Đã xảy ra lỗi. Vui lòng thử lại.'));
+    }
+  }
+
+  Future<void> _onGoogleLoginRequested(
+    AuthGoogleLoginRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    await _signInWithSocialProvider(
+      emit,
+      () => _authRepository.signInWithGoogle(),
+    );
+  }
+
+  Future<void> _onFacebookLoginRequested(
+    AuthFacebookLoginRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    await _signInWithSocialProvider(
+      emit,
+      () => _authRepository.signInWithFacebook(),
+    );
+  }
+
+  Future<void> _signInWithSocialProvider(
+    Emitter<AuthState> emit,
+    Future<UserCredential> Function() signIn,
+  ) async {
+    emit(const AuthLoading());
+    try {
+      final credential = await signIn();
+      emit(AuthAuthenticated(
+        userId: credential.user!.uid,
+        email: credential.user!.email ?? '',
+      ));
+    } on FirebaseAuthException catch (e) {
+      // Surface provider setup errors while wiring social login.
+      // These usually happen before the app reaches its own backend.
+      emit(AuthFailure(message: _mapFirebaseAuthException(e)));
+    } on FirebaseException catch (e) {
+      emit(AuthFailure(message: _mapFirebaseServiceError(e)));
+    } catch (_) {
+      emit(const AuthFailure(message: 'ÄÃ£ xáº£y ra lá»—i. Vui lÃ²ng thá»­ láº¡i.'));
     }
   }
 
@@ -105,8 +149,38 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         return 'Quá nhiều lần thử. Vui lòng thử lại sau.';
       case 'network-request-failed':
         return 'Lỗi kết nối mạng. Kiểm tra internet của bạn.';
+      case 'social-login-cancelled':
+        return 'Ban da huy dang nhap.';
+      case 'social-login-failed':
+        return 'Khong the dang nhap bang tai khoan xa hoi.';
+      case 'google-login-failed':
+        return 'Khong the dang nhap bang Google.';
+      case 'google-missing-id-token':
+        return 'Google Sign-In chua duoc cau hinh day du tren Firebase.';
+      case 'operation-not-allowed':
+        return 'Phuong thuc dang nhap nay chua duoc bat trong Firebase Authentication.';
+      case 'invalid-credential':
+        return 'Thong tin dang nhap khong hop le hoac provider chua duoc cau hinh dung.';
+      case 'configuration-not-found':
+        return 'Chua tim thay cau hinh dang nhap cho ung dung nay tren Firebase.';
+      case 'account-exists-with-different-credential':
+        return 'Email nay da duoc dang ky bang phuong thuc khac.';
       default:
         return 'Đã xảy ra lỗi. Vui lòng thử lại.';
+    }
+  }
+
+  String _mapFirebaseAuthException(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'social-login-failed':
+      case 'google-login-failed':
+      case 'google-missing-id-token':
+      case 'operation-not-allowed':
+      case 'invalid-credential':
+      case 'configuration-not-found':
+        return e.message ?? _mapFirebaseError(e.code);
+      default:
+        return _mapFirebaseError(e.code);
     }
   }
 
