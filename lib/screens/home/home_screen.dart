@@ -1135,7 +1135,10 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icons.chat_bubble_outline_rounded,
               label: 'Tin nhắn',
               active: _navIndex == 3,
-              onTap: () => setState(() => _navIndex = 3)),
+              onTap: () {
+                setState(() => _navIndex = 3);
+                context.go(AppConstants.routeChat);
+              }),
           _NavItem(
             icon: Icons.person_outline_rounded,
             label: 'Cá nhân',
