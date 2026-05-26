@@ -1,6 +1,5 @@
 // lib/core/constants/app_router.dart
 
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../screens/onboarding/splash_screen.dart';
 import '../../screens/onboarding/onboarding_screen.dart';
@@ -12,6 +11,9 @@ import '../../screens/profile/about_app_screen.dart';
 import '../../screens/profile/report_issue_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
+import '../../models/conversation.dart';
+import '../../screens/chat/conversations_screen.dart';
+import '../../screens/chat/chat_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -26,23 +28,13 @@ final appRouter = GoRouter(
     GoRoute(path: '/favorites',  builder: (_, __) => const FavoritesScreen()),
     GoRoute(path: '/about',      builder: (_, __) => const AboutAppScreen()),
     GoRoute(path: '/report-issue', builder: (_, __) => const ReportIssueScreen()),
-    GoRoute(path: '/chat',       builder: (_, __) => const _PlaceholderScreen(title: 'Tin nhắn')),
+    GoRoute(path: '/chat',       builder: (_, __) => const ConversationsScreen()),
+    GoRoute(
+      path: '/chat/detail',
+      builder: (context, state) {
+        final conv = state.extra as Conversation;
+        return ChatScreen(conversation: conv);
+      },
+    ),
   ],
 );
-
-class _PlaceholderScreen extends StatelessWidget {
-  final String title;
-  const _PlaceholderScreen({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0057D9),
-      body: Center(
-        child: Text(title,
-            style: const TextStyle(color: Colors.white, fontSize: 24,
-                fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
-}
