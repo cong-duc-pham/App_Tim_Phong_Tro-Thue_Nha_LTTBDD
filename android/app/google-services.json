@@ -12,7 +12,20 @@
           "package_name": "com.example.ung_dung_tim_kiem_tro"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "59875388196-khjrjq5d4mipa38bm3dv5h0aov11p4lo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ung_dung_tim_kiem_tro",
+            "certificate_hash": "8193cc0a7354b18c4b699d5efa77cefc6c5ea750"
+          }
+        },
+        {
+          "client_id": "59875388196-5q2t4t7aro55lip35j2k5e53h2reuspp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCunJ3NTZYv3sASJWjxOJlzbKEpHQACWKM"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "59875388196-5q2t4t7aro55lip35j2k5e53h2reuspp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

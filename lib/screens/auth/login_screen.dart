@@ -102,6 +102,8 @@ class _LoginScreenState extends State<LoginScreen>
                       _buildLoginButton(),
                       const SizedBox(height: AppConstants.spacingXxl),
                       _buildDivider(),
+                      const SizedBox(height: AppConstants.spacingLg),
+                      _buildSocialButtons(),
                       const SizedBox(height: AppConstants.spacingXxl),
                       _buildRegisterLink(),
                     ],
@@ -270,6 +272,37 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  Widget _buildSocialButtons() {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        final isLoading = state is AuthLoading;
+        final bloc = context.read<AuthBloc>();
+
+        return Column(
+          children: [
+            _SocialLoginButton(
+              label: 'Tiep tuc voi Google',
+              iconText: 'G',
+              iconColor: const Color(0xFFDB4437),
+              onPressed: isLoading
+                  ? null
+                  : () => bloc.add(const AuthGoogleLoginRequested()),
+            ),
+            const SizedBox(height: AppConstants.spacingMd),
+            _SocialLoginButton(
+              label: 'Tiep tuc voi Facebook',
+              iconText: 'f',
+              iconColor: const Color(0xFF1877F2),
+              onPressed: isLoading
+                  ? null
+                  : () => bloc.add(const AuthFacebookLoginRequested()),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildRegisterLink() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -288,6 +321,71 @@ class _LoginScreenState extends State<LoginScreen>
 }
 
 // ─── Shared input widget ─────────────────────────────────────────────────────
+
+class _SocialLoginButton extends StatelessWidget {
+  final String label;
+  final String iconText;
+  final Color iconColor;
+  final VoidCallback? onPressed;
+
+  const _SocialLoginButton({
+    required this.label,
+    required this.iconText,
+    required this.iconColor,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.textPrimary,
+          side: const BorderSide(color: AppColors.border),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 26,
+              height: 26,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: iconColor,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                iconText,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppConstants.spacingMd),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _AppTextField extends StatelessWidget {
   final TextEditingController controller;
