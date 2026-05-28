@@ -9,6 +9,7 @@ import '../../screens/profile/profile_screen.dart';
 import '../../screens/profile/favorites_screen.dart';
 import '../../screens/profile/about_app_screen.dart';
 import '../../screens/profile/report_issue_screen.dart';
+import '../../screens/profile/support_center_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
 import '../../models/conversation.dart';
@@ -28,6 +29,7 @@ final appRouter = GoRouter(
     GoRoute(path: '/favorites',  builder: (_, __) => const FavoritesScreen()),
     GoRoute(path: '/about',      builder: (_, __) => const AboutAppScreen()),
     GoRoute(path: '/report-issue', builder: (_, __) => const ReportIssueScreen()),
+    GoRoute(path: '/support-center', builder: (_, __) => const SupportCenterScreen()),
     GoRoute(path: '/chat',       builder: (_, __) => const ConversationsScreen()),
     GoRoute(
       path: '/chat/detail',

@@ -66,6 +66,7 @@ class AppConstants {
   static const String routeFavorites   = '/favorites';
   static const String routeAbout       = '/about';
   static const String routeReportIssue = '/report-issue';
+  static const String routeSupportCenter = '/support-center';
 
   // ─── Pagination ──────────────────────────────────────────────────────────
   static const int pageSize = 10; // Số item mỗi trang
