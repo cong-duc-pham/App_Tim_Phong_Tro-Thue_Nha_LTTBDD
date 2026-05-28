@@ -1,4 +1,4 @@
-﻿// lib/screens/profile/profile_screen.dart
+// lib/screens/profile/profile_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -217,7 +217,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _MenuItem(
                 icon: Icons.help_outline_rounded,
                 label: 'Trung tâm hỗ trợ',
-                onTap: () {},
+                onTap: () => context.push(AppConstants.routeSupportCenter),
               ),
               _MenuItem(
                 icon: Icons.bug_report_outlined,
