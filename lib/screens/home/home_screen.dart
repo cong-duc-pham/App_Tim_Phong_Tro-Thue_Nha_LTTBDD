@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../services/search_history_service.dart';
 
 // ─── Model ────────────────────────────────────────────────────────────────────
 
@@ -157,7 +158,9 @@ String _removeDiacritics(String s) {
 // ─── HomeScreen ───────────────────────────────────────────────────────────────
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final String? initialSearchQuery;
+  const HomeScreen({super.key, this.initialSearchQuery});
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -178,6 +181,39 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Filter
   _FilterState _filter = _FilterState();
+
+  @override
+  void initState() {
+    super.initState();
+    // Tự động kích hoạt tìm kiếm nếu có từ khóa truyền từ ngoài vào (qua deep link / router)
+    if (widget.initialSearchQuery != null && widget.initialSearchQuery!.trim().isNotEmpty) {
+      _searchCtrl.text = widget.initialSearchQuery!;
+      _searchQuery = widget.initialSearchQuery!.trim().toLowerCase();
+      _isSearching = true;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Cập nhật lại thanh tìm kiếm nếu từ khóa truyền vào widget thay đổi
+    if (widget.initialSearchQuery != oldWidget.initialSearchQuery) {
+      if (widget.initialSearchQuery != null && widget.initialSearchQuery!.trim().isNotEmpty) {
+        setState(() {
+          _searchCtrl.text = widget.initialSearchQuery!;
+          _searchQuery = widget.initialSearchQuery!.trim().toLowerCase();
+          _isSearching = true;
+        });
+      } else if (widget.initialSearchQuery == null) {
+        // Làm trống thanh tìm kiếm nếu query param bị xóa
+        setState(() {
+          _searchCtrl.clear();
+          _searchQuery = '';
+          _isSearching = false;
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -405,6 +441,12 @@ class _HomeScreenState extends State<HomeScreen> {
               controller: _searchCtrl,
               focusNode: _searchFocus,
               onChanged: _onSearchChanged,
+              onSubmitted: (val) {
+                // Lưu từ khóa tìm kiếm khi người dùng nhấn Enter/Tìm kiếm trên bàn phím
+                if (val.trim().isNotEmpty) {
+                  SearchHistoryService.addHistory(val.trim());
+                }
+              },
               style: const TextStyle(
                   fontSize: 14,
                   color: AppColors.textPrimary,

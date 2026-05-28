@@ -192,7 +192,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _MenuItem(
                 icon: Icons.history_rounded,
                 label: 'Lịch sử tìm kiếm',
-                onTap: () {},
+                onTap: () => context.push(AppConstants.routeSearchHistory),
               ),
               if (_user.role == 'landlord') ...[
                 _MenuItem(

@@ -10,6 +10,7 @@ import '../../screens/profile/favorites_screen.dart';
 import '../../screens/profile/about_app_screen.dart';
 import '../../screens/profile/report_issue_screen.dart';
 import '../../screens/profile/support_center_screen.dart';
+import '../../screens/profile/search_history_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
 import '../../models/conversation.dart';
@@ -21,7 +22,13 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(path: '/',          builder: (_, __) => const SplashScreen()),
     GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
-    GoRoute(path: '/home',       builder: (_, __) => const HomeScreen()),
+    GoRoute(
+      path: '/home',
+      builder: (context, state) {
+        final query = state.uri.queryParameters['q'];
+        return HomeScreen(initialSearchQuery: query);
+      },
+    ),
     GoRoute(path: '/listing',    builder: (_, __) => const PostListingScreen()),
     GoRoute(path: '/profile',    builder: (_, __) => const ProfileScreen()),
     GoRoute(path: '/login',      builder: (_, __) => const LoginScreen()),
@@ -30,6 +37,7 @@ final appRouter = GoRouter(
     GoRoute(path: '/about',      builder: (_, __) => const AboutAppScreen()),
     GoRoute(path: '/report-issue', builder: (_, __) => const ReportIssueScreen()),
     GoRoute(path: '/support-center', builder: (_, __) => const SupportCenterScreen()),
+    GoRoute(path: '/search-history', builder: (_, __) => const SearchHistoryScreen()),
     GoRoute(path: '/chat',       builder: (_, __) => const ConversationsScreen()),
     GoRoute(
       path: '/chat/detail',
