@@ -187,7 +187,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 badge: _user.reviewsCount > 0
                     ? '${_user.reviewsCount}'
                     : null,
-                onTap: () {},
+                onTap: () => context.push(AppConstants.routeMyReviews),
               ),
               _MenuItem(
                 icon: Icons.history_rounded,
