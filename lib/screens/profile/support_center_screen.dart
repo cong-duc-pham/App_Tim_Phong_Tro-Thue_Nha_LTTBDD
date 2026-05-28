@@ -60,7 +60,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     _FAQItem(
       category: 'Đăng tin & Chủ nhà',
       question: 'Tôi có thể đăng tối đa bao nhiêu ảnh cho một phòng trọ?',
-      answer: 'Đối với gói tin miễn phí, bạn có thể tải lên tối đa 1 ảnh. Với các gói tin đăng VIP hoặc Featured, bạn có thể tải lên từ 10 đến không giới hạn số lượng ảnh chất lượng cao để thu hút người thuê.',
+      answer: 'Đối với gói tin đăng miễn phí, bạn có thể tải lên tối đa 1 ảnh. Với các gói tin đăng VIP hoặc Featured, bạn có thể tải lên từ 10 đến không giới hạn số lượng ảnh chất lượng cao để thu hút người thuê.',
     ),
 
     // Category: Tài khoản & Bảo mật
@@ -227,11 +227,19 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
 
   Widget _buildFAQContent(List<_FAQItem> faqs) {
     if (_searchQuery.trim().isNotEmpty) {
-      // Khi đang tìm kiếm, hiển thị danh sách phẳng trực quan
+      // Khi đang tìm kiếm, hiển thị danh sách phẳng trực quan kèm contact card ở cuối
       return ListView.builder(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-        itemCount: faqs.length,
+        itemCount: faqs.length + 1,
         itemBuilder: (context, index) {
+          if (index == faqs.length) {
+            return Column(
+              children: [
+                const SizedBox(height: 16),
+                _buildContactCard(),
+              ],
+            );
+          }
           return _buildFAQTile(faqs[index]);
         },
       );
@@ -243,47 +251,50 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
       groupedFAQs.putIfAbsent(item.category, () => []).add(item);
     }
 
+    final List<Widget> listWidgets = [];
+    groupedFAQs.forEach((categoryName, categoryItems) {
+      IconData categoryIcon = Icons.help_center_rounded;
+      if (categoryName.contains('Tìm kiếm')) {
+        categoryIcon = Icons.search_rounded;
+      } else if (categoryName.contains('Đăng tin')) {
+        categoryIcon = Icons.add_home_work_rounded;
+      } else if (categoryName.contains('Tài khoản')) {
+        categoryIcon = Icons.security_rounded;
+      }
+
+      listWidgets.add(
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 12, bottom: 8),
+          child: Row(
+            children: [
+              Icon(categoryIcon, size: 16, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                categoryName.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      listWidgets.addAll(categoryItems.map((item) => _buildFAQTile(item)));
+      listWidgets.add(const SizedBox(height: 8));
+    });
+
+    // Thêm contact card ở cuối danh mục
+    listWidgets.add(const SizedBox(height: 8));
+    listWidgets.add(_buildContactCard());
+    listWidgets.add(const SizedBox(height: 16));
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-      children: groupedFAQs.entries.map((entry) {
-        final categoryName = entry.key;
-        final categoryItems = entry.value;
-
-        IconData categoryIcon = Icons.help_center_rounded;
-        if (categoryName.contains('Tìm kiếm')) {
-          categoryIcon = Icons.search_rounded;
-        } else if (categoryName.contains('Đăng tin')) {
-          categoryIcon = Icons.add_home_work_rounded;
-        } else if (categoryName.contains('Tài khoản')) {
-          categoryIcon = Icons.security_rounded;
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 4, top: 12, bottom: 8),
-              child: Row(
-                children: [
-                  Icon(categoryIcon, size: 16, color: AppColors.primary),
-                  const SizedBox(width: 6),
-                  Text(
-                    categoryName.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textSecondary,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            ...categoryItems.map((item) => _buildFAQTile(item)),
-            const SizedBox(height: 8),
-          ],
-        );
-      }).toList(),
+      children: listWidgets,
     );
   }
 
@@ -335,6 +346,172 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     );
   }
 
+  Widget _buildContactCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primaryLight.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        children: [
+          const Text(
+            'Bạn vẫn cần trợ giúp?',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primaryMedium,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Hãy liên hệ trực tiếp với chúng tôi qua các kênh dưới đây',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _buildSupportAction(
+                icon: Icons.phone_rounded,
+                label: 'Hotline',
+                color: AppColors.success,
+                onTap: _callHotline,
+              ),
+              const SizedBox(width: 12),
+              _buildSupportAction(
+                icon: Icons.email_rounded,
+                label: 'Email',
+                color: AppColors.info,
+                onTap: _sendEmail,
+              ),
+              const SizedBox(width: 12),
+              _buildSupportAction(
+                icon: Icons.bug_report_rounded,
+                label: 'Báo lỗi',
+                color: AppColors.error,
+                onTap: () => context.push(AppConstants.routeReportIssue),
+              ),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSupportAction({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+            border: Border.all(color: AppColors.borderLight),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _callHotline() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+        ),
+        title: const Text('Gọi tổng đài hỗ trợ?', style: TextStyle(fontWeight: FontWeight.w700)),
+        content: const Text('Tổng đài hỗ trợ 24/7 của SWING HOUSE:\n\n📞 1900 1234 (1.000đ/phút)'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Đang kết nối đến tổng đài...'),
+                  backgroundColor: AppColors.success,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                  ),
+                ),
+              );
+            },
+            child: const Text('Gọi ngay'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _sendEmail() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+        ),
+        title: const Text('Gửi email hỗ trợ?', style: TextStyle(fontWeight: FontWeight.w700)),
+        content: const Text('Gửi yêu cầu hỗ trợ đến email:\n\n✉️ support@swinghouse.vn'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Đã mở ứng dụng Mail...'),
+                  backgroundColor: AppColors.success,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                  ),
+                ),
+              );
+            },
+            child: const Text('Gửi mail'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -367,6 +544,8 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
               textAlign: TextAlign.center,
               style: AppTextStyles.bodyMedium,
             ),
+            const SizedBox(height: 24),
+            _buildContactCard(),
           ],
         ),
       ),
