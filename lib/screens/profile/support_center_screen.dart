@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
@@ -442,7 +443,11 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     );
   }
 
-  void _callHotline() {
+  Future<void> _callHotline() async {
+    final Uri phoneUri = Uri(scheme: 'tel', path: '19001234');
+    
+    if (!mounted) return;
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -457,18 +462,25 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
             child: const Text('Hủy'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Đang kết nối đến tổng đài...'),
-                  backgroundColor: AppColors.success,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-                  ),
-                ),
-              );
+              try {
+                if (await canLaunchUrl(phoneUri)) {
+                  await launchUrl(phoneUri);
+                } else {
+                  throw 'Không thể gọi số này';
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Không thể khởi chạy cuộc gọi (Lỗi: $e). Số hotline: 1900 1234'),
+                      backgroundColor: AppColors.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('Gọi ngay'),
           ),
@@ -477,7 +489,17 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
     );
   }
 
-  void _sendEmail() {
+  Future<void> _sendEmail() async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'support@swinghouse.vn',
+      queryParameters: {
+        'subject': 'Yêu cầu hỗ trợ từ ứng dụng SWING HOUSE',
+      },
+    );
+
+    if (!mounted) return;
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -492,18 +514,25 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
             child: const Text('Hủy'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Đã mở ứng dụng Mail...'),
-                  backgroundColor: AppColors.success,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-                  ),
-                ),
-              );
+              try {
+                if (await canLaunchUrl(emailUri)) {
+                  await launchUrl(emailUri);
+                } else {
+                  throw 'Không tìm thấy ứng dụng email tương thích';
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Không thể gửi mail (Lỗi: $e). Vui lòng gửi thủ công đến support@swinghouse.vn'),
+                      backgroundColor: AppColors.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('Gửi mail'),
           ),
