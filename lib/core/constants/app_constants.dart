@@ -68,6 +68,7 @@ class AppConstants {
   static const String routeReportIssue = '/report-issue';
   static const String routeSupportCenter = '/support-center';
   static const String routeSearchHistory = '/search-history';
+  static const String routeMyReviews = '/my-reviews';
 
   // ─── Pagination ──────────────────────────────────────────────────────────
   static const int pageSize = 10; // Số item mỗi trang
