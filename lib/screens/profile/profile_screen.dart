@@ -166,7 +166,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _MenuItem(
                 icon: Icons.tune_rounded,
                 label: 'Nhu cầu tìm phòng',
-                onTap: () {},
+                onTap: () {
+                  context.push('${AppConstants.routePreference}?from=profile');
+                },
               ),
             ],
           )),

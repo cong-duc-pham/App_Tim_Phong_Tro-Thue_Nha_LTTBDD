@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 
 class PreferenceScreen extends StatefulWidget {
-  const PreferenceScreen({super.key});
+  final String? from;
+  const PreferenceScreen({super.key, this.from});
 
   @override
   State<PreferenceScreen> createState() => _PreferenceScreenState();
@@ -16,6 +18,9 @@ class _PreferenceScreenState extends State<PreferenceScreen> {
   final Set<String> _areas = {};
   final Set<String> _amenities = {};
   double _maxBudget = 4;
+  bool _isLoading = true;
+
+  bool get _isEdit => widget.from != null && widget.from!.trim().isNotEmpty;
 
   static const _typeOptions = [
     _ChoiceOption('phong-tro', 'Phòng trọ', Icons.home_rounded),
@@ -46,6 +51,43 @@ class _PreferenceScreenState extends State<PreferenceScreen> {
     'Nuôi thú',
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedTypes = prefs.getStringList(AppConstants.keyPreferenceTypes);
+    final savedAreas = prefs.getStringList(AppConstants.keyPreferenceAreas);
+    final savedAmenities = prefs.getStringList(AppConstants.keyPreferenceAmenities);
+    final savedMaxBudget = prefs.getDouble(AppConstants.keyPreferenceMaxBudget);
+
+    if (mounted) {
+      setState(() {
+        if (savedTypes != null && savedTypes.isNotEmpty) {
+          _types.clear();
+          _types.addAll(savedTypes);
+        }
+        if (savedAreas != null && savedAreas.isNotEmpty) {
+          _areas.clear();
+          _areas.addAll(savedAreas);
+        }
+        if (savedAmenities != null && savedAmenities.isNotEmpty) {
+          _amenities.clear();
+          _amenities.addAll(savedAmenities);
+        }
+        if (savedMaxBudget != null) {
+          _maxBudget = savedMaxBudget / 1000000;
+          if (_maxBudget < 1) _maxBudget = 1;
+          if (_maxBudget > 15) _maxBudget = 15;
+        }
+        _isLoading = false;
+      });
+    }
+  }
+
   Future<void> _finish({bool skipped = false}) async {
     final prefs = await SharedPreferences.getInstance();
     if (!skipped) {
@@ -66,12 +108,39 @@ class _PreferenceScreenState extends State<PreferenceScreen> {
         _maxBudget * 1000000,
       );
     }
-    await prefs.setBool(AppConstants.keyOnboardingDone, true);
-
-    if (mounted) context.go(AppConstants.routeHome);
+    
+    if (!_isEdit) {
+      await prefs.setBool(AppConstants.keyOnboardingDone, true);
+      if (mounted) context.go(AppConstants.routeHome);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: const [
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 10),
+                Text(
+                  'Đã cập nhật nhu cầu tìm phòng thành công!',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        context.pop();
+      }
+    }
   }
 
   void _toggle(Set<String> target, String value) {
+    HapticFeedback.lightImpact();
     setState(() {
       if (target.contains(value)) {
         target.remove(value);
@@ -83,33 +152,78 @@ class _PreferenceScreenState extends State<PreferenceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.bgPage,
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.bgPage,
+      appBar: _isEdit
+          ? AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              centerTitle: true,
+              leading: IconButton(
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: AppColors.textPrimary,
+                  size: 18,
+                ),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  context.pop();
+                },
+              ),
+              title: const Text(
+                'Nhu cầu tìm phòng',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(1),
+                child: Container(
+                  color: AppColors.borderLight,
+                  height: 1,
+                ),
+              ),
+            )
+          : null,
       body: SafeArea(
+        top: !_isEdit,
         child: Column(
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildHeader(),
-                    const SizedBox(height: 24),
+                    if (!_isEdit) ...[
+                      _buildHeader(),
+                      const SizedBox(height: 24),
+                    ],
                     _buildSectionTitle('Bạn muốn tìm loại trọ nào?'),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     _buildTypeGrid(),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
                     _buildSectionTitle('Ngân sách tối đa'),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     _buildBudgetSlider(),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
                     _buildSectionTitle('Khu vực ưu tiên'),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     _buildChips(_areaOptions, _areas),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
                     _buildSectionTitle('Tiện nghi bạn cần'),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     _buildChips(_amenityOptions, _amenities),
                   ],
                 ),
@@ -166,9 +280,9 @@ class _PreferenceScreenState extends State<PreferenceScreen> {
       itemCount: _typeOptions.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 2.25,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 2.2,
       ),
       itemBuilder: (_, index) {
         final option = _typeOptions[index];
@@ -185,11 +299,18 @@ class _PreferenceScreenState extends State<PreferenceScreen> {
 
   Widget _buildBudgetSlider() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
         border: Border.all(color: AppColors.borderLight),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,14 +325,30 @@ class _PreferenceScreenState extends State<PreferenceScreen> {
               color: AppColors.primary,
             ),
           ),
-          Slider(
-            value: _maxBudget,
-            min: 1,
-            max: 15,
-            divisions: 14,
-            activeColor: AppColors.primary,
-            inactiveColor: AppColors.primaryLight,
-            onChanged: (value) => setState(() => _maxBudget = value),
+          const SizedBox(height: 6),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 4,
+              activeTrackColor: AppColors.primary,
+              inactiveTrackColor: AppColors.primaryLight,
+              thumbColor: AppColors.primary,
+              overlayColor: AppColors.primary.withValues(alpha: 0.12),
+              valueIndicatorColor: AppColors.primary,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+            ),
+            child: Slider(
+              value: _maxBudget,
+              min: 1,
+              max: 15,
+              divisions: 14,
+              onChanged: (value) {
+                if (value != _maxBudget) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _maxBudget = value);
+                }
+              },
+            ),
           ),
         ],
       ),
@@ -233,7 +370,9 @@ class _PreferenceScreenState extends State<PreferenceScreen> {
           backgroundColor: Colors.white,
           side: BorderSide(
             color: selected ? AppColors.primary : AppColors.borderLight,
+            width: selected ? 1.5 : 1,
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           labelStyle: TextStyle(
             color: selected ? AppColors.primary : AppColors.textSecondary,
             fontWeight: FontWeight.w700,
@@ -254,19 +393,30 @@ class _PreferenceScreenState extends State<PreferenceScreen> {
       child: Row(
         children: [
           TextButton(
-            onPressed: () => _finish(skipped: true),
-            child: const Text(
-              'Bỏ qua',
-              style: TextStyle(
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              if (_isEdit) {
+                context.pop();
+              } else {
+                _finish(skipped: true);
+              }
+            },
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            child: Text(
+              _isEdit ? 'Hủy' : 'Bỏ qua',
+              style: const TextStyle(
                 color: AppColors.textMuted,
                 fontWeight: FontWeight.w700,
+                fontSize: 15,
               ),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: SizedBox(
-              height: 50,
+              height: 48,
               child: ElevatedButton(
                 onPressed: _types.isEmpty ? null : () => _finish(),
                 style: ElevatedButton.styleFrom(
@@ -278,9 +428,9 @@ class _PreferenceScreenState extends State<PreferenceScreen> {
                     borderRadius: BorderRadius.circular(AppConstants.radiusLg),
                   ),
                 ),
-                child: const Text(
-                  'Xem gợi ý phù hợp',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                child: Text(
+                  _isEdit ? 'Lưu thay đổi' : 'Xem gợi ý phù hợp',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
                 ),
               ),
             ),
@@ -318,13 +468,21 @@ class _ChoiceTile extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: AppConstants.animFast,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: selected ? AppColors.primary : Colors.white,
           borderRadius: BorderRadius.circular(AppConstants.radiusLg),
           border: Border.all(
             color: selected ? AppColors.primary : AppColors.borderLight,
+            width: selected ? 1.5 : 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -333,7 +491,7 @@ class _ChoiceTile extends StatelessWidget {
               color: selected ? Colors.white : AppColors.primary,
               size: 22,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
                 label,

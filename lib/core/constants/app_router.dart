@@ -24,7 +24,13 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(path: '/',          builder: (_, __) => const SplashScreen()),
     GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
-    GoRoute(path: '/preferences', builder: (_, __) => const PreferenceScreen()),
+    GoRoute(
+      path: '/preferences',
+      builder: (context, state) {
+        final from = state.uri.queryParameters['from'];
+        return PreferenceScreen(from: from);
+      },
+    ),
     GoRoute(
       path: '/home',
       builder: (context, state) {
