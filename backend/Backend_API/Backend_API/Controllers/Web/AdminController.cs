@@ -111,7 +111,7 @@ namespace Backend_API.Controllers.MVC
                 })
                 .ToListAsync();
 
-            ViewData["Title"] = "Quản lý Users";
+            ViewData["Title"] = "Quáº£n lÃ½ Users";
             return View(new AdminUsersViewModel { Users = users });
         }
 
@@ -169,7 +169,7 @@ namespace Backend_API.Controllers.MVC
                 })
                 .ToListAsync();
 
-            ViewData["Title"] = "Duyệt Tin Đăng";
+            ViewData["Title"] = "Duyá»‡t Tin ÄÄƒng";
             return View(new AdminListingsViewModel { Listings = listings });
         }
 
@@ -193,8 +193,8 @@ namespace Backend_API.Controllers.MVC
 
             await _notificationService.CreateAndSendAsync(
                 listing.LandlordId,
-                "Tin đã được duyệt",
-                $"Tin \"{listing.Title}\" đã được duyệt và đang hiển thị.",
+                "Tin Ä‘Ã£ Ä‘Æ°á»£c duyá»‡t",
+                $"Tin \"{listing.Title}\" Ä‘Ã£ Ä‘Æ°á»£c duyá»‡t vÃ  Ä‘ang hiá»ƒn thá»‹.",
                 "listing_approved",
                 listing.ListingId,
                 "listing");
@@ -219,14 +219,26 @@ namespace Backend_API.Controllers.MVC
             listing.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            var rejectedReason = string.IsNullOrWhiteSpace(reason) ? "Chưa đáp ứng tiêu chuẩn nội dung." : reason.Trim();
-            await _notificationService.CreateAndSendAsync(
-                listing.LandlordId,
-                "Tin bị từ chối",
-                $"Tin \"{listing.Title}\" bị từ chối. Lý do: {rejectedReason}",
-                "listing_rejected",
-                listing.ListingId,
-                "listing");
+            var rejectedReason = string.IsNullOrWhiteSpace(reason)
+                ? "Tin dang chua dap ung tieu chuan noi dung. Vui long kiem tra lai thong tin, hinh anh va gia phong."
+                : reason.Trim();
+
+            try
+            {
+                await _notificationService.CreateAndSendAsync(
+                    listing.LandlordId,
+                    "Tin dang bi tu choi",
+                    $"Tin \"{listing.Title}\" da bi tu choi. Ly do: {rejectedReason}",
+                    "listing_rejected",
+                    listing.ListingId,
+                    "listing");
+
+                TempData["AdminSuccess"] = "Da tu choi tin dang va gui thong bao cho nguoi dang.";
+            }
+            catch (Exception ex)
+            {
+                TempData["AdminError"] = $"Tin dang da bi tu choi, nhung gui thong bao that bai: {ex.Message}";
+            }
 
             return RedirectToAction(nameof(Listings));
         }
@@ -252,7 +264,7 @@ namespace Backend_API.Controllers.MVC
                 })
                 .ToListAsync();
 
-            ViewData["Title"] = "Xử lý Báo cáo";
+            ViewData["Title"] = "Xá»­ lÃ½ BÃ¡o cÃ¡o";
             return View(new AdminReportsViewModel { Reports = reports });
         }
 
@@ -328,7 +340,7 @@ namespace Backend_API.Controllers.MVC
                 })
                 .ToListAsync();
 
-            ViewData["Title"] = "Quản lý Cloudinary Storage";
+            ViewData["Title"] = "Quáº£n lÃ½ Cloudinary Storage";
             return View(new AdminStorageViewModel
             {
                 RefType = refType,
@@ -364,7 +376,7 @@ namespace Backend_API.Controllers.MVC
 
             if (status == null)
             {
-                throw new InvalidOperationException($"Không tìm thấy trạng thái ListingStatus = '{statusName}'.");
+                throw new InvalidOperationException($"KhÃ´ng tÃ¬m tháº¥y tráº¡ng thÃ¡i ListingStatus = '{statusName}'.");
             }
 
             return status.StatusId;
