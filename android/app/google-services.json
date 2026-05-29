@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "59875388196-pk0v96f8tmcta1hr89v56fghfp3a0me1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ung_dung_tim_kiem_tro",
+            "certificate_hash": "b264a576b35bd5617d076681e557fc2e2405aecb"
+          }
+        },
+        {
           "client_id": "59875388196-5q2t4t7aro55lip35j2k5e53h2reuspp.apps.googleusercontent.com",
           "client_type": 3
         }
