@@ -44,6 +44,44 @@ public class AdminListingsViewModel
     public List<AdminListingItemViewModel> Listings { get; set; } = new();
 }
 
+public class AdminListingDetailViewModel
+{
+    public long ListingId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public decimal Price { get; set; }
+    public decimal Area { get; set; }
+    public int? Floor { get; set; }
+    public int? TotalFloors { get; set; }
+    public int? MaxOccupants { get; set; }
+    public string RoomType { get; set; } = string.Empty;
+    public string StatusName { get; set; } = string.Empty;
+    public string StreetAddress { get; set; } = string.Empty;
+    public string? WardName { get; set; }
+    public string? DistrictName { get; set; }
+    public string? ProvinceName { get; set; }
+    public bool? AllowPet { get; set; }
+    public bool? IsVerified { get; set; }
+    public bool? IsFeatured { get; set; }
+    public bool? IsNew { get; set; }
+    public decimal? ElectricPrice { get; set; }
+    public decimal? WaterPrice { get; set; }
+    public decimal? InternetPrice { get; set; }
+    public decimal? ParkingPrice { get; set; }
+    public int? ViewCount { get; set; }
+    public int? SaveCount { get; set; }
+    public DateOnly? AvailableFrom { get; set; }
+    public DateTime? ExpiredAt { get; set; }
+    public DateTime? CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public string LandlordName { get; set; } = string.Empty;
+    public string? LandlordEmail { get; set; }
+    public string? LandlordPhone { get; set; }
+    public string? LandlordFirebaseUid { get; set; }
+    public List<string> ImageUrls { get; set; } = new();
+    public List<string> Amenities { get; set; } = new();
+}
+
 public class AdminReportItemViewModel
 {
     public long ReportId { get; set; }

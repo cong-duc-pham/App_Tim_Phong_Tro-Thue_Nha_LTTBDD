@@ -1,6 +1,6 @@
 @model Backend_API.Models.ViewModels.Admin.AdminListingsViewModel
 @{
-    ViewData["Title"] = "Duyá»‡t Tin ÄÄƒng";
+    ViewData["Title"] = "Duy\u1EC7t tin \u0111\u0103ng";
 }
 
 @if (TempData["AdminSuccess"] is string successMessage)
@@ -18,26 +18,27 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 }
+
 <div class="card border-0 shadow-sm">
-    <div class="card-header bg-white fw-semibold">Danh sÃ¡ch pending</div>
+    <div class="card-header bg-white fw-semibold">Danh s&#225;ch tin ch&#7901; duy&#7879;t</div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
                         <th>#ID</th>
-                        <th>TiÃªu Ä‘á»</th>
-                        <th>GiÃ¡</th>
-                        <th>Chá»§ tin</th>
-                        <th>NgÃ y táº¡o</th>
-                        <th class="text-end">Action</th>
+                        <th>Ti&#234;u &#273;&#7873;</th>
+                        <th>Gi&#225;</th>
+                        <th>Ch&#7911; tin</th>
+                        <th>Ng&#224;y t&#7841;o</th>
+                        <th class="text-end">Thao t&#225;c</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (!Model.Listings.Any())
                     {
                         <tr>
-                            <td colspan="6" class="text-center py-4 text-muted">KhÃ´ng cÃ³ tin pending.</td>
+                            <td colspan="6" class="text-center py-4 text-muted">Kh&#244;ng c&#243; tin ch&#7901; duy&#7879;t.</td>
                         </tr>
                     }
                     else
@@ -47,7 +48,7 @@
                             <tr>
                                 <td>@listing.ListingId</td>
                                 <td>@listing.Title</td>
-                                <td>@listing.Price.ToString("N0") Ä‘</td>
+                                <td>@listing.Price.ToString("N0") &#273;</td>
                                 <td>
                                     <div>@listing.LandlordName</div>
                                     <small class="text-muted">@(listing.LandlordEmail ?? "-")</small>
@@ -55,14 +56,15 @@
                                 <td>@(listing.CreatedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
                                 <td class="text-end">
                                     <div class="d-inline-flex gap-2">
+                                        <a href="/admin/listings/@listing.ListingId" class="btn btn-sm btn-outline-primary">Chi ti&#7871;t</a>
                                         <form method="post" action="/admin/listings/@listing.ListingId/approve">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-outline-success">Approve</button>
+                                            <button type="submit" class="btn btn-sm btn-outline-success">Duy&#7879;t</button>
                                         </form>
                                         <form method="post" action="/admin/listings/@listing.ListingId/reject" class="d-flex gap-2">
                                             @Html.AntiForgeryToken()
-                                            <input type="text" name="reason" class="form-control form-control-sm" placeholder="LÃ½ do tá»« chá»‘i" />
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
+                                            <input type="text" name="reason" class="form-control form-control-sm" placeholder="L&#253; do t&#7915; ch&#7889;i" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">T&#7915; ch&#7889;i</button>
                                         </form>
                                     </div>
                                 </td>
