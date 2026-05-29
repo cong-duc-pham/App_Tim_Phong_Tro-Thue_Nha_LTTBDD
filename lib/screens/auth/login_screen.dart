@@ -202,7 +202,7 @@ class _LoginScreenState extends State<LoginScreen>
       alignment: Alignment.centerRight,
       child: TextButton(
         onPressed: () {
-          // TODO: Navigate to forgot password screen
+          context.push(AppConstants.routeForgotPassword);
         },
         style: TextButton.styleFrom(
           padding: EdgeInsets.zero,
