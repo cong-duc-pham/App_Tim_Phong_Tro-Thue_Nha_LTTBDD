@@ -14,5 +14,9 @@ namespace Backend_API.Services.Interfaces
         Task UpdateFcmTokenAsync(long userId, string token);
         
         Task<LoginResponseDto> RefreshTokenAsync(string refreshToken);
+
+        Task RequestPasswordResetOtpAsync(ForgotPasswordRequestDto dto);
+
+        Task ResetPasswordWithOtpAsync(ResetPasswordWithOtpRequestDto dto);
     }
 }

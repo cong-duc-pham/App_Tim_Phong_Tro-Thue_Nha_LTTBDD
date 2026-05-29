@@ -1,6 +1,7 @@
 ﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
@@ -39,6 +40,7 @@ class PostListingScreen extends StatefulWidget {
 
 class _PostListingScreenState extends State<PostListingScreen> {
   final ListingRepository _listingRepository = ListingRepository();
+  final ImagePicker _imagePicker = ImagePicker();
   int _currentStep = 0;
   static const int _totalSteps = 5;
   bool _isSubmitting = false;
@@ -105,10 +107,18 @@ class _PostListingScreenState extends State<PostListingScreen> {
   void _next() { if (_currentStep < _totalSteps - 1) _goTo(_currentStep + 1); }
   void _prev() { if (_currentStep > 0) _goTo(_currentStep - 1); }
 
-  /// Giả lập chọn ảnh - thực tế tích hợp image_picker ở đây
-  void _pickImage(int idx) {
+  Future<void> _pickImage(int idx) async {
+    final picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1600,
+    );
+
+    if (picked == null) return;
+
     setState(() {
-      _slots[idx].file = File('picked_$idx');
+      _slots[idx].file = File(picked.path);
+      _slots[idx].networkUrl = null;
     });
   }
 
@@ -145,7 +155,18 @@ class _PostListingScreenState extends State<PostListingScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      await _listingRepository.createListing(_buildCreatePayload());
+      final created = await _listingRepository.createListing(_buildCreatePayload());
+      final imageUrls = await _uploadSelectedImages(created.listingId);
+      if (imageUrls.isNotEmpty) {
+        await _listingRepository.updateListing(created.listingId, {
+          'image0': imageUrls.length > 0 ? imageUrls[0] : null,
+          'image1': imageUrls.length > 1 ? imageUrls[1] : null,
+          'image2': imageUrls.length > 2 ? imageUrls[2] : null,
+          'image3': imageUrls.length > 3 ? imageUrls[3] : null,
+          'image4': imageUrls.length > 4 ? imageUrls[4] : null,
+          'image5': imageUrls.length > 5 ? imageUrls[5] : null,
+        });
+      }
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -177,6 +198,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
   String? _validateBeforeSubmit() {
     if (_selectedType == null) return 'Vui lòng chọn loại hình phòng.';
     if (_titleCtrl.text.trim().isEmpty) return 'Vui lòng nhập tiêu đề tin đăng.';
+    if (_slots[0].file == null && _slots[0].networkUrl == null) {
+      return 'Vui lòng thêm ảnh bìa để admin có thể duyệt tin.';
+    }
     if (_streetCtrl.text.trim().isEmpty) return 'Vui lòng nhập địa chỉ chi tiết.';
     final area = _parseDecimal(_areaCtrl.text);
     if (area == null || area <= 0) return 'Vui lòng nhập diện tích hợp lệ.';
@@ -215,6 +239,29 @@ class _PostListingScreenState extends State<PostListingScreen> {
       'image4': _slots[4].networkUrl,
       'image5': _slots[5].networkUrl,
     };
+  }
+
+  Future<List<String>> _uploadSelectedImages(int listingId) async {
+    final urls = <String>[];
+
+    for (final slot in _slots) {
+      if (slot.file == null) {
+        if (slot.networkUrl != null) {
+          urls.add(slot.networkUrl!);
+        }
+        continue;
+      }
+
+      final url = await _listingRepository.uploadListingImage(
+        listingId: listingId,
+        filePath: slot.file!.path,
+        isCover: slot.slotIndex == 0,
+      );
+      slot.networkUrl = url;
+      urls.add(url);
+    }
+
+    return urls;
   }
 
   double? _parseDecimal(String value) {
@@ -492,7 +539,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
             crossAxisCount: 2,
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
-            childAspectRatio: 1.35,
+            childAspectRatio: 1.2,
           ),
           itemCount: 5,
           itemBuilder: (_, i) => _ImageSlotCard(
@@ -743,7 +790,7 @@ class _ImageSlotCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasImage = !slot.isEmpty;
-    final h        = isCoverLayout ? 210.0 : 115.0;
+    final h        = isCoverLayout ? 220.0 : 130.0;
 
     return GestureDetector(
       onTap: hasImage ? null : onPick,
@@ -914,6 +961,7 @@ class _EmptySlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Container(
@@ -1136,7 +1184,7 @@ class _StepDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(children: [
+    return Column(mainAxisSize: MainAxisSize.min, children: [
       AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         width:  isActive ? 28 : 22,

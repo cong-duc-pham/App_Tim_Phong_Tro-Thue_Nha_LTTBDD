@@ -74,6 +74,38 @@ namespace Backend_API.Controllers
             }
         }
 
+        [HttpPost("forgot-password")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto request)
+        {
+            try
+            {
+                await _authService.RequestPasswordResetOtpAsync(request);
+                return Ok(new { success = true, message = "Da gui OTP dat lai mat khau. Vui long kiem tra email." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("reset-password")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordWithOtpRequestDto request)
+        {
+            try
+            {
+                await _authService.ResetPasswordWithOtpAsync(request);
+                return Ok(new { success = true, message = "Dat lai mat khau thanh cong." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
         /// <summary>
         /// Đăng nhập bằng Firebase Token (Google Sign-In).
         /// Firebase Token được verify qua Admin SDK → tạo/lấy user → trả JWT.
