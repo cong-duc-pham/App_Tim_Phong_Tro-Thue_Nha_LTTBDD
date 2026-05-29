@@ -14,8 +14,10 @@ import '../../screens/profile/support_center_screen.dart';
 import '../../screens/profile/search_history_screen.dart';
 import '../../screens/profile/my_reviews_screen.dart';
 import '../../screens/profile/verification_screen.dart';
+import '../../screens/profile/change_password_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
+import '../../screens/auth/forgot_password_screen.dart';
 import '../../models/conversation.dart';
 import '../../screens/chat/conversations_screen.dart';
 import '../../screens/chat/chat_screen.dart';
@@ -50,6 +52,8 @@ final appRouter = GoRouter(
     GoRoute(path: '/search-history', builder: (_, __) => const SearchHistoryScreen()),
     GoRoute(path: '/my-reviews', builder: (_, __) => const MyReviewsScreen()),
     GoRoute(path: '/verify-account', builder: (_, __) => const AccountVerificationScreen()),
+    GoRoute(path: '/change-password', builder: (_, __) => const ChangePasswordScreen()),
+    GoRoute(path: '/forgot-password', builder: (_, __) => const ForgotPasswordScreen()),
     GoRoute(path: '/chat',       builder: (_, __) => const ConversationsScreen()),
     GoRoute(
       path: '/chat/detail',

@@ -75,6 +75,8 @@ class AppConstants {
   static const String routeSearchHistory = '/search-history';
   static const String routeMyReviews = '/my-reviews';
   static const String routeVerifyAccount = '/verify-account';
+  static const String routeChangePassword = '/change-password';
+  static const String routeForgotPassword = '/forgot-password';
 
   // ─── Pagination ──────────────────────────────────────────────────────────
   static const int pageSize = 10; // Số item mỗi trang
