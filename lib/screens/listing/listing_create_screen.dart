@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../repositories/listing_repository.dart';
 
 
 
@@ -37,8 +38,10 @@ class PostListingScreen extends StatefulWidget {
 }
 
 class _PostListingScreenState extends State<PostListingScreen> {
+  final ListingRepository _listingRepository = ListingRepository();
   int _currentStep = 0;
   static const int _totalSteps = 5;
+  bool _isSubmitting = false;
 
   // 6 slot ảnh cố định (slot_index 0-5)
   final List<ImageSlot> _slots =
@@ -125,17 +128,114 @@ class _PostListingScreenState extends State<PostListingScreen> {
 
   int get _filledCount => _slots.where((s) => !s.isEmpty).length;
 
-  void _submit() {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Row(children: [
-        Icon(Icons.check_circle, color: Colors.white),
-        SizedBox(width: 12),
-        Text('Đăng tin thành công! Đang chờ xét duyệt.'),
-      ]),
-      backgroundColor: AppColors.success,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    ));
+  Future<void> _submit() async {
+    if (_isSubmitting) return;
+
+    final validationMessage = _validateBeforeSubmit();
+    if (validationMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(validationMessage),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      await _listingRepository.createListing(_buildCreatePayload());
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Row(children: [
+          Icon(Icons.check_circle, color: Colors.white),
+          SizedBox(width: 12),
+          Text('Đăng tin thành công! Đang chờ xét duyệt.'),
+        ]),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Đăng tin thất bại: ${e.toString()}'),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  String? _validateBeforeSubmit() {
+    if (_selectedType == null) return 'Vui lòng chọn loại hình phòng.';
+    if (_titleCtrl.text.trim().isEmpty) return 'Vui lòng nhập tiêu đề tin đăng.';
+    if (_streetCtrl.text.trim().isEmpty) return 'Vui lòng nhập địa chỉ chi tiết.';
+    final area = _parseDecimal(_areaCtrl.text);
+    if (area == null || area <= 0) return 'Vui lòng nhập diện tích hợp lệ.';
+    final price = _parseDecimal(_priceCtrl.text);
+    if (price == null || price <= 0) return 'Vui lòng nhập giá thuê hợp lệ.';
+    return null;
+  }
+
+  Map<String, dynamic> _buildCreatePayload() {
+    return {
+      'title': _titleCtrl.text.trim(),
+      'description': _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+      'price': _parseDecimal(_priceCtrl.text)!,
+      'area': _parseDecimal(_areaCtrl.text)!,
+      'typeId': _selectedType!.id,
+      'streetAddress': _fullStreetAddress(),
+      'provinceId': null,
+      'districtId': null,
+      'wardId': null,
+      'floor': _parseInt(_floorCtrl.text),
+      'totalFloors': _parseInt(_totalFloorsCtrl.text),
+      'maxOccupants': _parseInt(_maxOccupantsCtrl.text),
+      'electricPrice': _parseDecimal(_electricCtrl.text),
+      'waterPrice': _parseDecimal(_waterCtrl.text),
+      'internetPrice': _parseDecimal(_internetCtrl.text),
+      'parkingPrice': _parseDecimal(_parkingCtrl.text),
+      'allowPet': _allowPet,
+      'availableFrom': _availableFrom == null
+          ? null
+          : _availableFrom!.toIso8601String().split('T').first,
+      'amenityIds': <int>[],
+      'image0': _slots[0].networkUrl,
+      'image1': _slots[1].networkUrl,
+      'image2': _slots[2].networkUrl,
+      'image3': _slots[3].networkUrl,
+      'image4': _slots[4].networkUrl,
+      'image5': _slots[5].networkUrl,
+    };
+  }
+
+  double? _parseDecimal(String value) {
+    final normalized = value.replaceAll('.', '').replaceAll(',', '').trim();
+    if (normalized.isEmpty) return null;
+    return double.tryParse(normalized);
+  }
+
+  int? _parseInt(String value) {
+    final normalized = value.trim();
+    if (normalized.isEmpty) return null;
+    return int.tryParse(normalized);
+  }
+
+  String _fullStreetAddress() {
+    return [
+      _streetCtrl.text.trim(),
+      if (_selectedWard?.trim().isNotEmpty == true) _selectedWard!.trim(),
+      if (_selectedDistrict?.trim().isNotEmpty == true) _selectedDistrict!.trim(),
+      if (_selectedProvince?.trim().isNotEmpty == true) _selectedProvince!.trim(),
+    ].where((part) => part.isNotEmpty).join(', ');
   }
 
   // ─────────────────────────────────────────────
@@ -188,9 +288,12 @@ class _PostListingScreenState extends State<PostListingScreen> {
         _BottomNav(
           currentStep: _currentStep,
           totalSteps: _totalSteps,
+          isSubmitting: _isSubmitting,
           onNext: _next,
           onPrev: _prev,
-          onSubmit: _submit,
+          onSubmit: () {
+            _submit();
+          },
         ),
       ]),
     );
@@ -1662,11 +1765,13 @@ class _PreviewCard extends StatelessWidget {
 
 class _BottomNav extends StatelessWidget {
   final int          currentStep, totalSteps;
+  final bool isSubmitting;
   final VoidCallback onNext, onPrev, onSubmit;
 
   const _BottomNav({
     required this.currentStep,
     required this.totalSteps,
+    required this.isSubmitting,
     required this.onNext,
     required this.onPrev,
     required this.onSubmit,
@@ -1707,7 +1812,7 @@ class _BottomNav extends StatelessWidget {
         Expanded(
           flex: 2,
           child: ElevatedButton(
-            onPressed: isLast ? onSubmit : onNext,
+            onPressed: isSubmitting ? null : (isLast ? onSubmit : onNext),
             style: ElevatedButton.styleFrom(
               backgroundColor:
               isLast ? AppColors.success : AppColors.primary,
@@ -1720,16 +1825,31 @@ class _BottomNav extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(isLast ? 'Đăng tin ngay' : 'Tiếp theo',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 15)),
-                const SizedBox(width: 6),
-                Icon(
-                  isLast
-                      ? Icons.check_circle_outline
-                      : Icons.arrow_forward_ios,
-                  size: 16,
-                ),
+                if (isSubmitting) ...[
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Đang đăng tin...',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 15)),
+                ] else ...[
+                  Text(isLast ? 'Đăng tin ngay' : 'Tiếp theo',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 15)),
+                  const SizedBox(width: 6),
+                  Icon(
+                    isLast
+                        ? Icons.check_circle_outline
+                        : Icons.arrow_forward_ios,
+                    size: 16,
+                  ),
+                ],
               ],
             ),
           ),

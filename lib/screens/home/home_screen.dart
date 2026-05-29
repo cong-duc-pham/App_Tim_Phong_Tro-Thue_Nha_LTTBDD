@@ -1,11 +1,14 @@
 // lib/screens/home/home_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../models/listing.dart';
+import '../../repositories/listing_repository.dart';
 import '../../services/search_history_service.dart';
 
 // ─── Model ────────────────────────────────────────────────────────────────────
@@ -24,6 +27,7 @@ class ListingItem {
   final List<String> tags;
   final Color bgColor;
   final String type; // 'phong-tro' | 'can-ho' | 'o-ghep' | 'nha-nguyen-can'
+  final String? imageUrl;
 
   const ListingItem({
     required this.id,
@@ -39,6 +43,7 @@ class ListingItem {
     this.tags = const [],
     required this.bgColor,
     this.type = 'phong-tro',
+    this.imageUrl,
   });
 }
 
@@ -167,6 +172,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final ListingRepository _listingRepository = ListingRepository();
   int _navIndex = 0;
   int _activeFilter = 0;
   final List<String> _filters = [
@@ -182,6 +188,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Filter
   _FilterState _filter = _FilterState();
+  List<ListingItem> _sqlListings = [];
+  bool _isLoadingListings = false;
+  String? _listingLoadError;
   Set<String> _preferredTypes = {};
   Set<String> _preferredAreas = {};
   Set<String> _preferredAmenities = {};
@@ -191,6 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadPreferences();
+    _loadListingsFromSql();
     // Tự động kích hoạt tìm kiếm nếu có từ khóa truyền từ ngoài vào (qua deep link / router)
     if (widget.initialSearchQuery != null && widget.initialSearchQuery!.trim().isNotEmpty) {
       _searchCtrl.text = widget.initialSearchQuery!;
@@ -214,6 +224,89 @@ class _HomeScreenState extends State<HomeScreen> {
       _preferredMaxBudget =
           prefs.getDouble(AppConstants.keyPreferenceMaxBudget);
     });
+  }
+
+  Future<void> _loadListingsFromSql() async {
+    setState(() {
+      _isLoadingListings = true;
+      _listingLoadError = null;
+    });
+
+    try {
+      final listings = await _listingRepository.getListings(pageSize: 30);
+      if (!mounted) return;
+      setState(() {
+        _sqlListings = listings.map(_mapSqlListingToHomeItem).toList();
+        _isLoadingListings = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _listingLoadError = e.toString();
+        _isLoadingListings = false;
+      });
+    }
+  }
+
+  List<ListingItem> get _listingsForUi =>
+      _sqlListings.isEmpty ? _allListings : _sqlListings;
+
+  List<ListingItem> get _featuredListingsForUi {
+    final featured =
+        _listingsForUi.where((e) => e.isFeatured || e.isNew).toList();
+    return featured.isEmpty ? _listingsForUi.take(4).toList() : featured;
+  }
+
+  List<ListingItem> get _suggestedListingsForUi {
+    final suggested =
+        _listingsForUi.where((e) => !e.isFeatured && !e.isNew).toList();
+    return suggested.isEmpty ? _listingsForUi : suggested;
+  }
+
+  ListingItem _mapSqlListingToHomeItem(Listing listing) {
+    final createdAt = listing.createdAt;
+    final isNew = createdAt != null &&
+        DateTime.now().difference(createdAt.toLocal()).inDays <= 7;
+    final type = _typeKeyFromSqlListing(listing);
+    final status = listing.packageInfo != null ? 'hot' : 'available';
+
+    return ListingItem(
+      id: listing.listingId.toString(),
+      title: listing.title,
+      address: listing.displayAddress,
+      price: listing.price,
+      area: listing.area,
+      isVerified: listing.isVerified,
+      isFeatured: listing.isFeatured || listing.packageInfo != null,
+      isNew: isNew,
+      allowPet: listing.allowPet,
+      status: status,
+      tags: listing.amenityNames,
+      bgColor: _colorForType(type),
+      type: type,
+      imageUrl: listing.image0,
+    );
+  }
+
+  String _typeKeyFromSqlListing(Listing listing) {
+    final name = _removeDiacritics(listing.typeName.toLowerCase());
+    if (name.contains('can ho') || listing.typeId == 2) return 'can-ho';
+    if (name.contains('ghep') || listing.typeId == 3) return 'o-ghep';
+    if (name.contains('nha') || listing.typeId == 4) return 'nha-nguyen-can';
+    return 'phong-tro';
+  }
+
+  Color _colorForType(String type) {
+    switch (type) {
+      case 'can-ho':
+        return AppColors.illus2;
+      case 'o-ghep':
+        return AppColors.illus3;
+      case 'nha-nguyen-can':
+        return AppColors.illus4;
+      default:
+        return AppColors.illus1;
+    }
   }
 
   @override
@@ -274,7 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<ListingItem> get _searchResults {
     if (_searchQuery.isEmpty) return [];
     final normalized = _removeDiacritics(_searchQuery.toLowerCase());
-    return _allListings
+    return _listingsForUi
         .where((e) =>
             _removeDiacritics(e.title.toLowerCase()).contains(normalized) ||
             _removeDiacritics(e.address.toLowerCase()).contains(normalized) ||
@@ -303,7 +396,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<ListingItem> get _personalizedSuggestedListings {
-    final list = List<ListingItem>.from(_suggestedListings);
+    final list = List<ListingItem>.from(_suggestedListingsForUi);
     if (!_hasSavedPreferences) return list;
 
     list.sort((a, b) {
@@ -363,6 +456,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 SliverToBoxAdapter(child: _buildFilterChips()),
                 SliverToBoxAdapter(child: _buildCategories()),
                 SliverToBoxAdapter(child: _buildBanner()),
+                if (_isLoadingListings) ...[
+                  SliverToBoxAdapter(child: _buildListingLoading()),
+                ],
+                if (_listingLoadError != null && _sqlListings.isEmpty) ...[
+                  SliverToBoxAdapter(child: _buildListingFallbackNotice()),
+                ],
                 SliverToBoxAdapter(
                     child: _buildSectionHeader('⭐  Tin nổi bật', 'Xem thêm')),
                 SliverToBoxAdapter(child: _buildFeaturedCards()),
@@ -1007,8 +1106,47 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ── Featured Cards ────────────────────────────────────────────────────────
 
+  Widget _buildListingLoading() {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppConstants.paddingH,
+        AppConstants.spacingMd,
+        AppConstants.paddingH,
+        0,
+      ),
+      child: LinearProgressIndicator(minHeight: 2),
+    );
+  }
+
+  Widget _buildListingFallbackNotice() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppConstants.paddingH,
+        AppConstants.spacingMd,
+        AppConstants.paddingH,
+        0,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(AppConstants.spacingMd),
+        decoration: BoxDecoration(
+          color: AppColors.warningBg,
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          border: Border.all(color: AppColors.warning.withValues(alpha: 0.25)),
+        ),
+        child: const Text(
+          'Chua ket noi duoc SQL, dang hien du lieu mau.',
+          style: TextStyle(
+            color: AppColors.warningText,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFeaturedCards() {
-    final list = _applyFilter(_featuredListings);
+    final list = _applyFilter(_featuredListingsForUi);
     if (list.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
@@ -1028,6 +1166,66 @@ class _HomeScreenState extends State<HomeScreen> {
         separatorBuilder: (_, __) => const SizedBox(width: AppConstants.spacingMd),
         itemBuilder: (_, i) => _buildRoomCard(list[i]),
       ),
+    );
+  }
+
+  Widget _buildListingImage(
+    ListingItem item, {
+    required double width,
+    required double height,
+    required BorderRadius borderRadius,
+    required String fallbackIcon,
+    double fallbackIconSize = 28,
+  }) {
+    final imageUrl = item.imageUrl;
+    if (imageUrl != null && imageUrl.trim().isNotEmpty) {
+      return ClipRRect(
+        borderRadius: borderRadius,
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          width: width,
+          height: height,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => Container(color: item.bgColor),
+          errorWidget: (_, __, ___) => _buildListingImageFallback(
+            item,
+            width: width,
+            height: height,
+            borderRadius: borderRadius,
+            fallbackIcon: fallbackIcon,
+            fallbackIconSize: fallbackIconSize,
+          ),
+        ),
+      );
+    }
+
+    return _buildListingImageFallback(
+      item,
+      width: width,
+      height: height,
+      borderRadius: borderRadius,
+      fallbackIcon: fallbackIcon,
+      fallbackIconSize: fallbackIconSize,
+    );
+  }
+
+  Widget _buildListingImageFallback(
+    ListingItem item, {
+    required double width,
+    required double height,
+    required BorderRadius borderRadius,
+    required String fallbackIcon,
+    required double fallbackIconSize,
+  }) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: item.bgColor,
+        borderRadius: borderRadius,
+      ),
+      alignment: Alignment.center,
+      child: Text(fallbackIcon, style: TextStyle(fontSize: fallbackIconSize)),
     );
   }
 

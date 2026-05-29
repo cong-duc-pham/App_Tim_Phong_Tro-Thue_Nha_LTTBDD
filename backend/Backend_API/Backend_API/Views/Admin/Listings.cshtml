@@ -1,20 +1,35 @@
 @model Backend_API.Models.ViewModels.Admin.AdminListingsViewModel
 @{
-    ViewData["Title"] = "Duyệt Tin Đăng";
+    ViewData["Title"] = "Duyá»‡t Tin ÄÄƒng";
 }
 
+@if (TempData["AdminSuccess"] is string successMessage)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @successMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["AdminError"] is string errorMessage)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @errorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
 <div class="card border-0 shadow-sm">
-    <div class="card-header bg-white fw-semibold">Danh sách pending</div>
+    <div class="card-header bg-white fw-semibold">Danh sÃ¡ch pending</div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
                         <th>#ID</th>
-                        <th>Tiêu đề</th>
-                        <th>Giá</th>
-                        <th>Chủ tin</th>
-                        <th>Ngày tạo</th>
+                        <th>TiÃªu Ä‘á»</th>
+                        <th>GiÃ¡</th>
+                        <th>Chá»§ tin</th>
+                        <th>NgÃ y táº¡o</th>
                         <th class="text-end">Action</th>
                     </tr>
                 </thead>
@@ -22,7 +37,7 @@
                     @if (!Model.Listings.Any())
                     {
                         <tr>
-                            <td colspan="6" class="text-center py-4 text-muted">Không có tin pending.</td>
+                            <td colspan="6" class="text-center py-4 text-muted">KhÃ´ng cÃ³ tin pending.</td>
                         </tr>
                     }
                     else
@@ -32,7 +47,7 @@
                             <tr>
                                 <td>@listing.ListingId</td>
                                 <td>@listing.Title</td>
-                                <td>@listing.Price.ToString("N0") đ</td>
+                                <td>@listing.Price.ToString("N0") Ä‘</td>
                                 <td>
                                     <div>@listing.LandlordName</div>
                                     <small class="text-muted">@(listing.LandlordEmail ?? "-")</small>
@@ -46,7 +61,7 @@
                                         </form>
                                         <form method="post" action="/admin/listings/@listing.ListingId/reject" class="d-flex gap-2">
                                             @Html.AntiForgeryToken()
-                                            <input type="text" name="reason" class="form-control form-control-sm" placeholder="Lý do từ chối" />
+                                            <input type="text" name="reason" class="form-control form-control-sm" placeholder="LÃ½ do tá»« chá»‘i" />
                                             <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
                                         </form>
                                     </div>
