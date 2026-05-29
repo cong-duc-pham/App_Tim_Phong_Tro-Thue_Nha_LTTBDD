@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
@@ -181,16 +182,38 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Filter
   _FilterState _filter = _FilterState();
+  Set<String> _preferredTypes = {};
+  Set<String> _preferredAreas = {};
+  Set<String> _preferredAmenities = {};
+  double? _preferredMaxBudget;
 
   @override
   void initState() {
     super.initState();
+    _loadPreferences();
     // Tự động kích hoạt tìm kiếm nếu có từ khóa truyền từ ngoài vào (qua deep link / router)
     if (widget.initialSearchQuery != null && widget.initialSearchQuery!.trim().isNotEmpty) {
       _searchCtrl.text = widget.initialSearchQuery!;
       _searchQuery = widget.initialSearchQuery!.trim().toLowerCase();
       _isSearching = true;
     }
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+
+    setState(() {
+      _preferredTypes =
+          prefs.getStringList(AppConstants.keyPreferenceTypes)?.toSet() ?? {};
+      _preferredAreas =
+          prefs.getStringList(AppConstants.keyPreferenceAreas)?.toSet() ?? {};
+      _preferredAmenities =
+          prefs.getStringList(AppConstants.keyPreferenceAmenities)?.toSet() ??
+              {};
+      _preferredMaxBudget =
+          prefs.getDouble(AppConstants.keyPreferenceMaxBudget);
+    });
   }
 
   @override
@@ -279,6 +302,40 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
   }
 
+  List<ListingItem> get _personalizedSuggestedListings {
+    final list = List<ListingItem>.from(_suggestedListings);
+    if (!_hasSavedPreferences) return list;
+
+    list.sort((a, b) {
+      final scoreB = _preferenceScore(b);
+      final scoreA = _preferenceScore(a);
+      if (scoreB != scoreA) return scoreB.compareTo(scoreA);
+      return a.price.compareTo(b.price);
+    });
+    return list;
+  }
+
+  bool get _hasSavedPreferences =>
+      _preferredTypes.isNotEmpty ||
+      _preferredAreas.isNotEmpty ||
+      _preferredAmenities.isNotEmpty ||
+      _preferredMaxBudget != null;
+
+  int _preferenceScore(ListingItem item) {
+    var score = 0;
+    if (_preferredTypes.contains(item.type)) score += 5;
+    if (_preferredMaxBudget != null && item.price <= _preferredMaxBudget!) {
+      score += 4;
+    }
+    if (_preferredAreas.any((area) => item.address.contains(area))) {
+      score += 3;
+    }
+    score += item.tags.where(_preferredAmenities.contains).length * 2;
+    if (item.isVerified) score += 1;
+    if (item.status == 'available') score += 1;
+    return score;
+  }
+
   void _showFilterSheet() {
     showModalBottomSheet(
       context: context,
@@ -311,16 +368,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 SliverToBoxAdapter(child: _buildFeaturedCards()),
                 SliverToBoxAdapter(
                     child: _buildSectionHeader('🎯  Gợi ý cho bạn', 'Xem thêm')),
+                if (_hasSavedPreferences) ...[
+                  SliverToBoxAdapter(child: _buildPreferenceBanner()),
+                ],
                 if (_filter.hasActive) ...[
                   SliverToBoxAdapter(child: _buildActiveFilterBanner()),
                 ],
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (_, i) {
-                      final list = _applyFilter(_suggestedListings);
+                      final list = _applyFilter(_personalizedSuggestedListings);
                       return _buildFullCard(list[i]);
                     },
-                    childCount: _applyFilter(_suggestedListings).length,
+                    childCount:
+                        _applyFilter(_personalizedSuggestedListings).length,
                   ),
                 ),
               ],
@@ -778,6 +839,64 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildPreferenceBanner() {
+    final chips = <String>[
+      ..._preferredTypes.map(_typeLabel),
+      ..._preferredAreas,
+      if (_preferredMaxBudget != null)
+        'Dưới ${(_preferredMaxBudget! / 1000000).toStringAsFixed(0)}tr',
+    ].where((e) => e.isNotEmpty).take(3).toList();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppConstants.paddingH, 10, AppConstants.paddingH, 0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          border: Border.all(color: AppColors.borderLight),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.auto_awesome_rounded,
+                size: 17, color: AppColors.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                chips.isEmpty
+                    ? 'Gợi ý đang được cá nhân hóa theo khảo sát của bạn'
+                    : 'Ưu tiên: ${chips.join(' · ')}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _typeLabel(String type) {
+    switch (type) {
+      case 'phong-tro':
+        return 'Phòng trọ';
+      case 'can-ho':
+        return 'Căn hộ';
+      case 'o-ghep':
+        return 'Ở ghép';
+      case 'nha-nguyen-can':
+        return 'Nhà nguyên căn';
+      default:
+        return '';
+    }
   }
 
   // ── Categories ────────────────────────────────────────────────────────────
