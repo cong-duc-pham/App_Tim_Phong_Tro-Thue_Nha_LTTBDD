@@ -131,7 +131,19 @@ if (!string.IsNullOrEmpty(firebaseCredJson))
 {
     credentialPath = firebaseCredJson; // FirebaseCredentialLoader hỗ trợ cả JSON string
 }
-FirebaseHelper.InitializeApp(credentialPath, projectId);
+try
+{
+    FirebaseHelper.InitializeApp(credentialPath, projectId);
+}
+catch (Exception ex)
+{
+    if (builder.Environment.IsProduction())
+    {
+        throw;
+    }
+
+    Console.WriteLine($"[Firebase] Skipped Firebase Admin initialization: {ex.Message}");
+}
 
 // ── SignalR & Background Jobs
 builder.Services.AddSignalR();
