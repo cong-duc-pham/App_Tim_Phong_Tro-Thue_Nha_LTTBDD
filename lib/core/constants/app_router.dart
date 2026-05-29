@@ -3,6 +3,7 @@
 import 'package:go_router/go_router.dart';
 import '../../screens/onboarding/splash_screen.dart';
 import '../../screens/onboarding/onboarding_screen.dart';
+import '../../screens/onboarding/preference_screen.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/listing/listing_create_screen.dart';
 import '../../screens/profile/profile_screen.dart';
@@ -23,6 +24,7 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(path: '/',          builder: (_, __) => const SplashScreen()),
     GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
+    GoRoute(path: '/preferences', builder: (_, __) => const PreferenceScreen()),
     GoRoute(
       path: '/home',
       builder: (context, state) {

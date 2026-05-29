@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
@@ -38,10 +39,18 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Chuyển sang onboarding sau khi splash xong
-    Future.delayed(AppConstants.splashDuration, () {
-      if (mounted) context.go(AppConstants.routeOnboarding);
-    });
+    Future.delayed(AppConstants.splashDuration, _navigateAfterSplash);
+  }
+
+  Future<void> _navigateAfterSplash() async {
+    final prefs = await SharedPreferences.getInstance();
+    final onboardingDone =
+        prefs.getBool(AppConstants.keyOnboardingDone) ?? false;
+
+    if (!mounted) return;
+    context.go(
+      onboardingDone ? AppConstants.routeHome : AppConstants.routeOnboarding,
+    );
   }
 
   @override
