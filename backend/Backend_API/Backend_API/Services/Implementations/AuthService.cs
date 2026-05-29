@@ -1,6 +1,7 @@
 using Backend_API.Models.DTOs.Auth;
 using Backend_API.Models.Entities;
 using Backend_API.Services.Interfaces;
+using Backend_API.Services;
 using Backend_API.Helpers;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
@@ -12,15 +13,22 @@ namespace Backend_API.Services.Implementations
     public class AuthService : IAuthService
     {
         private const string RefreshProvider = "internal_refresh";
+        private const string PasswordResetOtpType = "forgot_password";
         private readonly PhongTroDbContext _context;
         private readonly JwtTokenHelper _jwtHelper;
         private readonly FirebaseHelper _firebaseHelper;
+        private readonly IEmailService _emailService;
 
-        public AuthService(PhongTroDbContext context, JwtTokenHelper jwtHelper, FirebaseHelper firebaseHelper)
+        public AuthService(
+            PhongTroDbContext context,
+            JwtTokenHelper jwtHelper,
+            FirebaseHelper firebaseHelper,
+            IEmailService emailService)
         {
             _context = context;
             _jwtHelper = jwtHelper;
             _firebaseHelper = firebaseHelper;
+            _emailService = emailService;
         }
 
         public async Task<LoginResponseDto> RegisterAsync(RegisterRequestDto dto)
@@ -198,6 +206,87 @@ namespace Backend_API.Services.Implementations
             };
         }
 
+        public async Task RequestPasswordResetOtpAsync(ForgotPasswordRequestDto dto)
+        {
+            var email = NormalizeEmail(dto.Email);
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email != null && u.Email.ToLower() == email);
+
+            if (user == null)
+            {
+                throw new Exception("Email khong ton tai trong he thong.");
+            }
+
+            if (string.IsNullOrWhiteSpace(user.PasswordHash))
+            {
+                throw new Exception("Tai khoan nay dang nhap bang Google/Facebook, khong can dat lai mat khau tai day.");
+            }
+
+            var oldOtps = await _context.OtpCodes
+                .Where(o => o.UserId == user.UserId
+                    && o.Contact == email
+                    && o.OtpType == PasswordResetOtpType
+                    && o.IsUsed != true)
+                .ToListAsync();
+
+            foreach (var oldOtp in oldOtps)
+            {
+                oldOtp.IsUsed = true;
+            }
+
+            var nowUtc = DateTime.UtcNow;
+            var code = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+            var otp = new OtpCode
+            {
+                UserId = user.UserId,
+                Contact = email,
+                OtpType = PasswordResetOtpType,
+                Code = code,
+                IsUsed = false,
+                CreatedAt = nowUtc,
+                ExpiresAt = nowUtc.AddMinutes(10)
+            };
+
+            await _context.OtpCodes.AddAsync(otp);
+            await _context.SaveChangesAsync();
+            await _emailService.SendPasswordResetOtpAsync(email, code);
+        }
+
+        public async Task ResetPasswordWithOtpAsync(ResetPasswordWithOtpRequestDto dto)
+        {
+            var email = NormalizeEmail(dto.Email);
+            var code = dto.OtpCode.Trim();
+            var nowUtc = DateTime.UtcNow;
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email != null && u.Email.ToLower() == email);
+
+            if (user == null || string.IsNullOrWhiteSpace(user.PasswordHash))
+            {
+                throw new Exception("Tai khoan khong hop le de dat lai mat khau.");
+            }
+
+            var otp = await _context.OtpCodes
+                .Where(o => o.UserId == user.UserId
+                    && o.Contact == email
+                    && o.OtpType == PasswordResetOtpType
+                    && o.Code == code
+                    && o.IsUsed != true
+                    && o.ExpiresAt > nowUtc)
+                .OrderByDescending(o => o.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (otp == null)
+            {
+                throw new Exception("OTP khong dung hoac da het han.");
+            }
+
+            otp.IsUsed = true;
+            user.PasswordHash = PasswordHasher.Hash(dto.NewPassword);
+            user.UpdatedAt = nowUtc;
+            await _context.SaveChangesAsync();
+        }
+
         private async Task<string> IssueRefreshTokenAsync(long userId)
         {
             var rawToken = GenerateSecureToken(64);
@@ -245,6 +334,11 @@ namespace Backend_API.Services.Implementations
         {
             var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
             return Convert.ToHexString(bytes);
+        }
+
+        private static string NormalizeEmail(string email)
+        {
+            return email.Trim().ToLowerInvariant();
         }
     }
 }

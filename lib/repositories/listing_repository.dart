@@ -61,6 +61,64 @@ class ListingRepository {
     }
   }
 
+  Future<Listing> updateListing(int listingId, Map<String, dynamic> payload) async {
+    try {
+      final accessToken = await _getBackendAccessToken();
+      final response = await _apiService.dio.put<Map<String, dynamic>>(
+        '/listings/$listingId',
+        data: payload,
+        options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+      );
+
+      final body = response.data ?? {};
+      final data = body['data'] ?? body['Data'];
+      if (data is! Map) {
+        throw Exception('Backend khong tra ve thong tin tin dang.');
+      }
+
+      return Listing.fromJson(Map<String, dynamic>.from(data));
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
+  Future<String> uploadListingImage({
+    required int listingId,
+    required String filePath,
+    required bool isCover,
+  }) async {
+    try {
+      final accessToken = await _getBackendAccessToken();
+      final fileName = filePath.split(RegExp(r'[\\/]')).last;
+
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(filePath, filename: fileName),
+        'uploadType': isCover ? 'cover' : 'gallery',
+      });
+
+      final response = await _apiService.dio.post<Map<String, dynamic>>(
+        '/storage/listings/$listingId/images',
+        data: formData,
+        options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+      );
+
+      final body = response.data ?? {};
+      final data = body['data'] ?? body['Data'];
+      if (data is! Map) {
+        throw Exception('Backend khong tra ve URL anh.');
+      }
+
+      final url = data['url'] ?? data['Url'];
+      if (url is! String || url.isEmpty) {
+        throw Exception('URL anh khong hop le.');
+      }
+
+      return url;
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
   Future<String> _getBackendAccessToken() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -101,6 +159,9 @@ class ListingRepository {
     if (data is Map) {
       final message = data['message'] ?? data['Message'];
       if (message != null) return message.toString();
+    }
+    if (data is String && data.trim().isNotEmpty) {
+      return data;
     }
     return e.message ?? 'Khong ket noi duoc backend.';
   }

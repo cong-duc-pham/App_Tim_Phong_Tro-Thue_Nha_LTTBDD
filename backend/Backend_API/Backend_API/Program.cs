@@ -13,6 +13,7 @@ using Backend_API.BackgroundTasks;
 using Backend_API.Helpers;
 using Backend_API.Services.Interfaces;
 using Backend_API.Services.Implementations;
+using Backend_API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -110,6 +111,7 @@ builder.Services.AddSingleton<CloudinaryStorageHelper>();
 builder.Services.AddSingleton<FirebaseMessagingHelper>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IListingService, ListingService>();
@@ -169,6 +171,7 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+app.UseStaticFiles();
 
 // ── Middleware Pipeline
 

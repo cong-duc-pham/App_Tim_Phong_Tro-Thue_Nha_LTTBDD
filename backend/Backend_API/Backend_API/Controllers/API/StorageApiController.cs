@@ -28,6 +28,87 @@ namespace Backend_API.Controllers.API
             _storageHelper = storageHelper;
         }
 
+        [HttpPost("listings/{listingId:long}/images")]
+        [RequestSizeLimit(10 * 1024 * 1024)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UploadListingImage(long listingId, IFormFile file, [FromForm] string? uploadType)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return Unauthorized(new { success = false, message = "Chua dang nhap." });
+            }
+
+            var listing = await _context.Listings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(l => l.ListingId == listingId);
+
+            if (listing == null)
+            {
+                return NotFound(new { success = false, message = "Khong tim thay tin dang." });
+            }
+
+            if (listing.LandlordId != userId.Value)
+            {
+                return Forbid();
+            }
+
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { success = false, message = "Vui long chon anh." });
+            }
+
+            if (file.Length > 10 * 1024 * 1024)
+            {
+                return BadRequest(new { success = false, message = "Anh khong duoc vuot qua 10 MB." });
+            }
+
+            if (!TryResolveImageExtension(file.FileName, file.ContentType, out var extension))
+            {
+                return BadRequest(new { success = false, message = "Dinh dang anh khong hop le." });
+            }
+
+            var safeUploadType = (uploadType ?? "gallery").Trim().ToLowerInvariant();
+            if (safeUploadType != "cover" && safeUploadType != "gallery")
+            {
+                safeUploadType = "gallery";
+            }
+
+            var fileName = safeUploadType == "cover"
+                ? $"cover{extension}"
+                : $"{Guid.NewGuid():N}{extension}";
+
+            var webRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            var relativeDirectory = Path.Combine("uploads", "listings", listingId.ToString());
+            var physicalDirectory = Path.Combine(webRoot, relativeDirectory);
+            Directory.CreateDirectory(physicalDirectory);
+
+            var physicalPath = Path.Combine(physicalDirectory, fileName);
+            await using (var stream = System.IO.File.Create(physicalPath))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var relativeUrl = $"/uploads/listings/{listingId}/{fileName}";
+            var absoluteUrl = $"{Request.Scheme}://{Request.Host}{relativeUrl}";
+
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
+                    url = absoluteUrl,
+                    relativeUrl,
+                    fileName,
+                    uploadType = safeUploadType
+                }
+            });
+        }
+
         [HttpPost("listings/{listingId:long}/signed-upload-url")]
         [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
