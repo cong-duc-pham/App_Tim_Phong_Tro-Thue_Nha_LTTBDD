@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
@@ -92,9 +91,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _onSkip() => _finishOnboarding();
 
   Future<void> _finishOnboarding() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(AppConstants.keyOnboardingDone, true);
-    if (mounted) context.go(AppConstants.routeHome);
+    if (mounted) context.go(AppConstants.routePreference);
   }
 
   @override

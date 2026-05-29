@@ -52,10 +52,15 @@ class AppConstants {
   static const String keyUserToken      = 'user_token';
   static const String keyUserId         = 'user_id';
   static const String keyUserRole       = 'user_role';
+  static const String keyPreferenceTypes = 'preference_types';
+  static const String keyPreferenceAreas = 'preference_areas';
+  static const String keyPreferenceAmenities = 'preference_amenities';
+  static const String keyPreferenceMaxBudget = 'preference_max_budget';
 
   // ─── Routes ──────────────────────────────────────────────────────────────
   static const String routeSplash      = '/';
   static const String routeOnboarding  = '/onboarding';
+  static const String routePreference  = '/preferences';
   static const String routeHome        = '/home';
   static const String routeLogin       = '/login';
   static const String routeRegister    = '/register';
