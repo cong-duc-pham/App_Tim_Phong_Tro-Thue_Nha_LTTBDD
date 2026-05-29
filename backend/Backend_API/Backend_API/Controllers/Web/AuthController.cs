@@ -51,7 +51,7 @@ namespace Backend_API.Controllers.MVC
                     return Redirect(returnUrl);
                 }
 
-                return RedirectToAction("Index", "Home"); // Trang chủ chung hoặc Admin Dashboard tùy dự án
+                return RedirectToAction("Dashboard", "Admin");
             }
             catch (Exception ex)
             {
