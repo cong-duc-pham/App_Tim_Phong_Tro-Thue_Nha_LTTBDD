@@ -13,6 +13,7 @@ import '../../screens/profile/report_issue_screen.dart';
 import '../../screens/profile/support_center_screen.dart';
 import '../../screens/profile/search_history_screen.dart';
 import '../../screens/profile/my_reviews_screen.dart';
+import '../../screens/profile/verification_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
 import '../../models/conversation.dart';
@@ -48,6 +49,7 @@ final appRouter = GoRouter(
     GoRoute(path: '/support-center', builder: (_, __) => const SupportCenterScreen()),
     GoRoute(path: '/search-history', builder: (_, __) => const SearchHistoryScreen()),
     GoRoute(path: '/my-reviews', builder: (_, __) => const MyReviewsScreen()),
+    GoRoute(path: '/verify-account', builder: (_, __) => const AccountVerificationScreen()),
     GoRoute(path: '/chat',       builder: (_, __) => const ConversationsScreen()),
     GoRoute(
       path: '/chat/detail',
