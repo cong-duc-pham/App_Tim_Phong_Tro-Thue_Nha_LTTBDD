@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Backend_API.Helpers;
 using Backend_API.Models.Entities;
 using Backend_API.Models.ViewModels.Admin;
@@ -111,7 +111,7 @@ namespace Backend_API.Controllers.MVC
                 })
                 .ToListAsync();
 
-            ViewData["Title"] = "Quáº£n lÃ½ Users";
+            ViewData["Title"] = "QuÃ¡ÂºÂ£n lÃƒÂ½ Users";
             return View(new AdminUsersViewModel { Users = users });
         }
 
@@ -169,8 +169,93 @@ namespace Backend_API.Controllers.MVC
                 })
                 .ToListAsync();
 
-            ViewData["Title"] = "Duyá»‡t Tin ÄÄƒng";
+            ViewData["Title"] = "Duy\u1EC7t tin \u0111\u0103ng";
             return View(new AdminListingsViewModel { Listings = listings });
+        }
+
+        [HttpGet("listings/{id:long}")]
+        public async Task<IActionResult> ListingDetail(long id)
+        {
+            var listing = await _context.Listings
+                .Include(x => x.Status)
+                .Include(x => x.Type)
+                .Include(x => x.Landlord)
+                .Include(x => x.Province)
+                .Include(x => x.District)
+                .Include(x => x.Ward)
+                .Include(x => x.ListingImages)
+                .Include(x => x.ListingAmenities)
+                    .ThenInclude(x => x.Amenity)
+                .FirstOrDefaultAsync(x => x.ListingId == id);
+
+            if (listing == null)
+            {
+                return NotFound();
+            }
+
+            var imageUrls = new[]
+                {
+                    listing.Image0,
+                    listing.Image1,
+                    listing.Image2,
+                    listing.Image3,
+                    listing.Image4,
+                    listing.Image5
+                }
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x!)
+                .ToList();
+
+            imageUrls.AddRange(listing.ListingImages
+                .OrderByDescending(x => x.IsCover == true)
+                .ThenBy(x => x.SortOrder)
+                .Select(x => string.IsNullOrWhiteSpace(x.SecureUrl) ? x.CloudinaryUrl : x.SecureUrl!)
+                .Where(x => !string.IsNullOrWhiteSpace(x)));
+
+            var model = new AdminListingDetailViewModel
+            {
+                ListingId = listing.ListingId,
+                Title = listing.Title,
+                Description = listing.Description,
+                Price = listing.Price,
+                Area = listing.Area,
+                Floor = listing.Floor,
+                TotalFloors = listing.TotalFloors,
+                MaxOccupants = listing.MaxOccupants,
+                RoomType = listing.Type.TypeName,
+                StatusName = listing.Status.StatusName,
+                StreetAddress = listing.StreetAddress,
+                WardName = listing.Ward?.WardName,
+                DistrictName = listing.District?.DistrictName,
+                ProvinceName = listing.Province?.ProvinceName,
+                AllowPet = listing.AllowPet,
+                IsVerified = listing.IsVerified,
+                IsFeatured = listing.IsFeatured,
+                IsNew = listing.IsNew,
+                ElectricPrice = listing.ElectricPrice,
+                WaterPrice = listing.WaterPrice,
+                InternetPrice = listing.InternetPrice,
+                ParkingPrice = listing.ParkingPrice,
+                ViewCount = listing.ViewCount,
+                SaveCount = listing.SaveCount,
+                AvailableFrom = listing.AvailableFrom,
+                ExpiredAt = listing.ExpiredAt,
+                CreatedAt = listing.CreatedAt,
+                UpdatedAt = listing.UpdatedAt,
+                LandlordName = listing.Landlord.FullName,
+                LandlordEmail = listing.Landlord.Email,
+                LandlordPhone = listing.Landlord.Phone,
+                LandlordFirebaseUid = listing.Landlord.FirebaseUid,
+                ImageUrls = imageUrls.Distinct().ToList(),
+                Amenities = listing.ListingAmenities
+                    .Select(x => x.Amenity.Name)
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .OrderBy(x => x)
+                    .ToList()
+            };
+
+            ViewData["Title"] = "Chi tiet tin dang";
+            return View(model);
         }
 
         [HttpPost("listings/{id:long}/approve")]
@@ -186,18 +271,33 @@ namespace Backend_API.Controllers.MVC
                 return NotFound();
             }
 
+            if (string.IsNullOrWhiteSpace(listing.Image0))
+            {
+                TempData["AdminError"] = "Tin dang chua co anh bia nen chua the duyet. Vui long tu choi va yeu cau nguoi dang bo sung anh.";
+                return RedirectToAction(nameof(Listings));
+            }
+
             var activeStatusId = await GetListingStatusIdAsync(ListingStatusActive);
             listing.StatusId = activeStatusId;
             listing.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            await _notificationService.CreateAndSendAsync(
-                listing.LandlordId,
-                "Tin Ä‘Ã£ Ä‘Æ°á»£c duyá»‡t",
-                $"Tin \"{listing.Title}\" Ä‘Ã£ Ä‘Æ°á»£c duyá»‡t vÃ  Ä‘ang hiá»ƒn thá»‹.",
-                "listing_approved",
-                listing.ListingId,
-                "listing");
+            try
+            {
+                await _notificationService.CreateAndSendAsync(
+                    listing.LandlordId,
+                    "Tin dang da duoc duyet",
+                    $"Tin \"{listing.Title}\" da duoc duyet va dang hien thi.",
+                    "listing_approved",
+                    listing.ListingId,
+                    "listing");
+
+                TempData["AdminSuccess"] = "Da duyet tin dang va gui thong bao cho nguoi dang.";
+            }
+            catch (Exception ex)
+            {
+                TempData["AdminError"] = $"Tin dang da duoc duyet, nhung gui thong bao that bai: {ex.Message}";
+            }
 
             return RedirectToAction(nameof(Listings));
         }
@@ -264,7 +364,7 @@ namespace Backend_API.Controllers.MVC
                 })
                 .ToListAsync();
 
-            ViewData["Title"] = "Xá»­ lÃ½ BÃ¡o cÃ¡o";
+            ViewData["Title"] = "XÃ¡Â»Â­ lÃƒÂ½ BÃƒÂ¡o cÃƒÂ¡o";
             return View(new AdminReportsViewModel { Reports = reports });
         }
 
@@ -340,7 +440,7 @@ namespace Backend_API.Controllers.MVC
                 })
                 .ToListAsync();
 
-            ViewData["Title"] = "Quáº£n lÃ½ Cloudinary Storage";
+            ViewData["Title"] = "QuÃ¡ÂºÂ£n lÃƒÂ½ Cloudinary Storage";
             return View(new AdminStorageViewModel
             {
                 RefType = refType,
@@ -376,7 +476,7 @@ namespace Backend_API.Controllers.MVC
 
             if (status == null)
             {
-                throw new InvalidOperationException($"KhÃ´ng tÃ¬m tháº¥y tráº¡ng thÃ¡i ListingStatus = '{statusName}'.");
+                throw new InvalidOperationException($"KhÃƒÂ´ng tÃƒÂ¬m thÃ¡ÂºÂ¥y trÃ¡ÂºÂ¡ng thÃƒÂ¡i ListingStatus = '{statusName}'.");
             }
 
             return status.StatusId;
@@ -649,3 +749,4 @@ END;
         }
     }
 }
+
