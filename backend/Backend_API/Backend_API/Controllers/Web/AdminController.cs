@@ -3,6 +3,8 @@ using Backend_API.Helpers;
 using Backend_API.Models.Entities;
 using Backend_API.Models.ViewModels.Admin;
 using Backend_API.Services.Interfaces;
+using FirebaseAdmin;
+using FirebaseAdmin.Auth;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,6 +36,12 @@ namespace Backend_API.Controllers.MVC
             _context = context;
             _notificationService = notificationService;
             _cloudinaryStorageHelper = cloudinaryStorageHelper;
+        }
+
+        [HttpGet("")]
+        public IActionResult Index()
+        {
+            return RedirectToAction(nameof(Dashboard));
         }
 
         [HttpGet("dashboard")]
@@ -87,6 +95,8 @@ namespace Backend_API.Controllers.MVC
         [HttpGet("users")]
         public async Task<IActionResult> Users()
         {
+            await TryAutoSyncFirebaseUsersAsync();
+
             var users = await _context.VwUserFirebaseInfos
                 .OrderByDescending(x => x.UserId)
                 .Select(x => new AdminUserItemViewModel
@@ -103,6 +113,24 @@ namespace Backend_API.Controllers.MVC
 
             ViewData["Title"] = "Quản lý Users";
             return View(new AdminUsersViewModel { Users = users });
+        }
+
+        [HttpPost("users/sync-firebase")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SyncFirebaseUsers()
+        {
+            try
+            {
+                var (createdCount, updatedCount, skippedCount) = await SyncFirebaseUsersToSqlAsync();
+                TempData["AdminSuccess"] = $"Da dong bo Firebase: {createdCount} user moi, cap nhat {updatedCount} user, bo qua {skippedCount} user.";
+            }
+            catch (Exception ex)
+            {
+                var detail = ex.InnerException?.Message ?? ex.Message;
+                TempData["AdminError"] = $"Dong bo Firebase that bai: {detail}";
+            }
+
+            return RedirectToAction(nameof(Users));
         }
 
         [HttpPost("users/{id:long}/toggle-active")]
@@ -346,6 +374,266 @@ namespace Backend_API.Controllers.MVC
         {
             var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             return long.TryParse(idClaim, out var id) ? id : null;
+        }
+
+        private static string GetFirebaseDisplayName(ExportedUserRecord firebaseUser)
+        {
+            if (!string.IsNullOrWhiteSpace(firebaseUser.DisplayName))
+            {
+                return firebaseUser.DisplayName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(firebaseUser.Email))
+            {
+                return firebaseUser.Email;
+            }
+
+            return "Firebase User";
+        }
+
+        private static string GetFirebaseProvider(ExportedUserRecord firebaseUser)
+        {
+            var provider = firebaseUser.ProviderData.FirstOrDefault()?.ProviderId;
+            return string.IsNullOrWhiteSpace(provider) ? "firebase" : provider;
+        }
+
+        private static string GetAvatarSource(string provider)
+        {
+            if (provider.Contains("google", StringComparison.OrdinalIgnoreCase))
+            {
+                return "google";
+            }
+
+            if (provider.Contains("facebook", StringComparison.OrdinalIgnoreCase))
+            {
+                return "facebook";
+            }
+
+            return "default";
+        }
+
+        private static string? NormalizeEmail(string? email)
+        {
+            return string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
+        }
+
+        private static string? Truncate(string? value, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+
+            return value.Length <= maxLength ? value : value[..maxLength];
+        }
+
+        private static string TruncateRequired(string value, int maxLength)
+        {
+            return value.Length <= maxLength ? value : value[..maxLength];
+        }
+
+        private async Task<bool> CanUseEmailAsync(string? email, string firebaseUid, long? currentUserId = null)
+        {
+            if (email == null)
+            {
+                return false;
+            }
+
+            return !await _context.Users.AnyAsync(x =>
+                x.Email == email
+                && x.UserId != currentUserId
+                && x.FirebaseUid != firebaseUid);
+        }
+
+        private async Task EnsureUserPreferenceAsync(User user)
+        {
+            if (user.UserPreference != null
+                || await _context.UserPreferences.AnyAsync(x => x.UserId == user.UserId))
+            {
+                return;
+            }
+
+            _context.UserPreferences.Add(new UserPreference
+            {
+                UserId = user.UserId,
+                OnboardingDone = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        private async Task TryAutoSyncFirebaseUsersAsync()
+        {
+            if (FirebaseApp.DefaultInstance == null)
+            {
+                return;
+            }
+
+            try
+            {
+                await SyncFirebaseUsersToSqlAsync();
+            }
+            catch (Exception ex)
+            {
+                var detail = ex.InnerException?.Message ?? ex.Message;
+                TempData["AdminError"] = $"Tu dong dong bo Firebase that bai: {detail}";
+            }
+        }
+
+        private async Task<(int CreatedCount, int UpdatedCount, int SkippedCount)> SyncFirebaseUsersToSqlAsync()
+        {
+            if (FirebaseApp.DefaultInstance == null)
+            {
+                throw new InvalidOperationException("Firebase Admin chua duoc cau hinh. Hay them file firebase-adminsdk.json roi chay lai backend.");
+            }
+
+            var createdCount = 0;
+            var updatedCount = 0;
+            var skippedCount = 0;
+
+            await EnsureNullableUserUniqueIndexesAsync();
+
+            await foreach (var firebaseUser in FirebaseAuth.DefaultInstance.ListUsersAsync(null))
+            {
+                if (string.IsNullOrWhiteSpace(firebaseUser.Uid))
+                {
+                    skippedCount++;
+                    continue;
+                }
+
+                var provider = TruncateRequired(GetFirebaseProvider(firebaseUser), 30);
+                var email = NormalizeEmail(firebaseUser.Email);
+                if (email?.Length > 150)
+                {
+                    email = null;
+                }
+
+                var firebaseUid = TruncateRequired(firebaseUser.Uid, 128);
+                var user = await _context.Users
+                    .Include(x => x.UserPreference)
+                    .FirstOrDefaultAsync(x => x.FirebaseUid == firebaseUid);
+
+                if (user == null && email != null)
+                {
+                    user = await _context.Users
+                        .Include(x => x.UserPreference)
+                        .FirstOrDefaultAsync(x => x.Email == email && (x.FirebaseUid == null || x.FirebaseUid == ""));
+                }
+
+                if (user == null)
+                {
+                    user = new User
+                    {
+                        FullName = TruncateRequired(GetFirebaseDisplayName(firebaseUser), 100),
+                        Email = await CanUseEmailAsync(email, firebaseUid) ? email : null,
+                        PasswordHash = null,
+                        AvatarUrl = Truncate(firebaseUser.PhotoUrl, 500),
+                        RoleId = 2,
+                        IsVerified = firebaseUser.EmailVerified,
+                        IsActive = !firebaseUser.Disabled,
+                        FirebaseUid = firebaseUid,
+                        FirebaseProvider = provider,
+                        AvatarSource = GetAvatarSource(provider),
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    _context.Users.Add(user);
+                    await _context.SaveChangesAsync();
+                    await EnsureUserPreferenceAsync(user);
+                    createdCount++;
+                }
+                else
+                {
+                    user.FullName = string.IsNullOrWhiteSpace(firebaseUser.DisplayName)
+                        ? user.FullName
+                        : TruncateRequired(firebaseUser.DisplayName, 100);
+                    user.Email = await CanUseEmailAsync(email, firebaseUid, user.UserId) ? email : user.Email;
+                    user.AvatarUrl = string.IsNullOrWhiteSpace(firebaseUser.PhotoUrl) ? user.AvatarUrl : Truncate(firebaseUser.PhotoUrl, 500);
+                    user.IsVerified = firebaseUser.EmailVerified;
+                    user.IsActive = !firebaseUser.Disabled;
+                    user.FirebaseUid = firebaseUid;
+                    user.FirebaseProvider = provider;
+                    user.AvatarSource = GetAvatarSource(provider);
+                    user.UpdatedAt = DateTime.UtcNow;
+
+                    await EnsureUserPreferenceAsync(user);
+                    updatedCount++;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return (createdCount, updatedCount, skippedCount);
+        }
+
+        private async Task EnsureNullableUserUniqueIndexesAsync()
+        {
+            const string sql = """
+DECLARE @sql NVARCHAR(MAX) = N'';
+
+SELECT @sql += N'ALTER TABLE dbo.Users DROP CONSTRAINT ' + QUOTENAME(kc.name) + N';'
+FROM sys.key_constraints kc
+JOIN sys.index_columns ic
+    ON kc.parent_object_id = ic.object_id
+    AND kc.unique_index_id = ic.index_id
+JOIN sys.columns c
+    ON ic.object_id = c.object_id
+    AND ic.column_id = c.column_id
+WHERE kc.parent_object_id = OBJECT_ID(N'dbo.Users')
+  AND kc.type = 'UQ'
+  AND c.name IN (N'email', N'phone', N'firebase_uid');
+
+IF @sql <> N''
+BEGIN
+    EXEC sp_executesql @sql;
+END;
+
+IF EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.Users')
+      AND name = N'IX_Users_FirebaseUid'
+      AND is_unique = 0
+)
+BEGIN
+    DROP INDEX IX_Users_FirebaseUid ON dbo.Users;
+END;
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.Users')
+      AND name = N'UX_Users_Email_NotNull'
+)
+BEGIN
+    CREATE UNIQUE INDEX UX_Users_Email_NotNull
+        ON dbo.Users(email)
+        WHERE email IS NOT NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.Users')
+      AND name = N'UX_Users_Phone_NotNull'
+)
+BEGIN
+    CREATE UNIQUE INDEX UX_Users_Phone_NotNull
+        ON dbo.Users(phone)
+        WHERE phone IS NOT NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE object_id = OBJECT_ID(N'dbo.Users')
+      AND name = N'UX_Users_FirebaseUid_NotNull'
+)
+BEGIN
+    CREATE UNIQUE INDEX UX_Users_FirebaseUid_NotNull
+        ON dbo.Users(firebase_uid)
+        WHERE firebase_uid IS NOT NULL;
+END;
+""";
+
+            await _context.Database.ExecuteSqlRawAsync(sql);
         }
     }
 }
