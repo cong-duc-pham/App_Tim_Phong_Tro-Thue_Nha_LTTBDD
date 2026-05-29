@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
@@ -120,7 +121,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
     } catch (_) {
-      // Giá»¯ dá»¯ liá»‡u tá»« Firebase Auth náº¿u Firestore chÆ°a sáºµn sÃ ng.
+      // Giữ dữ liệu từ Firebase Auth nếu Firestore chưa sẵn sàng.
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final isVerifyMain = prefs.getBool('verify_account_main_status') ?? false;
+    if (isVerifyMain) {
+      userInfo = _UserInfo(
+        fullName: userInfo.fullName,
+        email: userInfo.email,
+        phone: userInfo.phone,
+        role: userInfo.role,
+        isVerified: true,
+        avatarUrl: userInfo.avatarUrl,
+        createdAt: userInfo.createdAt,
+        favoritesCount: userInfo.favoritesCount,
+        listingsCount: userInfo.listingsCount,
+        reviewsCount: userInfo.reviewsCount,
+      );
+    } else {
+      // Nếu chưa kích hoạt mức độ tin cậy tuyệt đối, vẫn có thể fallback về trạng thái emailVerified thực tế
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      if (firebaseUser != null && firebaseUser.emailVerified) {
+        userInfo = _UserInfo(
+          fullName: userInfo.fullName,
+          email: userInfo.email,
+          phone: userInfo.phone,
+          role: userInfo.role,
+          isVerified: true,
+          avatarUrl: userInfo.avatarUrl,
+          createdAt: userInfo.createdAt,
+          favoritesCount: userInfo.favoritesCount,
+          listingsCount: userInfo.listingsCount,
+          reviewsCount: userInfo.reviewsCount,
+        );
+      }
     }
 
     if (!mounted) return;
@@ -161,7 +196,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 trailing: _user.isVerified
                     ? _VerifiedBadge()
                     : _UnverifiedBadge(),
-                onTap: () {},
+                onTap: () async {
+                  await context.push(AppConstants.routeVerifyAccount);
+                  _loadCurrentUser();
+                },
               ),
               _MenuItem(
                 icon: Icons.tune_rounded,
