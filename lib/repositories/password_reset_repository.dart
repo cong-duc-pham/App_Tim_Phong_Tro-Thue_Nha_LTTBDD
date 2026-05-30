@@ -39,6 +39,16 @@ class PasswordResetRepository {
   }
 
   String _readBackendMessage(DioException e) {
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout) {
+      return 'Ket noi may chu qua lau. Hay kiem tra backend dang chay o cong 61795.';
+    }
+
+    if (e.type == DioExceptionType.connectionError) {
+      return 'Khong ket noi duoc backend. Hay chay Backend_API truoc khi gui OTP.';
+    }
+
     final data = e.response?.data;
     if (data is Map) {
       final message = data['message'] ?? data['Message'];

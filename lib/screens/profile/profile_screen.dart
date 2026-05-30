@@ -72,6 +72,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadCurrentUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedToken = prefs.getString(AppConstants.keyUserToken);
+    final savedUserId = prefs.getString(AppConstants.keyUserId);
+    if (savedToken != null &&
+        savedToken.isNotEmpty &&
+        savedUserId != null &&
+        savedUserId.isNotEmpty) {
+      final savedEmail = prefs.getString('user_email') ?? '';
+      final savedFullName = prefs.getString('user_full_name');
+      final savedRole = prefs.getString(AppConstants.keyUserRole);
+      final isVerifyMain =
+          prefs.getBool('verify_account_main_status') ?? false;
+
+      if (!mounted) return;
+      setState(() {
+        _user = _UserInfo(
+          fullName: savedFullName?.trim().isNotEmpty == true
+              ? savedFullName!.trim()
+              : (savedEmail.isNotEmpty
+                  ? savedEmail.split('@').first
+                  : 'Nguoi dung'),
+          email: savedEmail,
+          phone: '',
+          role: _normalizeRole(savedRole),
+          isVerified: isVerifyMain,
+          createdAt: DateTime.now(),
+        );
+        _isLoggedIn = true;
+        _isLoading = false;
+      });
+      return;
+    }
+
     final firebaseUser = FirebaseAuth.instance.currentUser;
     if (firebaseUser == null) {
       if (!mounted) return;
@@ -125,7 +158,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Giữ dữ liệu từ Firebase Auth nếu Firestore chưa sẵn sàng.
     }
 
-    final prefs = await SharedPreferences.getInstance();
     final isVerifyMain = prefs.getBool('verify_account_main_status') ?? false;
     if (isVerifyMain) {
       userInfo = _UserInfo(
@@ -743,6 +775,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () async {
               Navigator.pop(context);
               await FirebaseAuth.instance.signOut();
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove(AppConstants.keyUserToken);
+              await prefs.remove(AppConstants.keyUserId);
+              await prefs.remove(AppConstants.keyUserRole);
+              await prefs.remove('refresh_token');
+              await prefs.remove('user_email');
+              await prefs.remove('user_full_name');
               if (!mounted) return;
               setState(() => _isLoggedIn = false);
               context.go(AppConstants.routeLogin);
@@ -771,6 +810,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String _formatJoinDate(DateTime date) {
     return '${date.month}/${date.year}';
+  }
+
+  String _normalizeRole(String? role) {
+    final value = role?.trim().toLowerCase() ?? '';
+    if (value.contains('landlord') || value.contains('owner')) {
+      return 'landlord';
+    }
+    return 'tenant';
   }
 }
 

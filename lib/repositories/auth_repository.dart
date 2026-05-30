@@ -5,34 +5,71 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../core/constants/app_constants.dart';
+import '../services/api_service.dart';
+
+class BackendAuthSession {
+  const BackendAuthSession({
+    required this.userId,
+    required this.email,
+    required this.fullName,
+    required this.accessToken,
+    this.refreshToken,
+    this.role,
+  });
+
+  final String userId;
+  final String email;
+  final String fullName;
+  final String accessToken;
+  final String? refreshToken;
+  final String? role;
+}
 
 class AuthRepository {
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
+  final ApiService _apiService;
 
   AuthRepository({
     FirebaseAuth? firebaseAuth,
     FirebaseFirestore? firestore,
+    ApiService? apiService,
   })  : _auth = firebaseAuth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance;
+        _firestore = firestore ?? FirebaseFirestore.instance,
+        _apiService = apiService ?? ApiService();
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   User? get currentUser => _auth.currentUser;
 
   /// Dang nhap bang email + password.
-  Future<UserCredential> signInWithEmailAndPassword({
+  Future<BackendAuthSession> signInWithEmailAndPassword({
     required String email,
     required String password,
   }) async {
-    return await _auth.signInWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
+    final response = await _apiService.dio.post<Map<String, dynamic>>(
+      '/auth/login',
+      data: {
+        'email': email.trim(),
+        'password': password,
+      },
     );
+
+    final session = _sessionFromBackendResponse(
+      response.data,
+      fallbackEmail: email.trim(),
+    );
+    await _saveBackendSession(session);
+    await _auth.signOut();
+    return session;
   }
 
   /// Dang nhap bang Google qua Firebase Auth.
-  Future<UserCredential> signInWithGoogle() async {
+  Future<BackendAuthSession> signInWithGoogle() async {
     try {
       await GoogleSignIn.instance.initialize();
       final googleUser = await GoogleSignIn.instance.authenticate();
@@ -62,7 +99,7 @@ class AuthRepository {
   }
 
   /// Dang nhap bang Facebook qua Firebase Auth.
-  Future<UserCredential> signInWithFacebook() async {
+  Future<BackendAuthSession> signInWithFacebook() async {
     final result = await FacebookAuth.instance.login(
       permissions: const ['public_profile'],
     );
@@ -89,12 +126,14 @@ class AuthRepository {
     return _signInWithSocialCredential(credential);
   }
 
-  Future<UserCredential> _signInWithSocialCredential(
+  Future<BackendAuthSession> _signInWithSocialCredential(
     AuthCredential credential,
   ) async {
     final userCredential = await _auth.signInWithCredential(credential);
     await _syncSocialProfile(userCredential.user);
-    return userCredential;
+    final session = await _loginBackendWithFirebase(userCredential.user);
+    await _saveBackendSession(session);
+    return session;
   }
 
   Future<void> _syncSocialProfile(User? user) async {
@@ -121,35 +160,29 @@ class AuthRepository {
   }
 
   /// Dang ky tai khoan moi.
-  Future<UserCredential> createUserWithEmailAndPassword({
+  Future<BackendAuthSession> createUserWithEmailAndPassword({
     required String fullName,
     required String email,
     required String password,
     required String phone,
   }) async {
-    final credential = await _auth.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
-
-    // The Auth user has already been created. If profile sync fails,
-    // registration should still be treated as successful.
-    try {
-      await credential.user?.updateDisplayName(fullName);
-      await _firestore.collection('users').doc(credential.user!.uid).set({
-        'uid': credential.user!.uid,
+    final response = await _apiService.dio.post<Map<String, dynamic>>(
+      '/auth/register',
+      data: {
         'fullName': fullName.trim(),
         'email': email.trim(),
+        'password': password,
         'phone': phone.trim(),
-        'role': 'tenant',
-        'createdAt': FieldValue.serverTimestamp(),
-        'avatar': null,
-      }, SetOptions(merge: true));
-    } on FirebaseException catch (e) {
-      debugPrint('Firebase profile sync failed: ${e.code} - ${e.message}');
-    }
+      },
+    );
 
-    return credential;
+    final session = _sessionFromBackendResponse(
+      response.data,
+      fallbackEmail: email.trim(),
+      fallbackFullName: fullName.trim(),
+    );
+    await _saveBackendSession(session);
+    return session;
   }
 
   /// Dang xuat.
@@ -157,10 +190,130 @@ class AuthRepository {
     await GoogleSignIn.instance.signOut();
     await FacebookAuth.instance.logOut();
     await _auth.signOut();
+    await clearBackendSession();
   }
 
   /// Gui email dat lai mat khau.
   Future<void> sendPasswordResetEmail(String email) async {
     await _auth.sendPasswordResetEmail(email: email.trim());
+  }
+
+  Future<BackendAuthSession?> getSavedSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AppConstants.keyUserToken);
+    final userId = prefs.getString(AppConstants.keyUserId);
+    if (token == null || token.isEmpty || userId == null || userId.isEmpty) {
+      return null;
+    }
+
+    return BackendAuthSession(
+      userId: userId,
+      email: prefs.getString('user_email') ?? '',
+      fullName: prefs.getString('user_full_name') ?? '',
+      accessToken: token,
+      refreshToken: prefs.getString('refresh_token'),
+      role: prefs.getString(AppConstants.keyUserRole),
+    );
+  }
+
+  Future<void> clearBackendSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(AppConstants.keyUserToken);
+    await prefs.remove(AppConstants.keyUserId);
+    await prefs.remove(AppConstants.keyUserRole);
+    await prefs.remove('refresh_token');
+    await prefs.remove('user_email');
+    await prefs.remove('user_full_name');
+  }
+
+  Future<BackendAuthSession> _loginBackendWithFirebase(User? user) async {
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'firebase-user-missing',
+        message: 'Khong lay duoc thong tin Firebase user.',
+      );
+    }
+
+    final firebaseToken = await user.getIdToken(true);
+    if (firebaseToken == null || firebaseToken.isEmpty) {
+      throw FirebaseAuthException(
+        code: 'firebase-token-missing',
+        message: 'Khong lay duoc Firebase token.',
+      );
+    }
+
+    final response = await _apiService.dio.post<Map<String, dynamic>>(
+      '/auth/firebase-login',
+      data: {'firebaseToken': firebaseToken},
+    );
+
+    return _sessionFromBackendResponse(
+      response.data,
+      fallbackEmail: user.email ?? '',
+      fallbackFullName: user.displayName ?? '',
+    );
+  }
+
+  BackendAuthSession _sessionFromBackendResponse(
+    Map<String, dynamic>? body, {
+    required String fallbackEmail,
+    String fallbackFullName = '',
+  }) {
+    final data = body?['data'] ?? body?['Data'];
+    if (data is! Map) {
+      throw Exception('Backend khong tra ve thong tin dang nhap.');
+    }
+
+    final accessToken = data['accessToken'] ?? data['AccessToken'];
+    if (accessToken is! String || accessToken.isEmpty) {
+      throw Exception('Backend khong tra ve access token.');
+    }
+
+    final userId = data['userId'] ?? data['UserId'];
+    final fullName = data['fullName'] ?? data['FullName'];
+    final refreshToken = data['refreshToken'] ?? data['RefreshToken'];
+    final role = data['role'] ?? data['Role'];
+
+    return BackendAuthSession(
+      userId: userId?.toString() ?? '',
+      email: fallbackEmail,
+      fullName: fullName?.toString() ?? fallbackFullName,
+      accessToken: accessToken,
+      refreshToken: refreshToken?.toString(),
+      role: role?.toString(),
+    );
+  }
+
+  Future<void> _saveBackendSession(BackendAuthSession session) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(AppConstants.keyUserToken, session.accessToken);
+    await prefs.setString(AppConstants.keyUserId, session.userId);
+    await prefs.setString('user_email', session.email);
+    await prefs.setString('user_full_name', session.fullName);
+    if (session.refreshToken != null) {
+      await prefs.setString('refresh_token', session.refreshToken!);
+    }
+    if (session.role != null) {
+      await prefs.setString(AppConstants.keyUserRole, session.role!);
+    }
+  }
+
+  String readBackendMessage(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map) {
+        final message = data['message'] ?? data['Message'];
+        if (message != null) return message.toString();
+      }
+      if (data is String && data.trim().isNotEmpty) {
+        return data;
+      }
+      return error.message ?? 'Khong ket noi duoc backend.';
+    }
+
+    final message = error.toString();
+    return message.startsWith('Exception: ')
+        ? message.substring('Exception: '.length)
+        : message;
   }
 }
