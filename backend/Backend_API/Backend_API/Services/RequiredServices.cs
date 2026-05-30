@@ -15,12 +15,18 @@ namespace Backend_API.Services
 
     public class EmailService : IEmailService
     {
+        private const int SmtpTimeoutMilliseconds = 10000;
         private readonly IConfiguration _configuration;
+        private readonly IHostEnvironment _environment;
         private readonly ILogger<EmailService> _logger;
 
-        public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
+        public EmailService(
+            IConfiguration configuration,
+            IHostEnvironment environment,
+            ILogger<EmailService> logger)
         {
             _configuration = configuration;
+            _environment = environment;
             _logger = logger;
         }
 
@@ -59,11 +65,23 @@ namespace Backend_API.Services
                     </div>"
             };
 
-            using var smtp = new SmtpClient();
-            await smtp.ConnectAsync(host, port, SecureSocketOptions.StartTls);
-            await smtp.AuthenticateAsync(senderEmail, senderPassword);
-            await smtp.SendAsync(message);
-            await smtp.DisconnectAsync(true);
+            using var smtp = new SmtpClient
+            {
+                Timeout = SmtpTimeoutMilliseconds
+            };
+
+            try
+            {
+                await smtp.ConnectAsync(host, port, SecureSocketOptions.StartTls);
+                await smtp.AuthenticateAsync(senderEmail, senderPassword);
+                await smtp.SendAsync(message);
+                await smtp.DisconnectAsync(true);
+            }
+            catch (Exception ex) when (_environment.IsDevelopment())
+            {
+                _logger.LogWarning(ex, "Could not send password reset OTP email in development. OTP for {Email}: {OtpCode}", toEmail, otpCode);
+                Console.WriteLine($"[DEV OTP] {toEmail}: {otpCode}");
+            }
         }
     }
 }

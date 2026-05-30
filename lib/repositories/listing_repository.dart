@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/constants/app_constants.dart';
 import '../models/listing.dart';
 import '../services/api_service.dart';
 
@@ -120,6 +122,12 @@ class ListingRepository {
   }
 
   Future<String> _getBackendAccessToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedToken = prefs.getString(AppConstants.keyUserToken);
+    if (savedToken != null && savedToken.isNotEmpty) {
+      return savedToken;
+    }
+
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       throw Exception('Ban can dang nhap truoc khi dang tin.');
