@@ -95,6 +95,45 @@ namespace Backend_API.Controllers.API
 
             var relativeUrl = $"/uploads/listings/{listingId}/{fileName}";
             var absoluteUrl = $"{Request.Scheme}://{Request.Host}{relativeUrl}";
+            var publicId = $"uploads/listings/{listingId}/{Path.GetFileNameWithoutExtension(fileName)}";
+            var existingFile = safeUploadType == "cover"
+                ? await _context.CloudinaryFiles.FirstOrDefaultAsync(f =>
+                    f.RefType == "listing" &&
+                    f.RefId == listingId &&
+                    f.PublicId == publicId &&
+                    f.IsActive == true)
+                : null;
+
+            if (existingFile == null)
+            {
+                await _context.CloudinaryFiles.AddAsync(new CloudinaryFile
+                {
+                    UserId = userId.Value,
+                    PublicId = publicId,
+                    SecureUrl = absoluteUrl,
+                    DeliveryUrl = absoluteUrl,
+                    ResourceType = "image",
+                    Format = extension.TrimStart('.').ToLowerInvariant(),
+                    FileSizeKb = (int)Math.Ceiling(file.Length / 1024d),
+                    Folder = $"uploads/listings/{listingId}",
+                    RefType = "listing",
+                    RefId = listingId,
+                    IsActive = true,
+                    UploadStatus = "uploaded",
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                existingFile.SecureUrl = absoluteUrl;
+                existingFile.DeliveryUrl = absoluteUrl;
+                existingFile.Format = extension.TrimStart('.').ToLowerInvariant();
+                existingFile.FileSizeKb = (int)Math.Ceiling(file.Length / 1024d);
+                existingFile.UploadStatus = "uploaded";
+                existingFile.DeletedAt = null;
+            }
+
+            await _context.SaveChangesAsync();
 
             return Ok(new
             {
