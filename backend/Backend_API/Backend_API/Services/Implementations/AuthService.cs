@@ -3,6 +3,7 @@ using Backend_API.Models.Entities;
 using Backend_API.Services.Interfaces;
 using Backend_API.Services;
 using Backend_API.Helpers;
+using FirebaseAdmin.Auth;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
@@ -33,8 +34,9 @@ namespace Backend_API.Services.Implementations
 
         public async Task<LoginResponseDto> RegisterAsync(RegisterRequestDto dto)
         {
+            var email = NormalizeEmail(dto.Email);
             var isDuplicate = await _context.Users
-                .AnyAsync(u => u.Email == dto.Email || u.Phone == dto.Phone);
+                .AnyAsync(u => (u.Email != null && u.Email.ToLower() == email) || u.Phone == dto.Phone);
             if (isDuplicate)
             {
                 throw new Exception("Email hoặc Số điện thoại đã được sử dụng.");
@@ -44,7 +46,7 @@ namespace Backend_API.Services.Implementations
             var newUser = new User
             {
                 FullName = dto.FullName,
-                Email = dto.Email,
+                Email = email,
                 Phone = dto.Phone,
                 PasswordHash = hash,
                 RoleId = 2, // Default: Tenant
@@ -81,9 +83,11 @@ namespace Backend_API.Services.Implementations
 
         public async Task<LoginResponseDto> LoginAsync(LoginRequestDto dto)
         {
+            var email = NormalizeEmail(dto.Email);
             var user = await _context.Users
                 .Include(u => u.Role)
-                .FirstOrDefaultAsync(u => u.Email == dto.Email);
+                .Include(u => u.UserPreference)
+                .FirstOrDefaultAsync(u => u.Email != null && u.Email.ToLower() == email);
                 
             if (user == null || string.IsNullOrEmpty(user.PasswordHash) || !PasswordHasher.Verify(dto.Password, user.PasswordHash))
             {
@@ -209,15 +213,14 @@ namespace Backend_API.Services.Implementations
         public async Task RequestPasswordResetOtpAsync(ForgotPasswordRequestDto dto)
         {
             var email = NormalizeEmail(dto.Email);
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email != null && u.Email.ToLower() == email);
+            var user = await FindOrCreatePasswordResetUserAsync(email);
 
             if (user == null)
             {
                 throw new Exception("Email khong ton tai trong he thong.");
             }
 
-            if (string.IsNullOrWhiteSpace(user.PasswordHash))
+            if (string.IsNullOrWhiteSpace(user.PasswordHash) && !IsFirebasePasswordUser(user))
             {
                 throw new Exception("Tai khoan nay dang nhap bang Google/Facebook, khong can dat lai mat khau tai day.");
             }
@@ -261,7 +264,7 @@ namespace Backend_API.Services.Implementations
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Email != null && u.Email.ToLower() == email);
 
-            if (user == null || string.IsNullOrWhiteSpace(user.PasswordHash))
+            if (user == null || (string.IsNullOrWhiteSpace(user.PasswordHash) && !IsFirebasePasswordUser(user)))
             {
                 throw new Exception("Tai khoan khong hop le de dat lai mat khau.");
             }
@@ -339,6 +342,75 @@ namespace Backend_API.Services.Implementations
         private static string NormalizeEmail(string email)
         {
             return email.Trim().ToLowerInvariant();
+        }
+
+        private static bool IsFirebasePasswordUser(User user)
+        {
+            return string.Equals(user.FirebaseProvider, "password", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private async Task<User?> FindOrCreatePasswordResetUserAsync(string email)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email != null && u.Email.ToLower() == email);
+
+            if (user != null)
+            {
+                return user;
+            }
+
+            UserRecord firebaseUser;
+            try
+            {
+                firebaseUser = await FirebaseAuth.DefaultInstance.GetUserByEmailAsync(email);
+            }
+            catch
+            {
+                return null;
+            }
+
+            var hasPasswordProvider = firebaseUser.ProviderData.Any(p =>
+                string.Equals(p.ProviderId, "password", StringComparison.OrdinalIgnoreCase));
+
+            if (!hasPasswordProvider)
+            {
+                return new User
+                {
+                    FullName = firebaseUser.DisplayName ?? email,
+                    Email = email,
+                    FirebaseUid = firebaseUser.Uid,
+                    FirebaseProvider = firebaseUser.ProviderData.FirstOrDefault()?.ProviderId
+                };
+            }
+
+            var nowUtc = DateTime.UtcNow;
+            user = new User
+            {
+                FullName = string.IsNullOrWhiteSpace(firebaseUser.DisplayName)
+                    ? email.Split('@')[0]
+                    : firebaseUser.DisplayName,
+                Email = email,
+                Phone = firebaseUser.PhoneNumber,
+                FirebaseUid = firebaseUser.Uid,
+                FirebaseProvider = "password",
+                RoleId = 2,
+                IsActive = true,
+                IsVerified = firebaseUser.EmailVerified,
+                CreatedAt = nowUtc,
+                UpdatedAt = nowUtc
+            };
+
+            await _context.Users.AddAsync(user);
+            await _context.SaveChangesAsync();
+
+            await _context.UserPreferences.AddAsync(new UserPreference
+            {
+                UserId = user.UserId,
+                OnboardingDone = false
+            });
+            await _context.SaveChangesAsync();
+
+            return user;
         }
     }
 }
