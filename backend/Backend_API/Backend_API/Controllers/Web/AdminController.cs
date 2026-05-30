@@ -173,6 +173,63 @@ namespace Backend_API.Controllers.MVC
             return View(new AdminListingsViewModel { Listings = listings });
         }
 
+        [HttpGet("listing-management")]
+        public async Task<IActionResult> ListingManagement([FromQuery] string? status, [FromQuery] string? keyword)
+        {
+            var query = _context.Listings
+                .Include(x => x.Status)
+                .Include(x => x.Landlord)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                var normalizedStatus = status.Trim().ToLowerInvariant();
+                query = query.Where(x => x.Status.StatusName.ToLower() == normalizedStatus);
+            }
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                var normalizedKeyword = keyword.Trim().ToLower();
+                query = query.Where(x =>
+                    x.Title.ToLower().Contains(normalizedKeyword) ||
+                    x.StreetAddress.ToLower().Contains(normalizedKeyword) ||
+                    (x.Landlord.Email != null && x.Landlord.Email.ToLower().Contains(normalizedKeyword)) ||
+                    x.Landlord.FullName.ToLower().Contains(normalizedKeyword));
+            }
+
+            var statuses = await _context.ListingStatuses
+                .OrderBy(x => x.StatusId)
+                .Select(x => x.StatusName)
+                .ToListAsync();
+
+            var listings = await query
+                .OrderByDescending(x => x.CreatedAt)
+                .Take(500)
+                .Select(x => new AdminListingItemViewModel
+                {
+                    ListingId = x.ListingId,
+                    Title = x.Title,
+                    Price = x.Price,
+                    LandlordName = x.Landlord.FullName,
+                    LandlordEmail = x.Landlord.Email,
+                    StatusName = x.Status.StatusName,
+                    Image0 = x.Image0,
+                    ViewCount = x.ViewCount,
+                    SaveCount = x.SaveCount,
+                    CreatedAt = x.CreatedAt
+                })
+                .ToListAsync();
+
+            ViewData["Title"] = "Quan ly tin dang";
+            return View(new AdminListingManagementViewModel
+            {
+                Status = status,
+                Keyword = keyword,
+                Statuses = statuses,
+                Listings = listings
+            });
+        }
+
         [HttpGet("listings/{id:long}")]
         public async Task<IActionResult> ListingDetail(long id)
         {
@@ -407,6 +464,8 @@ namespace Backend_API.Controllers.MVC
         [HttpGet("storage")]
         public async Task<IActionResult> Storage([FromQuery(Name = "ref_type")] string? refType, [FromQuery(Name = "user_id")] long? userId)
         {
+            await BackfillListingStorageFilesAsync();
+
             var query = _context.CloudinaryFiles
                 .Include(x => x.User)
                 .Where(x => x.IsActive == true);
@@ -431,6 +490,7 @@ namespace Backend_API.Controllers.MVC
                     UserId = x.UserId,
                     UserName = x.User.FullName,
                     PublicId = x.PublicId,
+                    SecureUrl = x.SecureUrl,
                     ResourceType = x.ResourceType,
                     FileSizeKb = x.FileSizeKb,
                     Format = x.Format,
@@ -467,6 +527,94 @@ namespace Backend_API.Controllers.MVC
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Storage), new { ref_type = refType, user_id = userId });
+        }
+
+        private async Task BackfillListingStorageFilesAsync()
+        {
+            var listings = await _context.Listings
+                .AsNoTracking()
+                .Where(x => x.Image0 != null || x.Image1 != null || x.Image2 != null || x.Image3 != null || x.Image4 != null || x.Image5 != null)
+                .Select(x => new
+                {
+                    x.ListingId,
+                    x.LandlordId,
+                    Images = new[] { x.Image0, x.Image1, x.Image2, x.Image3, x.Image4, x.Image5 }
+                })
+                .ToListAsync();
+
+            var changed = false;
+            foreach (var listing in listings)
+            {
+                foreach (var imageUrl in listing.Images.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x!.Trim()).Distinct())
+                {
+                    if (!TryBuildStoragePublicId(imageUrl, listing.ListingId, out var publicId, out var format))
+                    {
+                        continue;
+                    }
+
+                    var exists = await _context.CloudinaryFiles.AnyAsync(x =>
+                        x.PublicId == publicId &&
+                        x.RefType == "listing" &&
+                        x.RefId == listing.ListingId &&
+                        x.IsActive == true);
+
+                    if (exists)
+                    {
+                        continue;
+                    }
+
+                    await _context.CloudinaryFiles.AddAsync(new CloudinaryFile
+                    {
+                        UserId = listing.LandlordId,
+                        PublicId = publicId,
+                        SecureUrl = imageUrl,
+                        DeliveryUrl = imageUrl,
+                        ResourceType = "image",
+                        Format = format,
+                        Folder = $"uploads/listings/{listing.ListingId}",
+                        RefType = "listing",
+                        RefId = listing.ListingId,
+                        IsActive = true,
+                        UploadStatus = "uploaded",
+                        CreatedAt = DateTime.UtcNow
+                    });
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        private static bool TryBuildStoragePublicId(string imageUrl, long listingId, out string publicId, out string? format)
+        {
+            publicId = string.Empty;
+            format = null;
+
+            var path = imageUrl;
+            if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri))
+            {
+                path = uri.AbsolutePath;
+            }
+
+            var marker = $"/uploads/listings/{listingId}/";
+            var markerIndex = path.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (markerIndex < 0)
+            {
+                return false;
+            }
+
+            var relativePath = path[(markerIndex + 1)..];
+            var extension = Path.GetExtension(relativePath);
+            format = string.IsNullOrWhiteSpace(extension)
+                ? null
+                : extension.TrimStart('.').ToLowerInvariant();
+            publicId = string.IsNullOrWhiteSpace(extension)
+                ? relativePath
+                : relativePath[..^extension.Length];
+            return !string.IsNullOrWhiteSpace(publicId);
         }
 
         private async Task<int> GetListingStatusIdAsync(string statusName)

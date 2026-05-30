@@ -87,11 +87,12 @@
                 </a>
 
                 <nav class="nav flex-column">
-                    <a class="nav-link @Active("/admin/dashboard")" href="/admin/dashboard"><i class="bi bi-speedometer2 me-2"></i>Tổng quan</a>
-                    <a class="nav-link @Active("/admin/users")" href="/admin/users"><i class="bi bi-people me-2"></i>Người dùng</a>
-                    <a class="nav-link @Active("/admin/listings")" href="/admin/listings"><i class="bi bi-house-door me-2"></i>Duyệt tin</a>
-                    <a class="nav-link @Active("/admin/reports")" href="/admin/reports"><i class="bi bi-flag me-2"></i>Báo cáo</a>
-                    <a class="nav-link @Active("/admin/storage")" href="/admin/storage"><i class="bi bi-cloud-arrow-up me-2"></i>Kho ảnh</a>
+                    <a class="nav-link @Active("/admin/dashboard")" href="/admin/dashboard"><i class="bi bi-speedometer2 me-2"></i>T&#7893;ng quan</a>
+                    <a class="nav-link @Active("/admin/users")" href="/admin/users"><i class="bi bi-people me-2"></i>Ng&#432;&#7901;i d&#249;ng</a>
+                    <a class="nav-link @Active("/admin/listing-management")" href="/admin/listing-management"><i class="bi bi-card-list me-2"></i>Tin &#273;&#259;ng</a>
+                    <a class="nav-link @Active("/admin/listings")" href="/admin/listings"><i class="bi bi-house-door me-2"></i>Duy&#7879;t tin</a>
+                    <a class="nav-link @Active("/admin/reports")" href="/admin/reports"><i class="bi bi-flag me-2"></i>B&#225;o c&#225;o</a>
+                    <a class="nav-link @Active("/admin/storage")" href="/admin/storage"><i class="bi bi-cloud-arrow-up me-2"></i>Kho &#7843;nh</a>
                     <a class="nav-link" href="/swagger"><i class="bi bi-braces me-2"></i>Swagger API</a>
                 </nav>
             </aside>
@@ -101,10 +102,10 @@
                     <h1 class="h5 mb-0">@pageTitle</h1>
 
                     <div class="d-flex align-items-center gap-3">
-                        <span class="text-muted">Xin chào, <strong>@adminName</strong></span>
+                        <span class="text-muted">Xin ch&#224;o, <strong>@adminName</strong></span>
                         <form method="post" action="/auth/logout" class="m-0">
                             <button type="submit" class="btn btn-outline-danger btn-sm">
-                                <i class="bi bi-box-arrow-right me-1"></i>Đăng xuất
+                                <i class="bi bi-box-arrow-right me-1"></i>&#272;&#259;ng xu&#7845;t
                             </button>
                         </form>
                     </div>

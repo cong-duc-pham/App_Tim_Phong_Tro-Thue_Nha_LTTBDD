@@ -1,6 +1,6 @@
 @model Backend_API.Models.ViewModels.Admin.AdminStorageViewModel
 @{
-    ViewData["Title"] = "Quản lý Cloudinary Storage";
+    ViewData["Title"] = "Quan ly Storage";
 }
 
 <div class="card border-0 shadow-sm mb-3">
@@ -12,18 +12,18 @@
             </div>
             <div class="col-12 col-md-4">
                 <label class="form-label">Filter: user_id</label>
-                <input type="number" name="user_id" value="@Model.UserId" class="form-control" placeholder="Nhập user id" />
+                <input type="number" name="user_id" value="@Model.UserId" class="form-control" placeholder="Nhap user id" />
             </div>
             <div class="col-12 col-md-4">
-                <button type="submit" class="btn btn-primary">Lọc</button>
-                <a href="/admin/storage" class="btn btn-outline-secondary">Xóa lọc</a>
+                <button type="submit" class="btn btn-primary">Loc</button>
+                <a href="/admin/storage" class="btn btn-outline-secondary">Xoa loc</a>
             </div>
         </form>
     </div>
 </div>
 
 <div class="card border-0 shadow-sm">
-    <div class="card-header bg-white fw-semibold">Danh sách files</div>
+    <div class="card-header bg-white fw-semibold">Danh sach files</div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -32,10 +32,11 @@
                         <th>#ID</th>
                         <th>User</th>
                         <th>ref_type</th>
+                        <th>Preview</th>
                         <th>Public ID</th>
                         <th>file_size_kb</th>
                         <th>format</th>
-                        <th>Ngày tạo</th>
+                        <th>Ngay tao</th>
                         <th class="text-end">Action</th>
                     </tr>
                 </thead>
@@ -43,7 +44,7 @@
                     @if (!Model.Files.Any())
                     {
                         <tr>
-                            <td colspan="8" class="text-center py-4 text-muted">Không có file phù hợp.</td>
+                            <td colspan="9" class="text-center py-4 text-muted">Khong co file phu hop.</td>
                         </tr>
                     }
                     else
@@ -54,6 +55,18 @@
                                 <td>@file.FileId</td>
                                 <td>@file.UserName (#@file.UserId)</td>
                                 <td>@(file.RefType ?? "-")</td>
+                                <td>
+                                    @if (file.ResourceType == "image" && !string.IsNullOrWhiteSpace(file.SecureUrl))
+                                    {
+                                        <a href="@file.SecureUrl" target="_blank" rel="noopener">
+                                            <img src="@file.SecureUrl" alt="@file.PublicId" class="rounded border object-fit-cover" style="width: 72px; height: 48px;" />
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
                                 <td><code>@file.PublicId</code></td>
                                 <td>@(file.FileSizeKb?.ToString() ?? "-")</td>
                                 <td>@(file.Format ?? "-")</td>
@@ -61,7 +74,7 @@
                                 <td class="text-end">
                                     <form method="post" action="/admin/storage/@file.FileId/delete?ref_type=@Model.RefType&user_id=@Model.UserId">
                                         @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">Xóa file</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Xoa file</button>
                                     </form>
                                 </td>
                             </tr>

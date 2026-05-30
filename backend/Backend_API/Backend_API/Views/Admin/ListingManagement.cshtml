@@ -1,0 +1,103 @@
+@model Backend_API.Models.ViewModels.Admin.AdminListingManagementViewModel
+@{
+    ViewData["Title"] = "Quan ly tin dang";
+}
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" action="/admin/listing-management" class="row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label">Tim kiem</label>
+                <input type="text" name="keyword" value="@Model.Keyword" class="form-control" placeholder="Tieu de, dia chi, chu tin..." />
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label">Trang thai</label>
+                <select name="status" class="form-select">
+                    <option value="">Tat ca</option>
+                    @foreach (var status in Model.Statuses)
+                    {
+                        <option value="@status" selected="@(string.Equals(Model.Status, status, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">@status</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-md-5">
+                <button type="submit" class="btn btn-primary">Loc</button>
+                <a href="/admin/listing-management" class="btn btn-outline-secondary">Xoa loc</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white fw-semibold">Danh sach tin dang</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#ID</th>
+                        <th>Preview</th>
+                        <th>Tin dang</th>
+                        <th>Gia</th>
+                        <th>Chu tin</th>
+                        <th>Trang thai</th>
+                        <th>Luot xem</th>
+                        <th>Ngay tao</th>
+                        <th class="text-end">Thao tac</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Listings.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center py-4 text-muted">Khong co tin dang phu hop.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var listing in Model.Listings)
+                        {
+                            <tr>
+                                <td>@listing.ListingId</td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(listing.Image0))
+                                    {
+                                        <img src="@listing.Image0" alt="@listing.Title" class="rounded border object-fit-cover" style="width: 76px; height: 52px;" />
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">@listing.Title</div>
+                                    <small class="text-muted">#@listing.ListingId</small>
+                                </td>
+                                <td>@listing.Price.ToString("N0") d</td>
+                                <td>
+                                    <div>@listing.LandlordName</div>
+                                    <small class="text-muted">@(listing.LandlordEmail ?? "-")</small>
+                                </td>
+                                <td><span class="badge text-bg-secondary">@listing.StatusName</span></td>
+                                <td>@(listing.ViewCount ?? 0)</td>
+                                <td>@(listing.CreatedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-2">
+                                        <a href="/admin/listings/@listing.ListingId" class="btn btn-sm btn-outline-primary">Chi tiet</a>
+                                        @if (string.Equals(listing.StatusName, "pending", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <form method="post" action="/admin/listings/@listing.ListingId/approve">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-success">Duyet</button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
