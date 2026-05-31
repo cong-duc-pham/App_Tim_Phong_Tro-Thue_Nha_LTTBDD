@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -54,7 +54,7 @@ class ListingRepository {
       final body = response.data ?? {};
       final data = body['data'] ?? body['Data'];
       if (data is! Map) {
-        throw Exception('Backend khong tra ve thong tin tin dang.');
+        throw Exception('Backend không trả về thông tin tin đăng.');
       }
 
       return Listing.fromJson(Map<String, dynamic>.from(data));
@@ -75,7 +75,7 @@ class ListingRepository {
       final body = response.data ?? {};
       final data = body['data'] ?? body['Data'];
       if (data is! Map) {
-        throw Exception('Backend khong tra ve thong tin tin dang.');
+        throw Exception('Backend không trả về thông tin tin đăng.');
       }
 
       return Listing.fromJson(Map<String, dynamic>.from(data));
@@ -107,12 +107,12 @@ class ListingRepository {
       final body = response.data ?? {};
       final data = body['data'] ?? body['Data'];
       if (data is! Map) {
-        throw Exception('Backend khong tra ve URL anh.');
+        throw Exception('Backend không trả về URL ảnh.');
       }
 
       final url = data['url'] ?? data['Url'];
       if (url is! String || url.isEmpty) {
-        throw Exception('URL anh khong hop le.');
+        throw Exception('URL ảnh không hợp lệ.');
       }
 
       return url;
@@ -130,12 +130,12 @@ class ListingRepository {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      throw Exception('Ban can dang nhap truoc khi dang tin.');
+      throw Exception('Bạn cần đăng nhập trước khi đăng tin.');
     }
 
     final firebaseToken = await user.getIdToken(true);
     if (firebaseToken == null || firebaseToken.isEmpty) {
-      throw Exception('Khong lay duoc Firebase token.');
+      throw Exception('Không lấy được Firebase token.');
     }
 
     late final Response<Map<String, dynamic>> response;
@@ -151,12 +151,12 @@ class ListingRepository {
     final body = response.data ?? {};
     final data = body['data'] ?? body['Data'];
     if (data is! Map) {
-      throw Exception('Backend khong tra ve access token.');
+      throw Exception('Backend không trả về access token.');
     }
 
     final token = data['accessToken'] ?? data['AccessToken'];
     if (token is! String || token.isEmpty) {
-      throw Exception('Access token khong hop le.');
+      throw Exception('Access token không hợp lệ.');
     }
 
     return token;
@@ -171,6 +171,6 @@ class ListingRepository {
     if (data is String && data.trim().isNotEmpty) {
       return data;
     }
-    return e.message ?? 'Khong ket noi duoc backend.';
+    return e.message ?? 'Không kết nối được backend.';
   }
 }

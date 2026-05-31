@@ -1,4 +1,4 @@
-// lib/repositories/auth_repository.dart
+﻿// lib/repositories/auth_repository.dart
 
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -46,7 +46,7 @@ class AuthRepository {
 
   User? get currentUser => _auth.currentUser;
 
-  /// Dang nhap bang email + password.
+  /// Đăng nhập bằng email + password.
   Future<BackendAuthSession> signInWithEmailAndPassword({
     required String email,
     required String password,
@@ -68,7 +68,7 @@ class AuthRepository {
     return session;
   }
 
-  /// Dang nhap bang Google qua Firebase Auth.
+  /// Đăng nhập bằng Google qua Firebase Auth.
   Future<BackendAuthSession> signInWithGoogle() async {
     try {
       await GoogleSignIn.instance.initialize();
@@ -79,7 +79,7 @@ class AuthRepository {
         throw FirebaseAuthException(
           code: 'google-missing-id-token',
           message:
-              'Google Sign-In chua co idToken. Hay them SHA-1/SHA-256 tren Firebase va tai lai google-services.json.',
+              'Google Sign-In chưa có idToken. Hãy thêm SHA-1/SHA-256 trên Firebase và tải lại google-services.json.',
         );
       }
 
@@ -98,7 +98,7 @@ class AuthRepository {
     }
   }
 
-  /// Dang nhap bang Facebook qua Firebase Auth.
+  /// Đăng nhập bằng Facebook qua Firebase Auth.
   Future<BackendAuthSession> signInWithFacebook() async {
     final result = await FacebookAuth.instance.login(
       permissions: const ['public_profile'],
@@ -115,7 +115,7 @@ class AuthRepository {
       throw FirebaseAuthException(
         code: 'social-login-failed',
         message: result.message ??
-            'Facebook login failed. Kiem tra app mode, tester, package name va key hash tren Meta Developer.',
+            'Facebook login failed. Kiểm tra app mode, tester, package name và key hash trên Meta Developer.',
       );
     }
 
@@ -159,7 +159,7 @@ class AuthRepository {
     }
   }
 
-  /// Dang ky tai khoan moi.
+  /// Đăng ký tài khoản mới.
   Future<BackendAuthSession> createUserWithEmailAndPassword({
     required String fullName,
     required String email,
@@ -185,7 +185,7 @@ class AuthRepository {
     return session;
   }
 
-  /// Dang xuat.
+  /// Đăng xuất.
   Future<void> signOut() async {
     await GoogleSignIn.instance.signOut();
     await FacebookAuth.instance.logOut();
@@ -193,7 +193,7 @@ class AuthRepository {
     await clearBackendSession();
   }
 
-  /// Gui email dat lai mat khau.
+  /// Gửi email đặt lại mật khẩu.
   Future<void> sendPasswordResetEmail(String email) async {
     await _auth.sendPasswordResetEmail(email: email.trim());
   }
@@ -230,7 +230,7 @@ class AuthRepository {
     if (user == null) {
       throw FirebaseAuthException(
         code: 'firebase-user-missing',
-        message: 'Khong lay duoc thong tin Firebase user.',
+        message: 'Không lấy được thông tin Firebase user.',
       );
     }
 
@@ -238,7 +238,7 @@ class AuthRepository {
     if (firebaseToken == null || firebaseToken.isEmpty) {
       throw FirebaseAuthException(
         code: 'firebase-token-missing',
-        message: 'Khong lay duoc Firebase token.',
+        message: 'Không lấy được Firebase token.',
       );
     }
 
@@ -261,12 +261,12 @@ class AuthRepository {
   }) {
     final data = body?['data'] ?? body?['Data'];
     if (data is! Map) {
-      throw Exception('Backend khong tra ve thong tin dang nhap.');
+      throw Exception('Backend không trả về thông tin đăng nhập.');
     }
 
     final accessToken = data['accessToken'] ?? data['AccessToken'];
     if (accessToken is! String || accessToken.isEmpty) {
-      throw Exception('Backend khong tra ve access token.');
+      throw Exception('Backend không trả về access token.');
     }
 
     final userId = data['userId'] ?? data['UserId'];
@@ -308,7 +308,7 @@ class AuthRepository {
       if (data is String && data.trim().isNotEmpty) {
         return data;
       }
-      return error.message ?? 'Khong ket noi duoc backend.';
+      return error.message ?? 'Không kết nối được backend.';
     }
 
     final message = error.toString();

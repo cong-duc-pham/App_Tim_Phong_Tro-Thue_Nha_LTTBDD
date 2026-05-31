@@ -1,4 +1,4 @@
-// lib/screens/home/home_screen.dart
+﻿// lib/screens/home/home_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1196,7 +1196,7 @@ class _HomeScreenState extends State<HomeScreen> {
           border: Border.all(color: AppColors.warning.withValues(alpha: 0.25)),
         ),
         child: const Text(
-          'Chua ket noi duoc SQL, dang hien du lieu mau.',
+          'Chưa kết nối được SQL, đang hiển thị dữ liệu mẫu.',
           style: TextStyle(
             color: AppColors.warningText,
             fontSize: 12,

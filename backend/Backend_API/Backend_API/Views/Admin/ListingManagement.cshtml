@@ -1,19 +1,19 @@
-@model Backend_API.Models.ViewModels.Admin.AdminListingManagementViewModel
+﻿@model Backend_API.Models.ViewModels.Admin.AdminListingManagementViewModel
 @{
-    ViewData["Title"] = "Quan ly tin dang";
+    ViewData["Title"] = "Quản lý tin đăng";
 }
 
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body">
         <form method="get" action="/admin/listing-management" class="row g-2 align-items-end">
             <div class="col-12 col-md-4">
-                <label class="form-label">Tim kiem</label>
-                <input type="text" name="keyword" value="@Model.Keyword" class="form-control" placeholder="Tieu de, dia chi, chu tin..." />
+                <label class="form-label">Tìm kiếm</label>
+                <input type="text" name="keyword" value="@Model.Keyword" class="form-control" placeholder="Tiêu đề, địa chỉ, chủ tin..." />
             </div>
             <div class="col-12 col-md-3">
-                <label class="form-label">Trang thai</label>
+                <label class="form-label">Trạng thái</label>
                 <select name="status" class="form-select">
-                    <option value="">Tat ca</option>
+                    <option value="">Tất cả</option>
                     @foreach (var status in Model.Statuses)
                     {
                         <option value="@status" selected="@(string.Equals(Model.Status, status, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">@status</option>
@@ -21,15 +21,15 @@
                 </select>
             </div>
             <div class="col-12 col-md-5">
-                <button type="submit" class="btn btn-primary">Loc</button>
-                <a href="/admin/listing-management" class="btn btn-outline-secondary">Xoa loc</a>
+                <button type="submit" class="btn btn-primary">Lọc</button>
+                <a href="/admin/listing-management" class="btn btn-outline-secondary">Xóa lọc</a>
             </div>
         </form>
     </div>
 </div>
 
 <div class="card border-0 shadow-sm">
-    <div class="card-header bg-white fw-semibold">Danh sach tin dang</div>
+    <div class="card-header bg-white fw-semibold">Danh sách tin đăng</div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -37,20 +37,20 @@
                     <tr>
                         <th>#ID</th>
                         <th>Preview</th>
-                        <th>Tin dang</th>
-                        <th>Gia</th>
-                        <th>Chu tin</th>
-                        <th>Trang thai</th>
-                        <th>Luot xem</th>
-                        <th>Ngay tao</th>
-                        <th class="text-end">Thao tac</th>
+                        <th>Tin đăng</th>
+                        <th>Giá</th>
+                        <th>Chủ tin</th>
+                        <th>Trạng thái</th>
+                        <th>Lượt xem</th>
+                        <th>Ngày tạo</th>
+                        <th class="text-end">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (!Model.Listings.Any())
                     {
                         <tr>
-                            <td colspan="9" class="text-center py-4 text-muted">Khong co tin dang phu hop.</td>
+                            <td colspan="9" class="text-center py-4 text-muted">Không có tin đăng phù hợp.</td>
                         </tr>
                     }
                     else
@@ -73,7 +73,7 @@
                                     <div class="fw-semibold">@listing.Title</div>
                                     <small class="text-muted">#@listing.ListingId</small>
                                 </td>
-                                <td>@listing.Price.ToString("N0") d</td>
+                                <td>@listing.Price.ToString("N0") đ</td>
                                 <td>
                                     <div>@listing.LandlordName</div>
                                     <small class="text-muted">@(listing.LandlordEmail ?? "-")</small>
@@ -83,12 +83,12 @@
                                 <td>@(listing.CreatedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
                                 <td class="text-end">
                                     <div class="d-inline-flex gap-2">
-                                        <a href="/admin/listings/@listing.ListingId" class="btn btn-sm btn-outline-primary">Chi tiet</a>
+                                        <a href="/admin/listings/@listing.ListingId" class="btn btn-sm btn-outline-primary">Chi tiết</a>
                                         @if (string.Equals(listing.StatusName, "pending", StringComparison.OrdinalIgnoreCase))
                                         {
                                             <form method="post" action="/admin/listings/@listing.ListingId/approve">
                                                 @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-sm btn-outline-success">Duyet</button>
+                                                <button type="submit" class="btn btn-sm btn-outline-success">Duyệt</button>
                                             </form>
                                         }
                                     </div>
