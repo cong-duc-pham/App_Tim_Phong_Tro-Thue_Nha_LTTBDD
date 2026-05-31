@@ -1,10 +1,10 @@
-@model Backend_API.Models.ViewModels.Admin.AdminReportsViewModel
+﻿@model Backend_API.Models.ViewModels.Admin.AdminReportsViewModel
 @{
-    ViewData["Title"] = "Xử lý Báo cáo";
+    ViewData["Title"] = "Xử lý báo cáo";
 }
 
 <div class="card border-0 shadow-sm">
-    <div class="card-header bg-white fw-semibold">Danh sách pending</div>
+    <div class="card-header bg-white fw-semibold">Danh sách báo cáo chờ xử lý</div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -16,14 +16,14 @@
                         <th>Người báo cáo</th>
                         <th>Đối tượng</th>
                         <th>Ngày tạo</th>
-                        <th class="text-end">Action</th>
+                        <th class="text-end">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (!Model.Reports.Any())
                     {
                         <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">Không có báo cáo pending.</td>
+                            <td colspan="7" class="text-center py-4 text-muted">Không có báo cáo chờ xử lý.</td>
                         </tr>
                     }
                     else
@@ -54,11 +54,11 @@
                                     <div class="d-inline-flex gap-2">
                                         <form method="post" action="/admin/reports/@report.ReportId/resolve">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-outline-success">Resolve</button>
+                                            <button type="submit" class="btn btn-sm btn-outline-success">Đã xử lý</button>
                                         </form>
                                         <form method="post" action="/admin/reports/@report.ReportId/dismiss">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-sm btn-outline-secondary">Dismiss</button>
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">Bỏ qua</button>
                                         </form>
                                     </div>
                                 </td>

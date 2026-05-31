@@ -1,4 +1,4 @@
-// lib/screens/home/home_screen.dart
+﻿// lib/screens/home/home_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +10,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../models/listing.dart';
 import '../../repositories/listing_repository.dart';
+import '../../services/api_service.dart';
 import '../../services/search_history_service.dart';
 
 // ─── Model ────────────────────────────────────────────────────────────────────
@@ -285,8 +286,28 @@ class _HomeScreenState extends State<HomeScreen> {
       tags: listing.amenityNames,
       bgColor: _colorForType(type),
       type: type,
-      imageUrl: listing.image0,
+      imageUrl: _resolveImageUrl(listing.image0),
     );
+  }
+
+  String? _resolveImageUrl(String? rawUrl) {
+    final value = rawUrl?.trim();
+    if (value == null || value.isEmpty) return null;
+
+    final apiUri = Uri.parse(ApiService.defaultBaseUrl);
+    final origin = '${apiUri.scheme}://${apiUri.authority}';
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      final imageUri = Uri.tryParse(value);
+      if (imageUri != null &&
+          imageUri.path.startsWith('/uploads/') &&
+          imageUri.port == apiUri.port) {
+        return '$origin${imageUri.path}';
+      }
+      return value;
+    }
+    if (!value.startsWith('/')) return value;
+
+    return '$origin$value';
   }
 
   String _typeKeyFromSqlListing(Listing listing) {
@@ -768,6 +789,17 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               width: 80,
               height: 80,
+              foregroundDecoration: item.imageUrl == null
+                  ? null
+                  : BoxDecoration(
+                      borderRadius: const BorderRadius.horizontal(
+                        left: Radius.circular(AppConstants.radiusLg),
+                      ),
+                      image: DecorationImage(
+                        image: CachedNetworkImageProvider(item.imageUrl!),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
               decoration: BoxDecoration(
                 color: item.bgColor,
                 borderRadius: const BorderRadius.horizontal(
@@ -1164,7 +1196,7 @@ class _HomeScreenState extends State<HomeScreen> {
           border: Border.all(color: AppColors.warning.withValues(alpha: 0.25)),
         ),
         child: const Text(
-          'Chua ket noi duoc SQL, dang hien du lieu mau.',
+          'Chưa kết nối được SQL, đang hiển thị dữ liệu mẫu.',
           style: TextStyle(
             color: AppColors.warningText,
             fontSize: 12,
@@ -1275,6 +1307,17 @@ class _HomeScreenState extends State<HomeScreen> {
             Stack(children: [
               Container(
                 height: AppConstants.cardImgHeight,
+                foregroundDecoration: item.imageUrl == null
+                    ? null
+                    : BoxDecoration(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(AppConstants.radiusLg),
+                        ),
+                        image: DecorationImage(
+                          image: CachedNetworkImageProvider(item.imageUrl!),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                 decoration: BoxDecoration(
                     color: item.bgColor,
                     borderRadius: const BorderRadius.vertical(
@@ -1388,6 +1431,17 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               width: AppConstants.cardFullImgW,
               height: 100,
+              foregroundDecoration: item.imageUrl == null
+                  ? null
+                  : BoxDecoration(
+                      borderRadius: const BorderRadius.horizontal(
+                        left: Radius.circular(AppConstants.radiusLg),
+                      ),
+                      image: DecorationImage(
+                        image: CachedNetworkImageProvider(item.imageUrl!),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
               decoration: BoxDecoration(
                   color: item.bgColor,
                   borderRadius: const BorderRadius.horizontal(
@@ -1504,7 +1558,12 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 GestureDetector(
-                  onTap: () => context.push('/listing'),
+                  onTap: () async {
+                    final created = await context.push('/listing');
+                    if (created == true) {
+                      _loadListingsFromSql();
+                    }
+                  },
                   child: Container(
                     width: AppConstants.navAddBtnSize,
                     height: AppConstants.navAddBtnSize,

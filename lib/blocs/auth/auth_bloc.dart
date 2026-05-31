@@ -1,17 +1,16 @@
-// lib/blocs/auth/auth_bloc.dart
+﻿// lib/blocs/auth/auth_bloc.dart
 
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../repositories/auth_repository.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final AuthRepository _authRepository;
-
   AuthBloc({required AuthRepository authRepository})
       : _authRepository = authRepository,
         super(const AuthInitial()) {
@@ -23,26 +22,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthCheckRequested>(_onCheckRequested);
   }
 
+  final AuthRepository _authRepository;
+
   Future<void> _onLoginRequested(
     AuthLoginRequested event,
     Emitter<AuthState> emit,
   ) async {
     emit(const AuthLoading());
     try {
-      final credential = await _authRepository.signInWithEmailAndPassword(
+      final session = await _authRepository.signInWithEmailAndPassword(
         email: event.email,
         password: event.password,
       );
-      emit(AuthAuthenticated(
-        userId: credential.user!.uid,
-        email: credential.user!.email ?? '',
-      ));
+      emit(AuthAuthenticated(userId: session.userId, email: session.email));
     } on FirebaseAuthException catch (e) {
-      emit(AuthFailure(message: _mapFirebaseError(e.code)));
+      emit(AuthFailure(message: _mapFirebaseAuthException(e)));
     } on FirebaseException catch (e) {
       emit(AuthFailure(message: _mapFirebaseServiceError(e)));
-    } catch (_) {
-      emit(const AuthFailure(message: 'Đã xảy ra lỗi. Vui lòng thử lại.'));
+    } catch (e) {
+      emit(AuthFailure(message: _authRepository.readBackendMessage(e)));
     }
   }
 
@@ -68,23 +66,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _signInWithSocialProvider(
     Emitter<AuthState> emit,
-    Future<UserCredential> Function() signIn,
+    Future<BackendAuthSession> Function() signIn,
   ) async {
     emit(const AuthLoading());
     try {
-      final credential = await signIn();
-      emit(AuthAuthenticated(
-        userId: credential.user!.uid,
-        email: credential.user!.email ?? '',
-      ));
+      final session = await signIn();
+      emit(AuthAuthenticated(userId: session.userId, email: session.email));
     } on FirebaseAuthException catch (e) {
-      // Surface provider setup errors while wiring social login.
-      // These usually happen before the app reaches its own backend.
       emit(AuthFailure(message: _mapFirebaseAuthException(e)));
     } on FirebaseException catch (e) {
       emit(AuthFailure(message: _mapFirebaseServiceError(e)));
-    } catch (_) {
-      emit(const AuthFailure(message: 'ÄÃ£ xáº£y ra lá»—i. Vui lÃ²ng thá»­ láº¡i.'));
+    } catch (e) {
+      emit(AuthFailure(message: _authRepository.readBackendMessage(e)));
     }
   }
 
@@ -103,11 +96,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await _authRepository.signOut();
       emit(const AuthRegisterSuccess());
     } on FirebaseAuthException catch (e) {
-      emit(AuthFailure(message: _mapFirebaseError(e.code)));
+      emit(AuthFailure(message: _mapFirebaseAuthException(e)));
     } on FirebaseException catch (e) {
       emit(AuthFailure(message: _mapFirebaseServiceError(e)));
-    } catch (_) {
-      emit(const AuthFailure(message: 'Đã xảy ra lỗi. Vui lòng thử lại.'));
+    } catch (e) {
+      emit(AuthFailure(message: _authRepository.readBackendMessage(e)));
     }
   }
 
@@ -123,6 +116,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthCheckRequested event,
     Emitter<AuthState> emit,
   ) async {
+    final session = await _authRepository.getSavedSession();
+    if (session != null) {
+      emit(AuthAuthenticated(userId: session.userId, email: session.email));
+      return;
+    }
+
     final user = _authRepository.currentUser;
     if (user != null) {
       emit(AuthAuthenticated(userId: user.uid, email: user.email ?? ''));
@@ -136,13 +135,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       case 'user-not-found':
         return 'Tài khoản không tồn tại.';
       case 'wrong-password':
-        return 'Mật khẩu không đúng.';
       case 'invalid-credential':
         return 'Email hoặc mật khẩu không đúng.';
       case 'email-already-in-use':
-        return 'Email này đã được sử dụng.';
+        return 'Email nay da duoc su dung.';
       case 'weak-password':
-        return 'Mật khẩu quá yếu (tối thiểu 6 ký tự).';
+        return 'Mật khẩu quá yếu, tối thiểu 6 ký tự.';
       case 'invalid-email':
         return 'Định dạng email không hợp lệ.';
       case 'too-many-requests':
@@ -150,21 +148,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       case 'network-request-failed':
         return 'Lỗi kết nối mạng. Kiểm tra internet của bạn.';
       case 'social-login-cancelled':
-        return 'Ban da huy dang nhap.';
+        return 'Bạn đã hủy đăng nhập.';
       case 'social-login-failed':
-        return 'Khong the dang nhap bang tai khoan xa hoi.';
+        return 'Không thể đăng nhập bằng tài khoản xã hội.';
       case 'google-login-failed':
-        return 'Khong the dang nhap bang Google.';
+        return 'Không thể đăng nhập bằng Google.';
       case 'google-missing-id-token':
-        return 'Google Sign-In chua duoc cau hinh day du tren Firebase.';
+        return 'Google Sign-In chưa được cấu hình đầy đủ trên Firebase.';
       case 'operation-not-allowed':
-        return 'Phuong thuc dang nhap nay chua duoc bat trong Firebase Authentication.';
-      case 'invalid-credential':
-        return 'Thong tin dang nhap khong hop le hoac provider chua duoc cau hinh dung.';
+        return 'Phương thức đăng nhập này chưa được bật trong Firebase Authentication.';
       case 'configuration-not-found':
-        return 'Chua tim thay cau hinh dang nhap cho ung dung nay tren Firebase.';
+        return 'Chưa tìm thấy cấu hình đăng nhập cho ứng dụng này trên Firebase.';
       case 'account-exists-with-different-credential':
-        return 'Email nay da duoc dang ky bang phuong thuc khac.';
+        return 'Email này đã được đăng ký bằng phương thức khác.';
+      case 'firebase-user-missing':
+      case 'firebase-token-missing':
+        return 'Không lấy được thông tin đăng nhập Firebase.';
       default:
         return 'Đã xảy ra lỗi. Vui lòng thử lại.';
     }
@@ -191,7 +190,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       case 'unavailable':
         return 'Dịch vụ Firebase tạm thời không khả dụng. Vui lòng thử lại.';
       case 'not-found':
-        return 'Chưa tìm thấy cấu hình/dữ liệu Firebase cần thiết.';
+        return 'Chưa tìm thấy cấu hình hoặc dữ liệu Firebase cần thiết.';
       default:
         return e.message ?? 'Lỗi Firebase (${e.code}). Vui lòng thử lại.';
     }
