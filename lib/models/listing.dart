@@ -1,4 +1,4 @@
-class Listing {
+﻿class Listing {
   final int listingId;
   final String title;
   final String? description;
@@ -101,6 +101,6 @@ class Listing {
       if (districtName?.trim().isNotEmpty == true) districtName!.trim(),
       if (provinceName?.trim().isNotEmpty == true) provinceName!.trim(),
     ];
-    return parts.isEmpty ? 'Chua cap nhat dia chi' : parts.join(', ');
+    return parts.isEmpty ? 'Chưa cập nhật địa chỉ' : parts.join(', ');
   }
 }

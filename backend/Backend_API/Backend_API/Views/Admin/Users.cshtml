@@ -1,4 +1,4 @@
-@model Backend_API.Models.ViewModels.Admin.AdminUsersViewModel
+﻿@model Backend_API.Models.ViewModels.Admin.AdminUsersViewModel
 @{
     ViewData["Title"] = "Quản lý Users";
 }
@@ -22,7 +22,7 @@
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div>
-            <div class="fw-semibold">Danh s&aacute;ch Users</div>
+            <div class="fw-semibold">Danh sách Users</div>
             <div class="small text-muted">Bấm đồng bộ để lấy user từ Firebase Auth về SQL.</div>
         </div>
         <form method="post" action="/admin/users/sync-firebase" class="m-0">
@@ -40,15 +40,15 @@
                         <th>Role</th>
                         <th>firebase_uid</th>
                         <th>auth_method</th>
-                        <th>Trạng th&aacute;i</th>
-                        <th class="text-end">Action</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (!Model.Users.Any())
                     {
                         <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">Kh&ocirc;ng c&oacute; dữ liệu.</td>
+                            <td colspan="7" class="text-center py-4 text-muted">Không có dữ liệu.</td>
                         </tr>
                     }
                     else
@@ -62,11 +62,11 @@
                                 <td>
                                     @if (string.IsNullOrWhiteSpace(user.FirebaseUid))
                                     {
-                                        <span class="badge bg-secondary">Kh&ocirc;ng</span>
+                                        <span class="badge bg-secondary">Không</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-success">C&oacute;</span>
+                                        <span class="badge bg-success">Có</span>
                                     }
                                 </td>
                                 <td>@user.AuthMethod</td>
@@ -77,7 +77,7 @@
                                     }
                                     else
                                     {
-                                        <span class="badge bg-danger">Đ&atilde; kh&oacute;a</span>
+                                        <span class="badge bg-danger">Đã khóa</span>
                                     }
                                 </td>
                                 <td class="text-end">
@@ -85,11 +85,11 @@
                                         @Html.AntiForgeryToken()
                                         @if (user.IsActive)
                                         {
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">Kh&oacute;a</button>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Khóa</button>
                                         }
                                         else
                                         {
-                                            <button type="submit" class="btn btn-sm btn-outline-success">Mở kh&oacute;a</button>
+                                            <button type="submit" class="btn btn-sm btn-outline-success">Mở khóa</button>
                                         }
                                     </form>
                                 </td>

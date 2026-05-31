@@ -111,7 +111,7 @@ namespace Backend_API.Controllers.MVC
                 })
                 .ToListAsync();
 
-            ViewData["Title"] = "QuÃ¡ÂºÂ£n lÃƒÂ½ Users";
+            ViewData["Title"] = "Quản lý Users";
             return View(new AdminUsersViewModel { Users = users });
         }
 
@@ -122,12 +122,12 @@ namespace Backend_API.Controllers.MVC
             try
             {
                 var (createdCount, updatedCount, skippedCount) = await SyncFirebaseUsersToSqlAsync();
-                TempData["AdminSuccess"] = $"Da dong bo Firebase: {createdCount} user moi, cap nhat {updatedCount} user, bo qua {skippedCount} user.";
+                TempData["AdminSuccess"] = $"Đã đồng bộ Firebase: {createdCount} user mới, cập nhật {updatedCount} user, bỏ qua {skippedCount} user.";
             }
             catch (Exception ex)
             {
                 var detail = ex.InnerException?.Message ?? ex.Message;
-                TempData["AdminError"] = $"Dong bo Firebase that bai: {detail}";
+                TempData["AdminError"] = $"Đồng bộ Firebase thất bại: {detail}";
             }
 
             return RedirectToAction(nameof(Users));
@@ -220,7 +220,7 @@ namespace Backend_API.Controllers.MVC
                 })
                 .ToListAsync();
 
-            ViewData["Title"] = "Quan ly tin dang";
+            ViewData["Title"] = "Quản lý tin đăng";
             return View(new AdminListingManagementViewModel
             {
                 Status = status,
@@ -311,7 +311,7 @@ namespace Backend_API.Controllers.MVC
                     .ToList()
             };
 
-            ViewData["Title"] = "Chi tiet tin dang";
+            ViewData["Title"] = "Chi tiết tin đăng";
             return View(model);
         }
 
@@ -330,7 +330,7 @@ namespace Backend_API.Controllers.MVC
 
             if (string.IsNullOrWhiteSpace(listing.Image0))
             {
-                TempData["AdminError"] = "Tin dang chua co anh bia nen chua the duyet. Vui long tu choi va yeu cau nguoi dang bo sung anh.";
+                TempData["AdminError"] = "Tin đăng chưa có ảnh bìa nên chưa thể duyệt. Vui lòng từ chối và yêu cầu người đăng bổ sung ảnh.";
                 return RedirectToAction(nameof(Listings));
             }
 
@@ -343,17 +343,17 @@ namespace Backend_API.Controllers.MVC
             {
                 await _notificationService.CreateAndSendAsync(
                     listing.LandlordId,
-                    "Tin dang da duoc duyet",
-                    $"Tin \"{listing.Title}\" da duoc duyet va dang hien thi.",
+                    "Tin đăng đã được duyệt",
+                    $"Tin \"{listing.Title}\" đã được duyệt và đang hiển thị.",
                     "listing_approved",
                     listing.ListingId,
                     "listing");
 
-                TempData["AdminSuccess"] = "Da duyet tin dang va gui thong bao cho nguoi dang.";
+                TempData["AdminSuccess"] = "Đã duyệt tin đăng và gửi thông báo cho người đăng.";
             }
             catch (Exception ex)
             {
-                TempData["AdminError"] = $"Tin dang da duoc duyet, nhung gui thong bao that bai: {ex.Message}";
+                TempData["AdminError"] = $"Tin đăng đã được duyệt, nhưng gửi thông báo thất bại: {ex.Message}";
             }
 
             return RedirectToAction(nameof(Listings));
@@ -377,24 +377,24 @@ namespace Backend_API.Controllers.MVC
             await _context.SaveChangesAsync();
 
             var rejectedReason = string.IsNullOrWhiteSpace(reason)
-                ? "Tin dang chua dap ung tieu chuan noi dung. Vui long kiem tra lai thong tin, hinh anh va gia phong."
+                ? "Tin đăng chưa đáp ứng tiêu chuẩn nội dung. Vui lòng kiểm tra lại thông tin, hình ảnh và giá phòng."
                 : reason.Trim();
 
             try
             {
                 await _notificationService.CreateAndSendAsync(
                     listing.LandlordId,
-                    "Tin dang bi tu choi",
-                    $"Tin \"{listing.Title}\" da bi tu choi. Ly do: {rejectedReason}",
+                    "Tin đăng bị từ chối",
+                    $"Tin \"{listing.Title}\" đã bị từ chối. Lý do: {rejectedReason}",
                     "listing_rejected",
                     listing.ListingId,
                     "listing");
 
-                TempData["AdminSuccess"] = "Da tu choi tin dang va gui thong bao cho nguoi dang.";
+                TempData["AdminSuccess"] = "Đã từ chối tin đăng và gửi thông báo cho người đăng.";
             }
             catch (Exception ex)
             {
-                TempData["AdminError"] = $"Tin dang da bi tu choi, nhung gui thong bao that bai: {ex.Message}";
+                TempData["AdminError"] = $"Tin đăng đã bị từ chối, nhưng gửi thông báo thất bại: {ex.Message}";
             }
 
             return RedirectToAction(nameof(Listings));
@@ -421,7 +421,7 @@ namespace Backend_API.Controllers.MVC
                 })
                 .ToListAsync();
 
-            ViewData["Title"] = "XÃ¡Â»Â­ lÃƒÂ½ BÃƒÂ¡o cÃƒÂ¡o";
+            ViewData["Title"] = "Xử lý Báo cáo";
             return View(new AdminReportsViewModel { Reports = reports });
         }
 
@@ -500,7 +500,7 @@ namespace Backend_API.Controllers.MVC
                 })
                 .ToListAsync();
 
-            ViewData["Title"] = "QuÃ¡ÂºÂ£n lÃƒÂ½ Cloudinary Storage";
+            ViewData["Title"] = "Quản lý Cloudinary Storage";
             return View(new AdminStorageViewModel
             {
                 RefType = refType,
@@ -624,7 +624,7 @@ namespace Backend_API.Controllers.MVC
 
             if (status == null)
             {
-                throw new InvalidOperationException($"KhÃƒÂ´ng tÃƒÂ¬m thÃ¡ÂºÂ¥y trÃ¡ÂºÂ¡ng thÃƒÂ¡i ListingStatus = '{statusName}'.");
+                throw new InvalidOperationException($"Không tìm thấy trạng thái ListingStatus = '{statusName}'.");
             }
 
             return status.StatusId;
@@ -736,7 +736,7 @@ namespace Backend_API.Controllers.MVC
             catch (Exception ex)
             {
                 var detail = ex.InnerException?.Message ?? ex.Message;
-                TempData["AdminError"] = $"Tu dong dong bo Firebase that bai: {detail}";
+                TempData["AdminError"] = $"Tự động đồng bộ Firebase thất bại: {detail}";
             }
         }
 
@@ -744,7 +744,7 @@ namespace Backend_API.Controllers.MVC
         {
             if (FirebaseApp.DefaultInstance == null)
             {
-                throw new InvalidOperationException("Firebase Admin chua duoc cau hinh. Hay them file firebase-adminsdk.json roi chay lai backend.");
+                throw new InvalidOperationException("Firebase Admin chưa được cấu hình. Hãy thêm file firebase-adminsdk.json rồi chạy lại backend.");
             }
 
             var createdCount = 0;
