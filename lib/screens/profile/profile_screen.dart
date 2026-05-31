@@ -1,4 +1,4 @@
-// lib/screens/profile/profile_screen.dart
+﻿// lib/screens/profile/profile_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,7 +10,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
 
-// â”€â”€â”€ Model táº¡m (thay báº±ng Bloc/Repository sau) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Model tạm (thay bằng Bloc/Repository sau) ────────────────────────────────
 
 class _UserInfo {
   final String fullName;
@@ -38,7 +38,7 @@ class _UserInfo {
   });
 }
 
-// Dá»¯ liá»‡u máº«u â€” thay báº±ng API call tháº­t
+// Dữ liệu mẫu — thay bằng API call thật
 final _mockUser = _UserInfo(
   fullName: 'Phạm Công Đức',
   email: 'duc.pham@example.com',
@@ -51,7 +51,7 @@ final _mockUser = _UserInfo(
   reviewsCount: 3,
 );
 
-// â”€â”€â”€ ProfileScreen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── ProfileScreen ─────────────────────────────────────────────────────────────
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -92,7 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ? savedFullName!.trim()
               : (savedEmail.isNotEmpty
                   ? savedEmail.split('@').first
-                  : 'Nguoi dung'),
+                  : 'Người dùng'),
           email: savedEmail,
           phone: '',
           role: _normalizeRole(savedRole),
@@ -323,7 +323,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // â”€â”€ Header (avatar + tÃªn + vai trÃ²) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Header (avatar + tên + vai trò) ─────────────────────────────────────
 
   Widget _buildHeader() {
     return Container(
@@ -432,7 +432,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            // TÃªn
+            // Tên
             Text(
               _user.fullName,
               style: const TextStyle(
@@ -535,7 +535,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // â”€â”€ Stats (3 sá»‘ liá»‡u) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Stats (3 số liệu) ────────────────────────────────────────────────────
 
   Widget _buildStats() {
     return Container(
@@ -572,7 +572,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // â”€â”€ Menu Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Menu Section ─────────────────────────────────────────────────────────
 
   Widget _buildMenuSection({
     required String title,
@@ -624,7 +624,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // â”€â”€ Logout Button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Logout Button ────────────────────────────────────────────────────────
 
   Widget _buildLogoutBtn() {
     return Padding(
@@ -659,7 +659,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // â”€â”€ Not logged in state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Not logged in state ───────────────────────────────────────────────────
 
   Widget _buildLoading() {
     return const Scaffold(
@@ -754,7 +754,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // â”€â”€ Dialogs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Dialogs ──────────────────────────────────────────────────────────────
 
   void _confirmLogout() {
     showDialog(
@@ -806,7 +806,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
   String _formatJoinDate(DateTime date) {
     return '${date.month}/${date.year}';
@@ -821,7 +821,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-// â”€â”€â”€ Edit Profile Bottom Sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Edit Profile Bottom Sheet ───────────────────────────────────────────────
 
 class _EditProfileSheet extends StatefulWidget {
   final _UserInfo user;
@@ -913,7 +913,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        // TODO: gá»i API cáº­p nháº­t
+                        // TODO: gọi API cập nhật
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -938,7 +938,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   }
 }
 
-// â”€â”€â”€ Reusable Widgets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Reusable Widgets ─────────────────────────────────────────────────────────
 
 class _StatItem extends StatelessWidget {
   final String value, label;

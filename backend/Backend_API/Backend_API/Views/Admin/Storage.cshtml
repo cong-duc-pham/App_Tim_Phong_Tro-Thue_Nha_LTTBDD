@@ -1,6 +1,6 @@
-@model Backend_API.Models.ViewModels.Admin.AdminStorageViewModel
+﻿@model Backend_API.Models.ViewModels.Admin.AdminStorageViewModel
 @{
-    ViewData["Title"] = "Quan ly Storage";
+    ViewData["Title"] = "Quản lý Storage";
 }
 
 <div class="card border-0 shadow-sm mb-3">
@@ -12,18 +12,18 @@
             </div>
             <div class="col-12 col-md-4">
                 <label class="form-label">Filter: user_id</label>
-                <input type="number" name="user_id" value="@Model.UserId" class="form-control" placeholder="Nhap user id" />
+                <input type="number" name="user_id" value="@Model.UserId" class="form-control" placeholder="Nhập user id" />
             </div>
             <div class="col-12 col-md-4">
-                <button type="submit" class="btn btn-primary">Loc</button>
-                <a href="/admin/storage" class="btn btn-outline-secondary">Xoa loc</a>
+                <button type="submit" class="btn btn-primary">Lọc</button>
+                <a href="/admin/storage" class="btn btn-outline-secondary">Xóa lọc</a>
             </div>
         </form>
     </div>
 </div>
 
 <div class="card border-0 shadow-sm">
-    <div class="card-header bg-white fw-semibold">Danh sach files</div>
+    <div class="card-header bg-white fw-semibold">Danh sách file</div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -36,15 +36,15 @@
                         <th>Public ID</th>
                         <th>file_size_kb</th>
                         <th>format</th>
-                        <th>Ngay tao</th>
-                        <th class="text-end">Action</th>
+                        <th>Ngày tạo</th>
+                        <th class="text-end">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (!Model.Files.Any())
                     {
                         <tr>
-                            <td colspan="9" class="text-center py-4 text-muted">Khong co file phu hop.</td>
+                            <td colspan="9" class="text-center py-4 text-muted">Không có file phù hợp.</td>
                         </tr>
                     }
                     else
@@ -74,7 +74,7 @@
                                 <td class="text-end">
                                     <form method="post" action="/admin/storage/@file.FileId/delete?ref_type=@Model.RefType&user_id=@Model.UserId">
                                         @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">Xoa file</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Xóa file</button>
                                     </form>
                                 </td>
                             </tr>
