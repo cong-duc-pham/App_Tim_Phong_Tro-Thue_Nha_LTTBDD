@@ -1,4 +1,4 @@
-// lib/blocs/auth/auth_bloc.dart
+﻿// lib/blocs/auth/auth_bloc.dart
 
 import 'package:equatable/equatable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -133,39 +133,39 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   String _mapFirebaseError(String code) {
     switch (code) {
       case 'user-not-found':
-        return 'Tai khoan khong ton tai.';
+        return 'Tài khoản không tồn tại.';
       case 'wrong-password':
       case 'invalid-credential':
-        return 'Email hoac mat khau khong dung.';
+        return 'Email hoặc mật khẩu không đúng.';
       case 'email-already-in-use':
         return 'Email nay da duoc su dung.';
       case 'weak-password':
-        return 'Mat khau qua yeu, toi thieu 6 ky tu.';
+        return 'Mật khẩu quá yếu, tối thiểu 6 ký tự.';
       case 'invalid-email':
-        return 'Dinh dang email khong hop le.';
+        return 'Định dạng email không hợp lệ.';
       case 'too-many-requests':
-        return 'Qua nhieu lan thu. Vui long thu lai sau.';
+        return 'Quá nhiều lần thử. Vui lòng thử lại sau.';
       case 'network-request-failed':
-        return 'Loi ket noi mang. Kiem tra internet cua ban.';
+        return 'Lỗi kết nối mạng. Kiểm tra internet của bạn.';
       case 'social-login-cancelled':
-        return 'Ban da huy dang nhap.';
+        return 'Bạn đã hủy đăng nhập.';
       case 'social-login-failed':
-        return 'Khong the dang nhap bang tai khoan xa hoi.';
+        return 'Không thể đăng nhập bằng tài khoản xã hội.';
       case 'google-login-failed':
-        return 'Khong the dang nhap bang Google.';
+        return 'Không thể đăng nhập bằng Google.';
       case 'google-missing-id-token':
-        return 'Google Sign-In chua duoc cau hinh day du tren Firebase.';
+        return 'Google Sign-In chưa được cấu hình đầy đủ trên Firebase.';
       case 'operation-not-allowed':
-        return 'Phuong thuc dang nhap nay chua duoc bat trong Firebase Authentication.';
+        return 'Phương thức đăng nhập này chưa được bật trong Firebase Authentication.';
       case 'configuration-not-found':
-        return 'Chua tim thay cau hinh dang nhap cho ung dung nay tren Firebase.';
+        return 'Chưa tìm thấy cấu hình đăng nhập cho ứng dụng này trên Firebase.';
       case 'account-exists-with-different-credential':
-        return 'Email nay da duoc dang ky bang phuong thuc khac.';
+        return 'Email này đã được đăng ký bằng phương thức khác.';
       case 'firebase-user-missing':
       case 'firebase-token-missing':
-        return 'Khong lay duoc thong tin dang nhap Firebase.';
+        return 'Không lấy được thông tin đăng nhập Firebase.';
       default:
-        return 'Da xay ra loi. Vui long thu lai.';
+        return 'Đã xảy ra lỗi. Vui lòng thử lại.';
     }
   }
 
@@ -186,13 +186,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   String _mapFirebaseServiceError(FirebaseException e) {
     switch (e.code) {
       case 'permission-denied':
-        return 'Khong co quyen ghi du lieu. Kiem tra Firestore Rules.';
+        return 'Không có quyền ghi dữ liệu. Kiểm tra Firestore Rules.';
       case 'unavailable':
-        return 'Dich vu Firebase tam thoi khong kha dung. Vui long thu lai.';
+        return 'Dịch vụ Firebase tạm thời không khả dụng. Vui lòng thử lại.';
       case 'not-found':
-        return 'Chua tim thay cau hinh hoac du lieu Firebase can thiet.';
+        return 'Chưa tìm thấy cấu hình hoặc dữ liệu Firebase cần thiết.';
       default:
-        return e.message ?? 'Loi Firebase (${e.code}). Vui long thu lai.';
+        return e.message ?? 'Lỗi Firebase (${e.code}). Vui lòng thử lại.';
     }
   }
 }
