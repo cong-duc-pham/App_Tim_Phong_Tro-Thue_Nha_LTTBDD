@@ -111,7 +111,7 @@ namespace Backend_API.Controllers.MVC
                 })
                 .ToListAsync();
 
-            ViewData["Title"] = "QuÃ¡ÂºÂ£n lÃƒÂ½ Users";
+            ViewData["Title"] = "Quản lý Users";
             return View(new AdminUsersViewModel { Users = users });
         }
 
@@ -122,12 +122,12 @@ namespace Backend_API.Controllers.MVC
             try
             {
                 var (createdCount, updatedCount, skippedCount) = await SyncFirebaseUsersToSqlAsync();
-                TempData["AdminSuccess"] = $"Da dong bo Firebase: {createdCount} user moi, cap nhat {updatedCount} user, bo qua {skippedCount} user.";
+                TempData["AdminSuccess"] = $"Đã đồng bộ Firebase: {createdCount} user mới, cập nhật {updatedCount} user, bỏ qua {skippedCount} user.";
             }
             catch (Exception ex)
             {
                 var detail = ex.InnerException?.Message ?? ex.Message;
-                TempData["AdminError"] = $"Dong bo Firebase that bai: {detail}";
+                TempData["AdminError"] = $"Đồng bộ Firebase thất bại: {detail}";
             }
 
             return RedirectToAction(nameof(Users));
@@ -171,6 +171,63 @@ namespace Backend_API.Controllers.MVC
 
             ViewData["Title"] = "Duy\u1EC7t tin \u0111\u0103ng";
             return View(new AdminListingsViewModel { Listings = listings });
+        }
+
+        [HttpGet("listing-management")]
+        public async Task<IActionResult> ListingManagement([FromQuery] string? status, [FromQuery] string? keyword)
+        {
+            var query = _context.Listings
+                .Include(x => x.Status)
+                .Include(x => x.Landlord)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                var normalizedStatus = status.Trim().ToLowerInvariant();
+                query = query.Where(x => x.Status.StatusName.ToLower() == normalizedStatus);
+            }
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                var normalizedKeyword = keyword.Trim().ToLower();
+                query = query.Where(x =>
+                    x.Title.ToLower().Contains(normalizedKeyword) ||
+                    x.StreetAddress.ToLower().Contains(normalizedKeyword) ||
+                    (x.Landlord.Email != null && x.Landlord.Email.ToLower().Contains(normalizedKeyword)) ||
+                    x.Landlord.FullName.ToLower().Contains(normalizedKeyword));
+            }
+
+            var statuses = await _context.ListingStatuses
+                .OrderBy(x => x.StatusId)
+                .Select(x => x.StatusName)
+                .ToListAsync();
+
+            var listings = await query
+                .OrderByDescending(x => x.CreatedAt)
+                .Take(500)
+                .Select(x => new AdminListingItemViewModel
+                {
+                    ListingId = x.ListingId,
+                    Title = x.Title,
+                    Price = x.Price,
+                    LandlordName = x.Landlord.FullName,
+                    LandlordEmail = x.Landlord.Email,
+                    StatusName = x.Status.StatusName,
+                    Image0 = x.Image0,
+                    ViewCount = x.ViewCount,
+                    SaveCount = x.SaveCount,
+                    CreatedAt = x.CreatedAt
+                })
+                .ToListAsync();
+
+            ViewData["Title"] = "Quản lý tin đăng";
+            return View(new AdminListingManagementViewModel
+            {
+                Status = status,
+                Keyword = keyword,
+                Statuses = statuses,
+                Listings = listings
+            });
         }
 
         [HttpGet("listings/{id:long}")]
@@ -254,7 +311,7 @@ namespace Backend_API.Controllers.MVC
                     .ToList()
             };
 
-            ViewData["Title"] = "Chi tiet tin dang";
+            ViewData["Title"] = "Chi tiết tin đăng";
             return View(model);
         }
 
@@ -273,7 +330,7 @@ namespace Backend_API.Controllers.MVC
 
             if (string.IsNullOrWhiteSpace(listing.Image0))
             {
-                TempData["AdminError"] = "Tin dang chua co anh bia nen chua the duyet. Vui long tu choi va yeu cau nguoi dang bo sung anh.";
+                TempData["AdminError"] = "Tin đăng chưa có ảnh bìa nên chưa thể duyệt. Vui lòng từ chối và yêu cầu người đăng bổ sung ảnh.";
                 return RedirectToAction(nameof(Listings));
             }
 
@@ -286,17 +343,17 @@ namespace Backend_API.Controllers.MVC
             {
                 await _notificationService.CreateAndSendAsync(
                     listing.LandlordId,
-                    "Tin dang da duoc duyet",
-                    $"Tin \"{listing.Title}\" da duoc duyet va dang hien thi.",
+                    "Tin đăng đã được duyệt",
+                    $"Tin \"{listing.Title}\" đã được duyệt và đang hiển thị.",
                     "listing_approved",
                     listing.ListingId,
                     "listing");
 
-                TempData["AdminSuccess"] = "Da duyet tin dang va gui thong bao cho nguoi dang.";
+                TempData["AdminSuccess"] = "Đã duyệt tin đăng và gửi thông báo cho người đăng.";
             }
             catch (Exception ex)
             {
-                TempData["AdminError"] = $"Tin dang da duoc duyet, nhung gui thong bao that bai: {ex.Message}";
+                TempData["AdminError"] = $"Tin đăng đã được duyệt, nhưng gửi thông báo thất bại: {ex.Message}";
             }
 
             return RedirectToAction(nameof(Listings));
@@ -320,24 +377,24 @@ namespace Backend_API.Controllers.MVC
             await _context.SaveChangesAsync();
 
             var rejectedReason = string.IsNullOrWhiteSpace(reason)
-                ? "Tin dang chua dap ung tieu chuan noi dung. Vui long kiem tra lai thong tin, hinh anh va gia phong."
+                ? "Tin đăng chưa đáp ứng tiêu chuẩn nội dung. Vui lòng kiểm tra lại thông tin, hình ảnh và giá phòng."
                 : reason.Trim();
 
             try
             {
                 await _notificationService.CreateAndSendAsync(
                     listing.LandlordId,
-                    "Tin dang bi tu choi",
-                    $"Tin \"{listing.Title}\" da bi tu choi. Ly do: {rejectedReason}",
+                    "Tin đăng bị từ chối",
+                    $"Tin \"{listing.Title}\" đã bị từ chối. Lý do: {rejectedReason}",
                     "listing_rejected",
                     listing.ListingId,
                     "listing");
 
-                TempData["AdminSuccess"] = "Da tu choi tin dang va gui thong bao cho nguoi dang.";
+                TempData["AdminSuccess"] = "Đã từ chối tin đăng và gửi thông báo cho người đăng.";
             }
             catch (Exception ex)
             {
-                TempData["AdminError"] = $"Tin dang da bi tu choi, nhung gui thong bao that bai: {ex.Message}";
+                TempData["AdminError"] = $"Tin đăng đã bị từ chối, nhưng gửi thông báo thất bại: {ex.Message}";
             }
 
             return RedirectToAction(nameof(Listings));
@@ -364,7 +421,7 @@ namespace Backend_API.Controllers.MVC
                 })
                 .ToListAsync();
 
-            ViewData["Title"] = "XÃ¡Â»Â­ lÃƒÂ½ BÃƒÂ¡o cÃƒÂ¡o";
+            ViewData["Title"] = "Xử lý Báo cáo";
             return View(new AdminReportsViewModel { Reports = reports });
         }
 
@@ -407,6 +464,8 @@ namespace Backend_API.Controllers.MVC
         [HttpGet("storage")]
         public async Task<IActionResult> Storage([FromQuery(Name = "ref_type")] string? refType, [FromQuery(Name = "user_id")] long? userId)
         {
+            await BackfillListingStorageFilesAsync();
+
             var query = _context.CloudinaryFiles
                 .Include(x => x.User)
                 .Where(x => x.IsActive == true);
@@ -431,6 +490,7 @@ namespace Backend_API.Controllers.MVC
                     UserId = x.UserId,
                     UserName = x.User.FullName,
                     PublicId = x.PublicId,
+                    SecureUrl = x.SecureUrl,
                     ResourceType = x.ResourceType,
                     FileSizeKb = x.FileSizeKb,
                     Format = x.Format,
@@ -440,7 +500,7 @@ namespace Backend_API.Controllers.MVC
                 })
                 .ToListAsync();
 
-            ViewData["Title"] = "QuÃ¡ÂºÂ£n lÃƒÂ½ Cloudinary Storage";
+            ViewData["Title"] = "Quản lý Cloudinary Storage";
             return View(new AdminStorageViewModel
             {
                 RefType = refType,
@@ -469,6 +529,94 @@ namespace Backend_API.Controllers.MVC
             return RedirectToAction(nameof(Storage), new { ref_type = refType, user_id = userId });
         }
 
+        private async Task BackfillListingStorageFilesAsync()
+        {
+            var listings = await _context.Listings
+                .AsNoTracking()
+                .Where(x => x.Image0 != null || x.Image1 != null || x.Image2 != null || x.Image3 != null || x.Image4 != null || x.Image5 != null)
+                .Select(x => new
+                {
+                    x.ListingId,
+                    x.LandlordId,
+                    Images = new[] { x.Image0, x.Image1, x.Image2, x.Image3, x.Image4, x.Image5 }
+                })
+                .ToListAsync();
+
+            var changed = false;
+            foreach (var listing in listings)
+            {
+                foreach (var imageUrl in listing.Images.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x!.Trim()).Distinct())
+                {
+                    if (!TryBuildStoragePublicId(imageUrl, listing.ListingId, out var publicId, out var format))
+                    {
+                        continue;
+                    }
+
+                    var exists = await _context.CloudinaryFiles.AnyAsync(x =>
+                        x.PublicId == publicId &&
+                        x.RefType == "listing" &&
+                        x.RefId == listing.ListingId &&
+                        x.IsActive == true);
+
+                    if (exists)
+                    {
+                        continue;
+                    }
+
+                    await _context.CloudinaryFiles.AddAsync(new CloudinaryFile
+                    {
+                        UserId = listing.LandlordId,
+                        PublicId = publicId,
+                        SecureUrl = imageUrl,
+                        DeliveryUrl = imageUrl,
+                        ResourceType = "image",
+                        Format = format,
+                        Folder = $"uploads/listings/{listing.ListingId}",
+                        RefType = "listing",
+                        RefId = listing.ListingId,
+                        IsActive = true,
+                        UploadStatus = "uploaded",
+                        CreatedAt = DateTime.UtcNow
+                    });
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        private static bool TryBuildStoragePublicId(string imageUrl, long listingId, out string publicId, out string? format)
+        {
+            publicId = string.Empty;
+            format = null;
+
+            var path = imageUrl;
+            if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri))
+            {
+                path = uri.AbsolutePath;
+            }
+
+            var marker = $"/uploads/listings/{listingId}/";
+            var markerIndex = path.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (markerIndex < 0)
+            {
+                return false;
+            }
+
+            var relativePath = path[(markerIndex + 1)..];
+            var extension = Path.GetExtension(relativePath);
+            format = string.IsNullOrWhiteSpace(extension)
+                ? null
+                : extension.TrimStart('.').ToLowerInvariant();
+            publicId = string.IsNullOrWhiteSpace(extension)
+                ? relativePath
+                : relativePath[..^extension.Length];
+            return !string.IsNullOrWhiteSpace(publicId);
+        }
+
         private async Task<int> GetListingStatusIdAsync(string statusName)
         {
             var status = await _context.ListingStatuses
@@ -476,7 +624,7 @@ namespace Backend_API.Controllers.MVC
 
             if (status == null)
             {
-                throw new InvalidOperationException($"KhÃƒÂ´ng tÃƒÂ¬m thÃ¡ÂºÂ¥y trÃ¡ÂºÂ¡ng thÃƒÂ¡i ListingStatus = '{statusName}'.");
+                throw new InvalidOperationException($"Không tìm thấy trạng thái ListingStatus = '{statusName}'.");
             }
 
             return status.StatusId;
@@ -588,7 +736,7 @@ namespace Backend_API.Controllers.MVC
             catch (Exception ex)
             {
                 var detail = ex.InnerException?.Message ?? ex.Message;
-                TempData["AdminError"] = $"Tu dong dong bo Firebase that bai: {detail}";
+                TempData["AdminError"] = $"Tự động đồng bộ Firebase thất bại: {detail}";
             }
         }
 
@@ -596,7 +744,7 @@ namespace Backend_API.Controllers.MVC
         {
             if (FirebaseApp.DefaultInstance == null)
             {
-                throw new InvalidOperationException("Firebase Admin chua duoc cau hinh. Hay them file firebase-adminsdk.json roi chay lai backend.");
+                throw new InvalidOperationException("Firebase Admin chưa được cấu hình. Hãy thêm file firebase-adminsdk.json rồi chạy lại backend.");
             }
 
             var createdCount = 0;

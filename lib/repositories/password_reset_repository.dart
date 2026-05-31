@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 
 import '../services/api_service.dart';
 
@@ -39,6 +39,16 @@ class PasswordResetRepository {
   }
 
   String _readBackendMessage(DioException e) {
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout) {
+      return 'Kết nối máy chủ quá lâu. Hãy kiểm tra backend đang chạy ở cổng 61795.';
+    }
+
+    if (e.type == DioExceptionType.connectionError) {
+      return 'Không kết nối được backend. Hãy chạy Backend_API trước khi gửi OTP.';
+    }
+
     final data = e.response?.data;
     if (data is Map) {
       final message = data['message'] ?? data['Message'];
@@ -49,6 +59,6 @@ class PasswordResetRepository {
       return data;
     }
 
-    return e.message ?? 'Khong ket noi duoc backend.';
+    return e.message ?? 'Không kết nối được backend.';
   }
 }

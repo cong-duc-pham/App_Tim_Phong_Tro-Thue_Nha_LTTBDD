@@ -36,11 +36,23 @@ public class AdminListingItemViewModel
     public decimal Price { get; set; }
     public string LandlordName { get; set; } = string.Empty;
     public string? LandlordEmail { get; set; }
+    public string StatusName { get; set; } = string.Empty;
+    public string? Image0 { get; set; }
+    public int? ViewCount { get; set; }
+    public int? SaveCount { get; set; }
     public DateTime? CreatedAt { get; set; }
 }
 
 public class AdminListingsViewModel
 {
+    public List<AdminListingItemViewModel> Listings { get; set; } = new();
+}
+
+public class AdminListingManagementViewModel
+{
+    public string? Status { get; set; }
+    public string? Keyword { get; set; }
+    public List<string> Statuses { get; set; } = new();
     public List<AdminListingItemViewModel> Listings { get; set; } = new();
 }
 
@@ -104,6 +116,7 @@ public class AdminStorageFileItemViewModel
     public long UserId { get; set; }
     public string UserName { get; set; } = string.Empty;
     public string PublicId { get; set; } = string.Empty;
+    public string SecureUrl { get; set; } = string.Empty;
     public string ResourceType { get; set; } = string.Empty;
     public int? FileSizeKb { get; set; }
     public string? Format { get; set; }
