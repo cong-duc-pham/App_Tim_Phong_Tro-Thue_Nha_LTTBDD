@@ -95,6 +95,49 @@ namespace Backend_API.Controllers.API
             }
         }
 
+        [HttpPost("{id:long}/messages")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> SendMessage(long id, [FromBody] SendMessageDto dto)
+        {
+            try
+            {
+                long userId = GetCurrentUserId();
+                dto.ConvId = id;
+                var result = await _conversationService.SendMessageAsync(userId, dto);
+                return Ok(new { success = true, data = result });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { success = false, message = "Chưa đăng nhập." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPut("{id:long}/read")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> MarkAsRead(long id)
+        {
+            try
+            {
+                long userId = GetCurrentUserId();
+                await _conversationService.MarkAsReadAsync(id, userId);
+                return Ok(new { success = true, message = "Đã đánh dấu đã đọc." });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { success = false, message = "Chưa đăng nhập." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
         private long GetCurrentUserId()
         {
             var claim = User.FindFirst(ClaimTypes.NameIdentifier);
