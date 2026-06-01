@@ -6,6 +6,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../models/conversation.dart';
 import '../../models/message.dart';
+import '../../repositories/conversation_repository.dart';
 
 class ChatScreen extends StatefulWidget {
   final Conversation conversation;
@@ -17,17 +18,21 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  final ConversationRepository _repository = ConversationRepository();
   final List<Message> _messages = [];
   final TextEditingController _textCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   bool _isTyping = false;
+  bool _isLoadingMessages = true;
+  bool _isSending = false;
+  String? _errorMessage;
   bool _showListingHeader = true;
-  final int _currentUserId = 999; // Simulating logged-in user
+  int? _currentUserId;
 
   @override
   void initState() {
     super.initState();
-    _loadMockMessages();
+    _loadMessages();
   }
 
   @override
@@ -37,6 +42,45 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
+  Future<void> _loadMessages() async {
+    setState(() {
+      _isLoadingMessages = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final currentUserId = await _repository.getCurrentBackendUserId();
+      final messages =
+          await _repository.getMessages(widget.conversation.convId);
+      await _repository.markAsRead(widget.conversation.convId);
+      if (!mounted) return;
+      setState(() {
+        _currentUserId = currentUserId;
+        _messages
+          ..clear()
+          ..addAll(messages);
+        _isLoadingMessages = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _scrollToBottom(animated: false),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = _cleanError(e);
+        _isLoadingMessages = false;
+      });
+    }
+  }
+
+  String _cleanError(Object e) {
+    final message = e.toString();
+    return message.startsWith('Exception: ')
+        ? message.substring('Exception: '.length)
+        : message;
+  }
+
+  // ignore: unused_element
   void _loadMockMessages() {
     // Generate initial contextual history based on conversation
     _messages.addAll([
@@ -44,7 +88,8 @@ class _ChatScreenState extends State<ChatScreen> {
         messageId: 1,
         convId: widget.conversation.convId,
         senderId: widget.conversation.otherUserId,
-        content: 'Chào bạn, tôi là ${widget.conversation.otherUserName.split(' (').first}. Bạn đang quan tâm đến tin đăng của tôi đúng không?',
+        content:
+            'Chào bạn, tôi là ${widget.conversation.otherUserName.split(' (').first}. Bạn đang quan tâm đến tin đăng của tôi đúng không?',
         msgType: 'text',
         isRead: true,
         sentAt: DateTime.now().subtract(const Duration(hours: 4)),
@@ -52,8 +97,9 @@ class _ChatScreenState extends State<ChatScreen> {
       Message(
         messageId: 2,
         convId: widget.conversation.convId,
-        senderId: _currentUserId,
-        content: 'Dạ vâng đúng rồi ạ, em muốn hỏi phòng này hiện tại còn trống không và giá thuê thực tế có bao gồm phí dịch vụ gì chưa ạ?',
+        senderId: _currentUserId ?? 0,
+        content:
+            'Dạ vâng đúng rồi ạ, em muốn hỏi phòng này hiện tại còn trống không và giá thuê thực tế có bao gồm phí dịch vụ gì chưa ạ?',
         msgType: 'text',
         isRead: true,
         sentAt: DateTime.now().subtract(const Duration(hours: 3)),
@@ -62,7 +108,8 @@ class _ChatScreenState extends State<ChatScreen> {
         messageId: 3,
         convId: widget.conversation.convId,
         senderId: widget.conversation.otherUserId,
-        content: 'Phòng này vẫn còn trống em nhé. Đây là hình ảnh thực tế của căn phòng:',
+        content:
+            'Phòng này vẫn còn trống em nhé. Đây là hình ảnh thực tế của căn phòng:',
         msgType: 'text',
         isRead: true,
         sentAt: DateTime.now().subtract(const Duration(minutes: 45)),
@@ -73,11 +120,13 @@ class _ChatScreenState extends State<ChatScreen> {
         senderId: widget.conversation.otherUserId,
         content: 'Hình ảnh phòng chụp sáng nay',
         msgType: 'image',
-        fileUrl: widget.conversation.listingImage ?? 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80',
+        fileUrl: widget.conversation.listingImage ??
+            'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80',
         isRead: true,
         sentAt: DateTime.now().subtract(const Duration(minutes: 44)),
       ),
-      if (widget.conversation.lastMessage != null && widget.conversation.convId != 104)
+      if (widget.conversation.lastMessage != null &&
+          widget.conversation.convId != 104)
         Message(
           messageId: 5,
           convId: widget.conversation.convId,
@@ -85,12 +134,14 @@ class _ChatScreenState extends State<ChatScreen> {
           content: widget.conversation.lastMessage!,
           msgType: 'text',
           isRead: true,
-          sentAt: widget.conversation.lastMsgAt ?? DateTime.now().subtract(const Duration(minutes: 12)),
+          sentAt: widget.conversation.lastMsgAt ??
+              DateTime.now().subtract(const Duration(minutes: 12)),
         ),
     ]);
 
     // Scroll to bottom after layout build
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom(animated: false));
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _scrollToBottom(animated: false));
   }
 
   void _scrollToBottom({bool animated = true}) {
@@ -106,15 +157,15 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final text = _textCtrl.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isSending) return;
 
     _textCtrl.clear();
     final newMessage = Message(
       messageId: DateTime.now().millisecondsSinceEpoch,
       convId: widget.conversation.convId,
-      senderId: _currentUserId,
+      senderId: _currentUserId ?? 0,
       content: text,
       msgType: 'text',
       isRead: false,
@@ -123,50 +174,49 @@ class _ChatScreenState extends State<ChatScreen> {
 
     setState(() {
       _messages.add(newMessage);
+      _isSending = true;
     });
-    
+
     _scrollToBottom();
 
-    // Simulate other user typing and replying after 1.5 seconds
-    setState(() {
-      _isTyping = true;
-    });
-    _scrollToBottom();
-
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    try {
+      final saved = await _repository.sendMessage(
+        conversationId: widget.conversation.convId,
+        content: text,
+      );
       if (!mounted) return;
-      
       setState(() {
-        _isTyping = false;
-        
-        // Simulating matching read state for our message
         final idx = _messages.indexOf(newMessage);
         if (idx != -1) {
-          _messages[idx] = newMessage.copyWith(isRead: true);
+          _messages[idx] = saved;
         }
-
-        // Add auto reply
-        _messages.add(
-          Message(
-            messageId: DateTime.now().millisecondsSinceEpoch + 1,
-            convId: widget.conversation.convId,
-            senderId: widget.conversation.otherUserId,
-            content: _getSimulatedReply(text),
-            msgType: 'text',
-            isRead: true,
-            sentAt: DateTime.now(),
-          ),
-        );
+        _isSending = false;
       });
       _scrollToBottom();
-    });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messages.remove(newMessage);
+        _isSending = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_cleanError(e)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
+  // ignore: unused_element
   String _getSimulatedReply(String userMessage) {
     final cleanMsg = userMessage.toLowerCase();
     if (cleanMsg.contains('xem phòng') || cleanMsg.contains('xem phong')) {
       return 'Dạ được chứ em! Chiều nay lúc 5h30 em ghé địa chỉ căn hộ nha, tới cổng thì gọi số này của anh để anh dẫn lên xem phòng trực tiếp nha.';
-    } else if (cleanMsg.contains('giá') || cleanMsg.contains('bao nhiêu') || cleanMsg.contains('gia')) {
+    } else if (cleanMsg.contains('giá') ||
+        cleanMsg.contains('bao nhiêu') ||
+        cleanMsg.contains('gia')) {
       return 'Giá thuê thực tế là 4.5 triệu/tháng. Phí dịch vụ chỉ có tiền điện 3.8k/kwh và nước 100k/người thôi, còn lại wifi và dọn vệ sinh hành lang là miễn phí hoàn toàn em nhé.';
     } else if (cleanMsg.contains('cọc') || cleanMsg.contains('coc')) {
       return 'Tiền đặt cọc là 1 tháng tiền phòng đối với hợp đồng 6 tháng, và 2 tháng đối với hợp đồng 1 năm em nhé. Thủ tục làm hợp đồng nhanh gọn lắm!';
@@ -175,11 +225,12 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  // ignore: unused_element
   void _sendMediaMessage(String type, String content, String url) {
     final newMessage = Message(
       messageId: DateTime.now().millisecondsSinceEpoch,
       convId: widget.conversation.convId,
-      senderId: _currentUserId,
+      senderId: _currentUserId ?? 0,
       content: content,
       msgType: type,
       fileUrl: url,
@@ -207,7 +258,9 @@ class _ChatScreenState extends State<ChatScreen> {
             messageId: DateTime.now().millisecondsSinceEpoch + 1,
             convId: widget.conversation.convId,
             senderId: widget.conversation.otherUserId,
-            content: type == 'image' ? 'Hình ảnh của em gửi rõ nét quá, anh đã lưu lại rồi nhé.' : 'Anh đã nhận được tệp đính kèm của em gửi rồi nha.',
+            content: type == 'image'
+                ? 'Hình ảnh của em gửi rõ nét quá, anh đã lưu lại rồi nhé.'
+                : 'Anh đã nhận được tệp đính kèm của em gửi rồi nha.',
             msgType: 'text',
             isRead: true,
             sentAt: DateTime.now(),
@@ -229,14 +282,61 @@ class _ChatScreenState extends State<ChatScreen> {
             if (_showListingHeader && widget.conversation.listingTitle != null)
               _buildListingContextBar(),
             Expanded(
-              child: _buildMessagesList(),
+              child: _buildMessagesBody(),
             ),
             if (_isTyping) _buildTypingIndicator(),
-            _buildInputBar(),
+            if (!_isLoadingMessages && _errorMessage == null) _buildInputBar(),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildMessagesBody() {
+    if (_isLoadingMessages) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.wifi_off_rounded,
+                  size: 42, color: AppColors.textMuted),
+              const SizedBox(height: 12),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _loadMessages,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Thử lại'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_messages.isEmpty) {
+      return const Center(
+        child: Text(
+          'Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+      );
+    }
+
+    return _buildMessagesList();
   }
 
   PreferredSizeWidget _buildAppBar() {
@@ -277,10 +377,12 @@ class _ChatScreenState extends State<ChatScreen> {
                         child: Image.network(
                           widget.conversation.otherUserAvatar!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _buildAvatarPlaceholder(widget.conversation.otherUserName),
+                          errorBuilder: (_, __, ___) => _buildAvatarPlaceholder(
+                              widget.conversation.otherUserName),
                         ),
                       )
-                    : _buildAvatarPlaceholder(widget.conversation.otherUserName),
+                    : _buildAvatarPlaceholder(
+                        widget.conversation.otherUserName),
               ),
               Container(
                 width: 10,
@@ -341,7 +443,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildAvatarPlaceholder(String name) {
-    final initials = name.trim().split(' ').map((e) => e[0]).take(2).join('').toUpperCase();
+    final initials =
+        name.trim().split(' ').map((e) => e[0]).take(2).join('').toUpperCase();
     return Center(
       child: Text(
         initials.isNotEmpty ? initials : 'U',
@@ -412,10 +515,12 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                     const SizedBox(width: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                        borderRadius:
+                            BorderRadius.circular(AppConstants.radiusSm),
                       ),
                       child: const Text(
                         '25 m²',
@@ -439,11 +544,14 @@ class _ChatScreenState extends State<ChatScreen> {
               GestureDetector(
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Đang chuyển hướng tới chi tiết tin đăng...')),
+                    const SnackBar(
+                        content:
+                            Text('Đang chuyển hướng tới chi tiết tin đăng...')),
                   );
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppColors.primary,
                     borderRadius: BorderRadius.circular(AppConstants.radiusMd),
@@ -511,7 +619,8 @@ class _ChatScreenState extends State<ChatScreen> {
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         child: Column(
-          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment:
+              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             // Bubble Content
             Container(
@@ -523,8 +632,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(AppConstants.radiusLg),
                   topRight: const Radius.circular(AppConstants.radiusLg),
-                  bottomLeft: Radius.circular(isMe ? AppConstants.radiusLg : AppConstants.radiusSm),
-                  bottomRight: Radius.circular(isMe ? AppConstants.radiusSm : AppConstants.radiusLg),
+                  bottomLeft: Radius.circular(
+                      isMe ? AppConstants.radiusLg : AppConstants.radiusSm),
+                  bottomRight: Radius.circular(
+                      isMe ? AppConstants.radiusSm : AppConstants.radiusLg),
                 ),
                 border: isMe ? null : Border.all(color: AppColors.borderLight),
                 boxShadow: [
@@ -554,7 +665,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   Icon(
                     Icons.done_all_rounded,
                     size: 12,
-                    color: message.isRead ? AppColors.primary : AppColors.textMuted,
+                    color: message.isRead
+                        ? AppColors.primary
+                        : AppColors.textMuted,
                   ),
                 ],
               ],
@@ -576,7 +689,8 @@ class _ChatScreenState extends State<ChatScreen> {
             width: 150,
             height: 150,
             color: AppColors.bgPage,
-            child: const Icon(Icons.image_not_supported_rounded, color: AppColors.textMuted),
+            child: const Icon(Icons.image_not_supported_rounded,
+                color: AppColors.textMuted),
           ),
         ),
       );
@@ -639,13 +753,17 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Text(
             '${widget.conversation.otherUserName.split(' (').first} đang nhập',
-            style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: AppColors.textSecondary),
+            style: const TextStyle(
+                fontSize: 11,
+                fontStyle: FontStyle.italic,
+                color: AppColors.textSecondary),
           ),
           const SizedBox(width: 4),
           const SizedBox(
             width: 10,
             height: 10,
-            child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.primary),
+            child: CircularProgressIndicator(
+                strokeWidth: 1.5, color: AppColors.primary),
           ),
         ],
       ),
@@ -669,7 +787,11 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           // Attachment Plus Button
           GestureDetector(
-            onTap: _showAttachmentPanel,
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Gửi tệp sẽ được nối API sau.')),
+              );
+            },
             child: Container(
               width: 38,
               height: 38,
@@ -702,8 +824,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 },
                 decoration: const InputDecoration(
                   hintText: 'Nhập tin nhắn...',
-                  hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  hintStyle:
+                      TextStyle(color: AppColors.textMuted, fontSize: 13),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
@@ -714,7 +838,7 @@ class _ChatScreenState extends State<ChatScreen> {
           const SizedBox(width: 10),
           // Send Button
           GestureDetector(
-            onTap: _sendMessage,
+            onTap: _isSending ? null : _sendMessage,
             child: Container(
               width: 38,
               height: 38,
@@ -723,9 +847,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                _textCtrl.text.trim().isEmpty 
-                    ? Icons.mic_rounded
-                    : Icons.send_rounded,
+                _isSending
+                    ? Icons.hourglass_top_rounded
+                    : _textCtrl.text.trim().isEmpty
+                        ? Icons.mic_rounded
+                        : Icons.send_rounded,
                 color: Colors.white,
                 size: 18,
               ),
@@ -736,6 +862,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  // ignore: unused_element
   void _showAttachmentPanel() {
     showModalBottomSheet(
       context: context,
@@ -743,7 +870,8 @@ class _ChatScreenState extends State<ChatScreen> {
       builder: (context) => Container(
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXxl)),
+          borderRadius: BorderRadius.vertical(
+              top: Radius.circular(AppConstants.radiusXxl)),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         child: Column(
@@ -760,7 +888,10 @@ class _ChatScreenState extends State<ChatScreen> {
             const SizedBox(height: 24),
             const Text(
               'Gửi phương tiện đính kèm',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary),
             ),
             const SizedBox(height: 24),
             Row(
@@ -854,9 +985,12 @@ class _ChatScreenState extends State<ChatScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppConstants.radiusLg)),
-        title: const Text('Gọi cho chủ nhà?', style: TextStyle(fontWeight: FontWeight.w700)),
-        content: Text('Bạn có muốn thực hiện cuộc gọi trực tiếp đến ${widget.conversation.otherUserName.split(' (').first} không?'),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppConstants.radiusLg)),
+        title: const Text('Gọi cho chủ nhà?',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        content: Text(
+            'Bạn có muốn thực hiện cuộc gọi trực tiếp đến ${widget.conversation.otherUserName.split(' (').first} không?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -866,7 +1000,8 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Đang khởi tạo cuộc gọi thoại...')),
+                const SnackBar(
+                    content: Text('Đang khởi tạo cuộc gọi thoại...')),
               );
             },
             child: const Text('Gọi ngay'),
@@ -883,7 +1018,8 @@ class _ChatScreenState extends State<ChatScreen> {
       builder: (context) => Container(
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXxl)),
+          borderRadius: BorderRadius.vertical(
+              top: Radius.circular(AppConstants.radiusXxl)),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: SafeArea(
@@ -891,25 +1027,35 @@ class _ChatScreenState extends State<ChatScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.bookmark_border_rounded, color: AppColors.textPrimary),
-                title: const Text('Lưu tin đăng này', style: TextStyle(fontWeight: FontWeight.w600)),
+                leading: const Icon(Icons.bookmark_border_rounded,
+                    color: AppColors.textPrimary),
+                title: const Text('Lưu tin đăng này',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Đã lưu tin đăng vào danh sách yêu thích!')),
+                    const SnackBar(
+                        content:
+                            Text('Đã lưu tin đăng vào danh sách yêu thích!')),
                   );
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.block_rounded, color: AppColors.error),
-                title: const Text('Chặn người dùng này', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
+                leading:
+                    const Icon(Icons.block_rounded, color: AppColors.error),
+                title: const Text('Chặn người dùng này',
+                    style: TextStyle(
+                        color: AppColors.error, fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(context);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.report_problem_outlined, color: AppColors.error),
-                title: const Text('Báo cáo người dùng', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
+                leading: const Icon(Icons.report_problem_outlined,
+                    color: AppColors.error),
+                title: const Text('Báo cáo người dùng',
+                    style: TextStyle(
+                        color: AppColors.error, fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(context);
                   context.push(AppConstants.routeReportIssue);
@@ -923,7 +1069,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   String _formatBubbleTime(DateTime date) {
-    final minuteString = date.minute < 10 ? '0${date.minute}' : '${date.minute}';
+    final minuteString =
+        date.minute < 10 ? '0${date.minute}' : '${date.minute}';
     return '${date.hour}:$minuteString';
   }
 }

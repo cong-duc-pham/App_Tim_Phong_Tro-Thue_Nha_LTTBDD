@@ -1,5 +1,3 @@
-// lib/models/conversation.dart
-
 class Conversation {
   final int convId;
   final int? listingId;
@@ -25,25 +23,44 @@ class Conversation {
     this.unreadCount = 0,
   });
 
-  /// Factory constructor to parse JSON from .NET API
   factory Conversation.fromJson(Map<String, dynamic> json) {
+    T? read<T>(String camel, String pascal) {
+      final value = json[camel] ?? json[pascal];
+      return value is T ? value : null;
+    }
+
+    int integer(String camel, String pascal) {
+      final value = json[camel] ?? json[pascal];
+      if (value is num) return value.toInt();
+      return int.tryParse(value?.toString() ?? '') ?? 0;
+    }
+
+    int? optionalInteger(String camel, String pascal) {
+      final value = json[camel] ?? json[pascal];
+      if (value == null) return null;
+      if (value is num) return value.toInt();
+      return int.tryParse(value.toString());
+    }
+
+    final lastMsgAtRaw = json['lastMsgAt'] ?? json['LastMsgAt'];
+
     return Conversation(
-      convId: (json['convId'] as num?)?.toInt() ?? 0,
-      listingId: (json['listingId'] as num?)?.toInt(),
-      listingTitle: json['listingTitle'] as String?,
-      listingImage: json['listingImage'] as String?,
-      lastMessage: json['lastMessage'] as String?,
-      lastMsgAt: json['lastMsgAt'] != null
-          ? DateTime.tryParse(json['lastMsgAt'].toString())
-          : null,
-      otherUserId: (json['otherUserId'] as num?)?.toInt() ?? 0,
-      otherUserName: json['otherUserName'] as String? ?? 'Người dùng',
-      otherUserAvatar: json['otherUserAvatar'] as String?,
-      unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
+      convId: integer('convId', 'ConvId'),
+      listingId: optionalInteger('listingId', 'ListingId'),
+      listingTitle: read<String>('listingTitle', 'ListingTitle'),
+      listingImage: read<String>('listingImage', 'ListingImage'),
+      lastMessage: read<String>('lastMessage', 'LastMessage'),
+      lastMsgAt: lastMsgAtRaw == null
+          ? null
+          : DateTime.tryParse(lastMsgAtRaw.toString()),
+      otherUserId: integer('otherUserId', 'OtherUserId'),
+      otherUserName:
+          read<String>('otherUserName', 'OtherUserName') ?? 'Người dùng',
+      otherUserAvatar: read<String>('otherUserAvatar', 'OtherUserAvatar'),
+      unreadCount: integer('unreadCount', 'UnreadCount'),
     );
   }
 
-  /// Convert model to JSON for API requests
   Map<String, dynamic> toJson() {
     return {
       'convId': convId,
@@ -59,7 +76,6 @@ class Conversation {
     };
   }
 
-  /// Create a copy of the conversation with modified fields
   Conversation copyWith({
     int? convId,
     int? listingId,
