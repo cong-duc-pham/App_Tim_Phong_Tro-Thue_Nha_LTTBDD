@@ -6,6 +6,7 @@ import '../../screens/onboarding/splash_screen.dart';
 import '../../screens/onboarding/onboarding_screen.dart';
 import '../../screens/onboarding/preference_screen.dart';
 import '../../screens/home/home_screen.dart';
+import '../../screens/notifications/notifications_screen.dart';
 import '../../screens/listing/listing_create_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/profile/favorites_screen.dart';
@@ -27,7 +28,7 @@ import '../../widgets/main_bottom_nav.dart';
 final appRouter = GoRouter(
   initialLocation: '/',
   routes: [
-    GoRoute(path: '/',          builder: (_, __) => const SplashScreen()),
+    GoRoute(path: '/', builder: (_, __) => const SplashScreen()),
     GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
     GoRoute(
       path: '/preferences',
@@ -51,22 +52,38 @@ final appRouter = GoRouter(
             return HomeScreen(initialSearchQuery: query);
           },
         ),
-        GoRoute(path: '/listing', builder: (_, __) => const PostListingScreen()),
-        GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen()),
+        GoRoute(
+            path: '/listing', builder: (_, __) => const PostListingScreen()),
+        GoRoute(
+            path: '/favorites', builder: (_, __) => const FavoritesScreen()),
         GoRoute(path: '/chat', builder: (_, __) => const ConversationsScreen()),
       ],
     ),
-    GoRoute(path: '/profile',    builder: (_, __) => const ProfileScreen()),
-    GoRoute(path: '/login',      builder: (_, __) => const LoginScreen()),
-    GoRoute(path: '/register',   builder: (_, __) => const RegisterScreen()),
-    GoRoute(path: '/about',      builder: (_, __) => const AboutAppScreen()),
-    GoRoute(path: '/report-issue', builder: (_, __) => const ReportIssueScreen()),
-    GoRoute(path: '/support-center', builder: (_, __) => const SupportCenterScreen()),
-    GoRoute(path: '/search-history', builder: (_, __) => const SearchHistoryScreen()),
+    GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+    GoRoute(
+        path: '/notifications',
+        builder: (_, __) => const NotificationsScreen()),
+    GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+    GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+    GoRoute(path: '/about', builder: (_, __) => const AboutAppScreen()),
+    GoRoute(
+        path: '/report-issue', builder: (_, __) => const ReportIssueScreen()),
+    GoRoute(
+        path: '/support-center',
+        builder: (_, __) => const SupportCenterScreen()),
+    GoRoute(
+        path: '/search-history',
+        builder: (_, __) => const SearchHistoryScreen()),
     GoRoute(path: '/my-reviews', builder: (_, __) => const MyReviewsScreen()),
-    GoRoute(path: '/verify-account', builder: (_, __) => const AccountVerificationScreen()),
-    GoRoute(path: '/change-password', builder: (_, __) => const ChangePasswordScreen()),
-    GoRoute(path: '/forgot-password', builder: (_, __) => const ForgotPasswordScreen()),
+    GoRoute(
+        path: '/verify-account',
+        builder: (_, __) => const AccountVerificationScreen()),
+    GoRoute(
+        path: '/change-password',
+        builder: (_, __) => const ChangePasswordScreen()),
+    GoRoute(
+        path: '/forgot-password',
+        builder: (_, __) => const ForgotPasswordScreen()),
     GoRoute(
       path: '/chat/detail',
       builder: (context, state) {
