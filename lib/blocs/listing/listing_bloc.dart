@@ -85,10 +85,15 @@ class ListingDetailBloc extends Bloc<ListingDetailEvent, ListingDetailState> {
 
     try {
       final newState = await _favoriteRepo.toggleFavorite(event.listingId);
-      emit(current.copyWith(isFavorite: newState, isFavoriteLoading: false));
-    } catch (_) {
-      // API lỗi thì roll back lại trạng thái cũ
-      emit(current.copyWith(isFavorite: wasLiked, isFavoriteLoading: false));
+      emit(current.copyWith(isFavorite: newState, isFavoriteLoading: false, favoriteError: null));
+    } catch (e) {
+      // API lỗi thì roll back lại trạng thái cũ và gán thông điệp lỗi
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(current.copyWith(
+        isFavorite: wasLiked,
+        isFavoriteLoading: false,
+        favoriteError: errorMsg,
+      ));
     }
   }
 }

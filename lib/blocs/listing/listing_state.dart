@@ -28,6 +28,7 @@ class ListingDetailLoaded extends ListingDetailState {
   final int reviewCount;
   // true khi đang gọi API toggle, tránh người dùng nhấn nhiều lần
   final bool isFavoriteLoading;
+  final String? favoriteError;
 
   const ListingDetailLoaded({
     required this.listing,
@@ -36,6 +37,7 @@ class ListingDetailLoaded extends ListingDetailState {
     required this.averageRating,
     required this.reviewCount,
     this.isFavoriteLoading = false,
+    this.favoriteError,
   });
 
   ListingDetailLoaded copyWith({
@@ -45,6 +47,7 @@ class ListingDetailLoaded extends ListingDetailState {
     double? averageRating,
     int? reviewCount,
     bool? isFavoriteLoading,
+    String? favoriteError,
   }) {
     return ListingDetailLoaded(
       listing: listing ?? this.listing,
@@ -53,6 +56,7 @@ class ListingDetailLoaded extends ListingDetailState {
       averageRating: averageRating ?? this.averageRating,
       reviewCount: reviewCount ?? this.reviewCount,
       isFavoriteLoading: isFavoriteLoading ?? this.isFavoriteLoading,
+      favoriteError: favoriteError,
     );
   }
 
@@ -64,6 +68,7 @@ class ListingDetailLoaded extends ListingDetailState {
         averageRating,
         reviewCount,
         isFavoriteLoading,
+        favoriteError,
       ];
 }
 

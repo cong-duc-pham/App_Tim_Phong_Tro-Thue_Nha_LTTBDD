@@ -125,19 +125,37 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       create: (_) => ListingDetailBloc()..add(LoadListingDetail(widget.listingId)),
       child: Scaffold(
         backgroundColor: AppColors.bgPage,
-        body: BlocBuilder<ListingDetailBloc, ListingDetailState>(
-          builder: (context, state) {
-            if (state is ListingDetailLoading) {
-              return _buildShimmerLoading();
+        body: BlocListener<ListingDetailBloc, ListingDetailState>(
+          listenWhen: (previous, current) =>
+              previous is ListingDetailLoaded &&
+              current is ListingDetailLoaded &&
+              current.favoriteError != previous.favoriteError &&
+              current.favoriteError != null,
+          listener: (context, state) {
+            if (state is ListingDetailLoaded && state.favoriteError != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.favoriteError!),
+                  backgroundColor: AppColors.error,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
             }
-            if (state is ListingDetailError) {
-              return _buildErrorState(context, state.message);
-            }
-            if (state is ListingDetailLoaded) {
-              return _buildContent(context, state);
-            }
-            return const SizedBox.shrink();
           },
+          child: BlocBuilder<ListingDetailBloc, ListingDetailState>(
+            builder: (context, state) {
+              if (state is ListingDetailLoading) {
+                return _buildShimmerLoading();
+              }
+              if (state is ListingDetailError) {
+                return _buildErrorState(context, state.message);
+              }
+              if (state is ListingDetailLoaded) {
+                return _buildContent(context, state);
+              }
+              return const SizedBox.shrink();
+            },
+          ),
         ),
       ),
     );
@@ -1090,10 +1108,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             Expanded(
               flex: 3,
               child: ElevatedButton.icon(
-                onPressed: listing.landlordPhone != null ? () => _makePhoneCall(listing.landlordPhone!) : null,
-                icon: const Icon(Icons.phone_in_talk_rounded, color: Colors.white, size: 20),
+                onPressed: listing.landlordId != null ? () => _startChat(context, listing) : null,
+                icon: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 20),
                 label: const Text(
-                  'Liên hệ ngay',
+                  'Nhắn tin ngay',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
                 ),
                 style: ElevatedButton.styleFrom(
