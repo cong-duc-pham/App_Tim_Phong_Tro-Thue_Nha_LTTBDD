@@ -944,10 +944,10 @@ INSERT INTO PostPackages
     (package_name, package_type, duration_days, price, priority,
      max_images, max_videos, allow_banner, badge_type, has_analytics, is_highlighted, description)
 VALUES
-(N'Tin Thuong',      'free',      30,       0,   0,  1, 0, 0, NULL,       0, 0, N'Dang tin mien phi, hien thi binh thuong trong danh sach'),
-(N'Tin VIP 7 ngay',  'vip',        7,   99000,   1,  5, 0, 0, 'vip',      1, 0, N'Uu tien hien thi cao hon, badge VIP xanh, xem thong ke luot xem'),
-(N'Tin VIP 30 ngay', 'vip',       30,  299000,   1, 10, 1, 0, 'vip',      1, 0, N'Nhu VIP 7 ngay nhung dai han hon, them ho tro 1 video'),
-(N'Tin Noi Bat',     'featured',  30,  499000,   2, 99, 3, 1, 'featured', 1, 1, N'Uu tien cao nhat, xuat hien tren banner trang chu, badge vang noi bat');
+(N'Thường',          'free',      30,       0,   0,  1, 0, 0, NULL,       0, 0, N'Hiển thị bình thường, 1 ảnh đăng kèm, không badge, không thống kê lượt xem'),
+(N'VIP Tuần',        'vip',        7,   79000,   1,  5, 0, 0, 'vip',      1, 0, N'Ưu tiên hiển thị, tối đa 5 ảnh, badge VIP xanh, thống kê lượt xem'),
+(N'VIP Tháng',       'vip',       30,  299000,   2, 10, 1, 0, 'vip',      1, 0, N'Ưu tiên cao, tối đa 10 ảnh, badge VIP xanh, 1 video đăng kèm, thống kê lượt xem'),
+(N'Nổi bật 30 ngày', 'featured',  30,  499000,   3, 99, 3, 1, 'featured', 1, 1, N'Ưu tiên cao nhất, không giới hạn ảnh, badge nổi bật vàng, xuất hiện trên banner, 3 video đăng kèm, thống kê chi tiết');
 
 GO
 

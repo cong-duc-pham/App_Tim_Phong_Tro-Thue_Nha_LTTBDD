@@ -20,6 +20,7 @@ import '../../screens/profile/change_password_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
 import '../../screens/auth/forgot_password_screen.dart';
+import '../../screens/payment/package_screen.dart';
 import '../../models/conversation.dart';
 import '../../screens/chat/conversations_screen.dart';
 import '../../screens/chat/chat_screen.dart';
@@ -58,6 +59,15 @@ final appRouter = GoRouter(
         GoRoute(
             path: '/favorites', builder: (_, __) => const FavoritesScreen()),
         GoRoute(path: '/chat', builder: (_, __) => const ConversationsScreen()),
+        GoRoute(
+          path: '/packages',
+          builder: (context, state) {
+            final listingId = int.tryParse(
+              state.uri.queryParameters['listingId'] ?? '',
+            );
+            return PackageScreen(listingId: listingId);
+          },
+        ),
       ],
     ),
     GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
