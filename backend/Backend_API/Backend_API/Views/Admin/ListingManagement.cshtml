@@ -83,7 +83,7 @@
                                 <td>@(listing.CreatedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
                                 <td class="text-end">
                                     <div class="d-inline-flex gap-2">
-                                        <a href="/admin/listings/@listing.ListingId" class="btn btn-sm btn-outline-primary">Chi tiết</a>
+                                        <a href="/admin/listings/@listing.ListingId?from=management" class="btn btn-sm btn-outline-primary">Chi tiết</a>
                                         @if (string.Equals(listing.StatusName, "pending", StringComparison.OrdinalIgnoreCase))
                                         {
                                             <form method="post" action="/admin/listings/@listing.ListingId/approve">
