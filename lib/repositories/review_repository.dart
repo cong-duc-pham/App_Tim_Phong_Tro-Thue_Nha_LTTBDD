@@ -40,7 +40,7 @@ class ReviewItem {
       reviewId: (json['reviewId'] ?? json['ReviewId'] ?? 0) as int,
       reviewerName: read<String>('reviewerName', 'ReviewerName') ?? 'Ẩn danh',
       reviewerAvatar: read<String>('reviewerAvatar', 'ReviewerAvatar'),
-      rating: ratingRaw is num ? ratingRaw.toDouble() : 0,
+      rating: ratingRaw is num ? ratingRaw.toDouble() : 0.0,
       content: read<String>('content', 'Content') ?? '',
       replyContent: read<String>('replyContent', 'ReplyContent'),
       createdAt: createdRaw != null
@@ -80,7 +80,7 @@ class ReviewRepository {
 
       return (
         reviews: reviews,
-        averageRating: avgRaw is num ? avgRaw.toDouble() : 0,
+        averageRating: avgRaw is num ? avgRaw.toDouble() : 0.0,
         count: countRaw is num ? countRaw.toInt() : 0,
       );
     } on DioException catch (e) {
