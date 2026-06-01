@@ -32,6 +32,7 @@ class ListingItem {
   final Color bgColor;
   final String type; // 'phong-tro' | 'can-ho' | 'o-ghep' | 'nha-nguyen-can'
   final String? imageUrl;
+  final String? provinceName;
 
   const ListingItem({
     required this.id,
@@ -48,6 +49,7 @@ class ListingItem {
     required this.bgColor,
     this.type = 'phong-tro',
     this.imageUrl,
+    this.provinceName,
   });
 }
 
@@ -245,6 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingListings = false;
   String? _listingLoadError;
   int _unreadNotificationCount = 0;
+  String _selectedLocation = 'TP. Hồ Chí Minh';
   Set<String> _preferredTypes = {};
   Set<String> _preferredAreas = {};
   Set<String> _preferredAmenities = {};
@@ -254,6 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadPreferences();
+    _loadSelectedLocation();
     _loadListingsFromSql();
     _loadFavoriteIds();
     _loadUnreadNotificationCount();
@@ -281,6 +285,15 @@ class _HomeScreenState extends State<HomeScreen> {
       _preferredMaxBudget =
           prefs.getDouble(AppConstants.keyPreferenceMaxBudget);
     });
+  }
+
+  Future<void> _loadSelectedLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(AppConstants.keySelectedHomeLocation);
+    if (!mounted) return;
+    if (saved != null && saved.trim().isNotEmpty) {
+      setState(() => _selectedLocation = saved);
+    }
   }
 
   Future<void> _loadListingsFromSql() async {
@@ -329,8 +342,60 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  List<ListingItem> get _listingsForUi =>
-      _sqlListings.isEmpty ? _allListings : _sqlListings;
+  List<ListingItem> get _listingsForUi {
+    final source = _sqlListings.isEmpty ? _allListings : _sqlListings;
+    if (_selectedLocation == 'Tất cả khu vực') return source;
+
+    final selected = _normalizeLocation(_selectedLocation);
+    return source.where((item) {
+      final province = _normalizeLocation(item.provinceName ?? '');
+      final address = _normalizeLocation(item.address);
+      return _matchesLocation(province, selected) ||
+          _matchesLocation(address, selected);
+    }).toList();
+  }
+
+  bool _matchesLocation(String value, String selected) {
+    if (selected == 'ho chi minh') {
+      return value.contains('ho chi minh') ||
+          value.contains('hcm') ||
+          value.contains('sai gon');
+    }
+    return value == selected || value.contains(selected);
+  }
+
+  List<String> get _locationOptions {
+    final values = <String>{
+      'Tất cả khu vực',
+      'TP. Hồ Chí Minh',
+      'Hà Nội',
+      'Đà Nẵng',
+      'Cần Thơ',
+      'Bình Dương',
+    };
+
+    for (final item in _sqlListings) {
+      final province = item.provinceName?.trim();
+      if (province != null && province.isNotEmpty) {
+        values.add(province);
+      }
+    }
+
+    return values.toList();
+  }
+
+  String _normalizeLocation(String value) {
+    var result = _removeDiacritics(value.toLowerCase())
+        .replaceAll('tp.', '')
+        .replaceAll('thanh pho', '')
+        .replaceAll('tinh', '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    if (result == 'tp hcm' || result == 'hcm' || result == 'sai gon') {
+      result = 'ho chi minh';
+    }
+    return result;
+  }
 
   List<ListingItem> get _featuredListingsForUi {
     final featured =
@@ -366,6 +431,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bgColor: _colorForType(type),
       type: type,
       imageUrl: _resolveImageUrl(listing.image0),
+      provinceName: listing.provinceName,
     );
   }
 
@@ -486,6 +552,106 @@ class _HomeScreenState extends State<HomeScreen> {
     return message.startsWith('Exception: ')
         ? message.substring('Exception: '.length)
         : message;
+  }
+
+  Future<void> _selectLocation(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(AppConstants.keySelectedHomeLocation, value);
+    if (!mounted) return;
+    setState(() => _selectedLocation = value);
+  }
+
+  void _showLocationSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppConstants.radiusXxl)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 4),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius:
+                        BorderRadius.circular(AppConstants.radiusFull),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 14, 20, 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Chọn khu vực',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+                ..._locationOptions.map((location) {
+                  final selected = location == _selectedLocation;
+                  return InkWell(
+                    onTap: () {
+                      Navigator.pop(context);
+                      _selectLocation(location);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 14),
+                      child: Row(
+                        children: [
+                          Icon(
+                            location == 'Tất cả khu vực'
+                                ? Icons.public_rounded
+                                : Icons.location_on_outlined,
+                            size: 20,
+                            color: selected
+                                ? AppColors.primary
+                                : AppColors.textMuted,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              location,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: selected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                color: selected
+                                    ? AppColors.primary
+                                    : AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          if (selected)
+                            const Icon(Icons.check_rounded,
+                                size: 20, color: AppColors.primary),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _onSearchChanged(String val) {
@@ -663,16 +829,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                   color: Colors.white.withValues(alpha: 0.75))),
                         ]),
                         const SizedBox(height: 2),
-                        const Row(children: [
-                          Text('TP. Hồ Chí Minh',
-                              style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white)),
-                          SizedBox(width: 4),
-                          Icon(Icons.keyboard_arrow_down_rounded,
-                              size: 18, color: Colors.white),
-                        ]),
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _showLocationSheet,
+                          child: Row(children: [
+                            Flexible(
+                              child: Text(_selectedLocation,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white)),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.keyboard_arrow_down_rounded,
+                                size: 18, color: Colors.white),
+                          ]),
+                        ),
                       ],
                     ),
                   ),
