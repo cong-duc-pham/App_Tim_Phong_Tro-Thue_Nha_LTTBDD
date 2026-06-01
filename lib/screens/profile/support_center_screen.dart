@@ -218,7 +218,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              borderSide: BorderSide.none,
             ),
           ),
         ),

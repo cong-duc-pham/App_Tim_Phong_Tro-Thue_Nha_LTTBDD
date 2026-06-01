@@ -9,6 +9,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../models/listing.dart';
+import '../../repositories/favorite_repository.dart';
 import '../../repositories/listing_repository.dart';
 import '../../services/api_service.dart';
 import '../../services/search_history_service.dart';
@@ -175,6 +176,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final ListingRepository _listingRepository = ListingRepository();
+  final FavoriteRepository _favoriteRepository = FavoriteRepository();
   int _activeFilter = 0;
   final List<String> _filters = [
     'Gần đây', 'Theo ngân sách', 'Phòng mới', 'Nuôi thú cưng', 'VIP'
@@ -202,6 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadPreferences();
     _loadListingsFromSql();
+    _loadFavoriteIds();
     // Tự động kích hoạt tìm kiếm nếu có từ khóa truyền từ ngoài vào (qua deep link / router)
     if (widget.initialSearchQuery != null && widget.initialSearchQuery!.trim().isNotEmpty) {
       _searchCtrl.text = widget.initialSearchQuery!;
@@ -246,6 +249,20 @@ class _HomeScreenState extends State<HomeScreen> {
         _listingLoadError = e.toString();
         _isLoadingListings = false;
       });
+    }
+  }
+
+  Future<void> _loadFavoriteIds() async {
+    try {
+      final favorites = await _favoriteRepository.getFavorites();
+      if (!mounted) return;
+      setState(() {
+        _savedIds
+          ..clear()
+          ..addAll(favorites.map((item) => item.listingId.toString()));
+      });
+    } catch (_) {
+      // Người dùng chưa đăng nhập vẫn có thể xem danh sách phòng.
     }
   }
 
@@ -359,14 +376,51 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  void _toggleSave(String id) {
+  Future<void> _toggleSave(String id) async {
+    final wasSaved = _savedIds.contains(id);
     setState(() {
-      if (_savedIds.contains(id)) {
+      if (wasSaved) {
         _savedIds.remove(id);
       } else {
         _savedIds.add(id);
       }
     });
+
+    try {
+      final isFavorite = await _favoriteRepository.toggleFavorite(int.parse(id));
+      if (!mounted) return;
+      setState(() {
+        if (isFavorite) {
+          if (!_savedIds.contains(id)) _savedIds.add(id);
+        } else {
+          _savedIds.remove(id);
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        if (wasSaved) {
+          if (!_savedIds.contains(id)) _savedIds.add(id);
+        } else {
+          _savedIds.remove(id);
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(_cleanBackendError(e)),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+        ),
+      ));
+    }
+  }
+
+  String _cleanBackendError(Object e) {
+    final message = e.toString();
+    return message.startsWith('Exception: ')
+        ? message.substring('Exception: '.length)
+        : message;
   }
 
   void _onSearchChanged(String val) {
@@ -611,11 +665,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
       child: Row(
         children: [
           const Icon(Icons.search_rounded, color: AppColors.textMuted, size: 20),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: TextField(
               controller: _searchCtrl,
@@ -635,8 +689,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 hintText: 'Tên đường, quận, trường học...',
                 hintStyle: AppTextStyles.inputHint,
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+                filled: false,
                 isDense: true,
-                contentPadding: EdgeInsets.zero,
+                contentPadding: EdgeInsets.symmetric(vertical: 8),
               ),
             ),
           ),
@@ -661,18 +721,17 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 AnimatedContainer(
                   duration: AppConstants.animFast,
-                  width: 36,
-                  height: 36,
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
                     color: _filter.hasActive
                         ? AppColors.primary
                         : AppColors.primary,
-                    borderRadius:
-                        BorderRadius.circular(AppConstants.radiusSm),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.center,
                   child: const Icon(Icons.tune_rounded,
-                      size: 18, color: Colors.white),
+                      size: 20, color: Colors.white),
                 ),
                 if (_filter.hasActive)
                   Positioned(
