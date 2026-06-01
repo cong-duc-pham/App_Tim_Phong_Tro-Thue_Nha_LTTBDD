@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -40,6 +40,34 @@ class ListingRepository {
         .whereType<Map>()
         .map((item) => Listing.fromJson(Map<String, dynamic>.from(item)))
         .toList();
+  }
+
+  // Lấy chi tiết một tin đăng theo ID — public, không cần auth
+  Future<Listing> getListingById(int id) async {
+    try {
+      final response = await _apiService.dio.get<Map<String, dynamic>>(
+        '/listings/$id',
+      );
+
+      final body = response.data ?? {};
+      final data = body['data'] ?? body['Data'];
+      if (data is! Map) {
+        throw Exception('Không tìm thấy tin đăng.');
+      }
+
+      return Listing.fromJson(Map<String, dynamic>.from(data));
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
+  // Tăng lượt xem — fire-and-forget, không throw nếu lỗi
+  Future<void> incrementView(int id) async {
+    try {
+      await _apiService.dio.post<void>('/listings/$id/view');
+    } catch (_) {
+      // Bỏ qua lỗi — không ảnh hưởng trải nghiệm người dùng
+    }
   }
 
   Future<Listing> createListing(Map<String, dynamic> payload) async {
