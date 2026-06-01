@@ -1,4 +1,4 @@
-﻿// lib/screens/home/home_screen.dart
+// lib/screens/home/home_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +11,7 @@ import '../../core/constants/app_text_styles.dart';
 import '../../models/listing.dart';
 import '../../repositories/favorite_repository.dart';
 import '../../repositories/listing_repository.dart';
+import '../../repositories/notification_repository.dart';
 import '../../services/api_service.dart';
 import '../../services/search_history_service.dart';
 
@@ -54,52 +55,95 @@ class ListingItem {
 
 final _allListings = [
   const ListingItem(
-    id: '1', title: 'Phòng đẹp full nội thất Bình Thạnh',
-    address: 'Bình Thạnh, TP.HCM', price: 3500000, area: 25,
-    isVerified: true, isFeatured: true, type: 'phong-tro',
-    tags: ['Wifi', 'Điều hòa', 'Ban công'], bgColor: AppColors.illus1,
+    id: '1',
+    title: 'Phòng đẹp full nội thất Bình Thạnh',
+    address: 'Bình Thạnh, TP.HCM',
+    price: 3500000,
+    area: 25,
+    isVerified: true,
+    isFeatured: true,
+    type: 'phong-tro',
+    tags: ['Wifi', 'Điều hòa', 'Ban công'],
+    bgColor: AppColors.illus1,
   ),
   const ListingItem(
-    id: '2', title: 'Studio cao cấp Quận 1 view đẹp',
-    address: 'Quận 1, TP.HCM', price: 5200000, area: 30,
-    isVerified: true, isNew: true, type: 'can-ho',
-    tags: ['Thang máy', 'Bảo vệ'], bgColor: AppColors.illus2,
+    id: '2',
+    title: 'Studio cao cấp Quận 1 view đẹp',
+    address: 'Quận 1, TP.HCM',
+    price: 5200000,
+    area: 30,
+    isVerified: true,
+    isNew: true,
+    type: 'can-ho',
+    tags: ['Thang máy', 'Bảo vệ'],
+    bgColor: AppColors.illus2,
   ),
   const ListingItem(
-    id: '3', title: 'Phòng gần ĐH Bách Khoa yên tĩnh',
-    address: 'Quận 10, TP.HCM', price: 2800000, area: 20,
-    isFeatured: true, type: 'phong-tro',
-    tags: ['Wifi', 'Máy giặt'], bgColor: AppColors.illus3,
-  ),
-  const ListingItem(
-    id: '4', title: 'Phòng trọ sinh viên gần RMIT',
-    address: 'Quận 7 · 1.2km', price: 2200000, area: 18,
-    isVerified: true, status: 'available', type: 'phong-tro',
-    bgColor: AppColors.illus4,
-  ),
-  const ListingItem(
-    id: '5', title: 'Căn hộ dịch vụ Tân Bình đầy đủ',
-    address: 'Tân Bình · 2.4km', price: 6500000, area: 35,
-    isVerified: true, status: 'hot', type: 'can-ho',
-    tags: ['Điều hòa', 'Thang máy'], bgColor: AppColors.illus2,
-  ),
-  const ListingItem(
-    id: '6', title: 'Phòng ghép 2 người Thủ Đức',
-    address: 'Thủ Đức · 3.1km', price: 1800000, area: 15,
-    allowPet: true, status: 'available', type: 'o-ghep',
+    id: '3',
+    title: 'Phòng gần ĐH Bách Khoa yên tĩnh',
+    address: 'Quận 10, TP.HCM',
+    price: 2800000,
+    area: 20,
+    isFeatured: true,
+    type: 'phong-tro',
+    tags: ['Wifi', 'Máy giặt'],
     bgColor: AppColors.illus3,
   ),
   const ListingItem(
-    id: '7', title: 'Nhà nguyên căn Gò Vấp 3 phòng ngủ',
-    address: 'Gò Vấp, TP.HCM', price: 12000000, area: 70,
-    isVerified: true, type: 'nha-nguyen-can',
-    tags: ['Sân vườn', 'Wifi', 'Máy giặt'], bgColor: AppColors.illus1,
+    id: '4',
+    title: 'Phòng trọ sinh viên gần RMIT',
+    address: 'Quận 7 · 1.2km',
+    price: 2200000,
+    area: 18,
+    isVerified: true,
+    status: 'available',
+    type: 'phong-tro',
+    bgColor: AppColors.illus4,
   ),
   const ListingItem(
-    id: '8', title: 'Ở ghép sinh viên phòng đôi Bình Dương',
-    address: 'Bình Dương · 5km', price: 900000, area: 12,
-    status: 'available', type: 'o-ghep',
-    tags: ['Wifi'], bgColor: AppColors.illus4,
+    id: '5',
+    title: 'Căn hộ dịch vụ Tân Bình đầy đủ',
+    address: 'Tân Bình · 2.4km',
+    price: 6500000,
+    area: 35,
+    isVerified: true,
+    status: 'hot',
+    type: 'can-ho',
+    tags: ['Điều hòa', 'Thang máy'],
+    bgColor: AppColors.illus2,
+  ),
+  const ListingItem(
+    id: '6',
+    title: 'Phòng ghép 2 người Thủ Đức',
+    address: 'Thủ Đức · 3.1km',
+    price: 1800000,
+    area: 15,
+    allowPet: true,
+    status: 'available',
+    type: 'o-ghep',
+    bgColor: AppColors.illus3,
+  ),
+  const ListingItem(
+    id: '7',
+    title: 'Nhà nguyên căn Gò Vấp 3 phòng ngủ',
+    address: 'Gò Vấp, TP.HCM',
+    price: 12000000,
+    area: 70,
+    isVerified: true,
+    type: 'nha-nguyen-can',
+    tags: ['Sân vườn', 'Wifi', 'Máy giặt'],
+    bgColor: AppColors.illus1,
+  ),
+  const ListingItem(
+    id: '8',
+    title: 'Ở ghép sinh viên phòng đôi Bình Dương',
+    address: 'Bình Dương · 5km',
+    price: 900000,
+    area: 12,
+    status: 'available',
+    type: 'o-ghep',
+    tags: ['Wifi'],
+    bgColor: AppColors.illus4,
   ),
 ];
 
@@ -177,9 +221,15 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final ListingRepository _listingRepository = ListingRepository();
   final FavoriteRepository _favoriteRepository = FavoriteRepository();
+  final NotificationRepository _notificationRepository =
+      NotificationRepository();
   int _activeFilter = 0;
   final List<String> _filters = [
-    'Gần đây', 'Theo ngân sách', 'Phòng mới', 'Nuôi thú cưng', 'VIP'
+    'Gần đây',
+    'Theo ngân sách',
+    'Phòng mới',
+    'Nuôi thú cưng',
+    'VIP'
   ];
   final List<String> _savedIds = [];
 
@@ -194,6 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<ListingItem> _sqlListings = [];
   bool _isLoadingListings = false;
   String? _listingLoadError;
+  int _unreadNotificationCount = 0;
   Set<String> _preferredTypes = {};
   Set<String> _preferredAreas = {};
   Set<String> _preferredAmenities = {};
@@ -205,8 +256,10 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadPreferences();
     _loadListingsFromSql();
     _loadFavoriteIds();
+    _loadUnreadNotificationCount();
     // Tự động kích hoạt tìm kiếm nếu có từ khóa truyền từ ngoài vào (qua deep link / router)
-    if (widget.initialSearchQuery != null && widget.initialSearchQuery!.trim().isNotEmpty) {
+    if (widget.initialSearchQuery != null &&
+        widget.initialSearchQuery!.trim().isNotEmpty) {
       _searchCtrl.text = widget.initialSearchQuery!;
       _searchQuery = widget.initialSearchQuery!.trim().toLowerCase();
       _isSearching = true;
@@ -263,6 +316,16 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } catch (_) {
       // Người dùng chưa đăng nhập vẫn có thể xem danh sách phòng.
+    }
+  }
+
+  Future<void> _loadUnreadNotificationCount() async {
+    try {
+      final count = await _notificationRepository.getUnreadCount();
+      if (!mounted) return;
+      setState(() => _unreadNotificationCount = count);
+    } catch (_) {
+      if (mounted) setState(() => _unreadNotificationCount = 0);
     }
   }
 
@@ -352,7 +415,8 @@ class _HomeScreenState extends State<HomeScreen> {
     super.didUpdateWidget(oldWidget);
     // Cập nhật lại thanh tìm kiếm nếu từ khóa truyền vào widget thay đổi
     if (widget.initialSearchQuery != oldWidget.initialSearchQuery) {
-      if (widget.initialSearchQuery != null && widget.initialSearchQuery!.trim().isNotEmpty) {
+      if (widget.initialSearchQuery != null &&
+          widget.initialSearchQuery!.trim().isNotEmpty) {
         setState(() {
           _searchCtrl.text = widget.initialSearchQuery!;
           _searchQuery = widget.initialSearchQuery!.trim().toLowerCase();
@@ -387,7 +451,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final isFavorite = await _favoriteRepository.toggleFavorite(int.parse(id));
+      final isFavorite =
+          await _favoriteRepository.toggleFavorite(int.parse(id));
       if (!mounted) return;
       setState(() {
         if (isFavorite) {
@@ -446,7 +511,8 @@ class _HomeScreenState extends State<HomeScreen> {
         .where((e) =>
             _removeDiacritics(e.title.toLowerCase()).contains(normalized) ||
             _removeDiacritics(e.address.toLowerCase()).contains(normalized) ||
-            e.tags.any((t) => _removeDiacritics(t.toLowerCase()).contains(normalized)))
+            e.tags.any(
+                (t) => _removeDiacritics(t.toLowerCase()).contains(normalized)))
         .toList();
   }
 
@@ -541,7 +607,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: _buildSectionHeader('⭐  Tin nổi bật', 'Xem thêm')),
                 SliverToBoxAdapter(child: _buildFeaturedCards()),
                 SliverToBoxAdapter(
-                    child: _buildSectionHeader('🎯  Gợi ý cho bạn', 'Xem thêm')),
+                    child:
+                        _buildSectionHeader('🎯  Gợi ý cho bạn', 'Xem thêm')),
                 if (_hasSavedPreferences) ...[
                   SliverToBoxAdapter(child: _buildPreferenceBanner()),
                 ],
@@ -611,8 +678,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   _IconBtn(
                       icon: Icons.notifications_outlined,
-                      badge: true,
-                      onTap: () {}),
+                      badge: _unreadNotificationCount > 0,
+                      onTap: () => context.go(AppConstants.routeNotifications)),
                   const SizedBox(width: 10),
                   GestureDetector(
                     onTap: () => context.go(AppConstants.routeProfile),
@@ -668,7 +735,8 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
       child: Row(
         children: [
-          const Icon(Icons.search_rounded, color: AppColors.textMuted, size: 20),
+          const Icon(Icons.search_rounded,
+              color: AppColors.textMuted, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
@@ -812,9 +880,7 @@ class _HomeScreenState extends State<HomeScreen> {
               'Thử tìm với từ khóa khác\nhoặc điều chỉnh bộ lọc',
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textMuted,
-                  height: 1.5),
+                  fontSize: 13, color: AppColors.textMuted, height: 1.5),
             ),
           ],
         ),
@@ -827,8 +893,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () {},
       child: Container(
-        margin: const EdgeInsets.fromLTRB(
-            AppConstants.paddingH, 0, AppConstants.paddingH, AppConstants.spacingSm),
+        margin: const EdgeInsets.fromLTRB(AppConstants.paddingH, 0,
+            AppConstants.paddingH, AppConstants.spacingSm),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(AppConstants.radiusLg),
@@ -903,8 +969,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 text: _formatPrice(item.price),
                                 style: AppTextStyles.cardPrice),
                             const TextSpan(
-                                text: '/th',
-                                style: AppTextStyles.cardPriceSub),
+                                text: '/th', style: AppTextStyles.cardPriceSub),
                           ]),
                         ),
                         GestureDetector(
@@ -939,19 +1004,18 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.fromLTRB(
             AppConstants.paddingH, 10, AppConstants.paddingH, 0),
         itemCount: _filters.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppConstants.spacingSm),
+        separatorBuilder: (_, __) =>
+            const SizedBox(width: AppConstants.spacingSm),
         itemBuilder: (_, i) {
           final active = i == _activeFilter;
           return GestureDetector(
             onTap: () => setState(() => _activeFilter = i),
             child: AnimatedContainer(
               duration: AppConstants.animFast,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
                 color: active ? AppColors.primary : Colors.white,
-                borderRadius:
-                    BorderRadius.circular(AppConstants.radiusFull),
+                borderRadius: BorderRadius.circular(AppConstants.radiusFull),
                 border: Border.all(
                     color: active ? AppColors.primary : AppColors.border,
                     width: 1.5),
@@ -975,9 +1039,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: active
-                              ? Colors.white
-                              : AppColors.textSecondary)),
+                          color:
+                              active ? Colors.white : AppColors.textSecondary)),
                 ],
               ),
             ),
@@ -1121,42 +1184,61 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCategories() {
     final cats = [
-      {'icon': Icons.home_rounded, 'label': 'Phòng trọ\nSV', 'color': AppColors.catBlue},
-      {'icon': Icons.apartment_rounded, 'label': 'Căn hộ\nDV', 'color': AppColors.catIndigo},
-      {'icon': Icons.people_rounded, 'label': 'Ở ghép', 'color': AppColors.catCyan},
-      {'icon': Icons.house_rounded, 'label': 'Nhà\nnguyên căn', 'color': AppColors.catSky},
+      {
+        'icon': Icons.home_rounded,
+        'label': 'Phòng trọ\nSV',
+        'color': AppColors.catBlue
+      },
+      {
+        'icon': Icons.apartment_rounded,
+        'label': 'Căn hộ\nDV',
+        'color': AppColors.catIndigo
+      },
+      {
+        'icon': Icons.people_rounded,
+        'label': 'Ở ghép',
+        'color': AppColors.catCyan
+      },
+      {
+        'icon': Icons.house_rounded,
+        'label': 'Nhà\nnguyên căn',
+        'color': AppColors.catSky
+      },
     ];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppConstants.paddingH, AppConstants.paddingV, AppConstants.paddingH, 0),
+      padding: const EdgeInsets.fromLTRB(AppConstants.paddingH,
+          AppConstants.paddingV, AppConstants.paddingH, 0),
       child: Column(
         children: [
           _buildSectionHeader('Loại hình', 'Xem tất cả'),
           const SizedBox(height: AppConstants.spacingSm),
           Row(
-            children: cats.map((c) => Expanded(
-              child: Column(children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                      color: c['color'] as Color,
-                      borderRadius:
-                          BorderRadius.circular(AppConstants.radiusMd)),
-                  alignment: Alignment.center,
-                  child: Icon(c['icon'] as IconData,
-                      size: AppConstants.iconLg, color: AppColors.primary),
-                ),
-                const SizedBox(height: 6),
-                Text(c['label'] as String,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
-                        height: 1.3)),
-              ]),
-            )).toList(),
+            children: cats
+                .map((c) => Expanded(
+                      child: Column(children: [
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                              color: c['color'] as Color,
+                              borderRadius:
+                                  BorderRadius.circular(AppConstants.radiusMd)),
+                          alignment: Alignment.center,
+                          child: Icon(c['icon'] as IconData,
+                              size: AppConstants.iconLg,
+                              color: AppColors.primary),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(c['label'] as String,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textSecondary,
+                                height: 1.3)),
+                      ]),
+                    ))
+                .toList(),
           ),
         ],
       ),
@@ -1167,8 +1249,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBanner() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppConstants.paddingH, AppConstants.paddingV, AppConstants.paddingH, 0),
+      padding: const EdgeInsets.fromLTRB(AppConstants.paddingH,
+          AppConstants.paddingV, AppConstants.paddingH, 0),
       child: Container(
         decoration: BoxDecoration(
             color: AppColors.primary,
@@ -1271,18 +1353,18 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: EdgeInsets.symmetric(vertical: 24),
         child: Center(
             child: Text('Không có tin nổi bật phù hợp',
-                style: TextStyle(
-                    color: AppColors.textMuted, fontSize: 13))),
+                style: TextStyle(color: AppColors.textMuted, fontSize: 13))),
       );
     }
     return SizedBox(
       height: 220,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(
-            AppConstants.paddingH, AppConstants.spacingSm, AppConstants.paddingH, 6),
+        padding: const EdgeInsets.fromLTRB(AppConstants.paddingH,
+            AppConstants.spacingSm, AppConstants.paddingH, 6),
         itemCount: list.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AppConstants.spacingMd),
+        separatorBuilder: (_, __) =>
+            const SizedBox(width: AppConstants.spacingMd),
         itemBuilder: (_, i) => _buildRoomCard(list[i]),
       ),
     );
@@ -1576,8 +1658,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSectionHeader(String title, String action) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppConstants.paddingH, AppConstants.paddingV, AppConstants.paddingH, 0),
+      padding: const EdgeInsets.fromLTRB(AppConstants.paddingH,
+          AppConstants.paddingV, AppConstants.paddingH, 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -1619,8 +1701,14 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
   ];
 
   static const _amenityOptions = [
-    'Wifi', 'Điều hòa', 'Thang máy', 'Máy giặt',
-    'Ban công', 'Bảo vệ', 'Sân vườn', 'Nuôi thú',
+    'Wifi',
+    'Điều hòa',
+    'Thang máy',
+    'Máy giặt',
+    'Ban công',
+    'Bảo vệ',
+    'Sân vườn',
+    'Nuôi thú',
   ];
 
   @override
@@ -1641,8 +1729,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppConstants.radiusXxl)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXxl)),
       ),
       child: SafeArea(
         top: false,
@@ -1702,7 +1790,10 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                         return GestureDetector(
                           onTap: () => setState(() {
                             final updated = Set<String>.from(_local.types);
-                            if (active) updated.remove(key); else updated.add(key);
+                            if (active)
+                              updated.remove(key);
+                            else
+                              updated.add(key);
                             _local = _local.copyWith(types: updated);
                           }),
                           child: AnimatedContainer(
@@ -1713,8 +1804,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                               color: active
                                   ? AppColors.primary
                                   : AppColors.bgCardLight,
-                              borderRadius: BorderRadius.circular(
-                                  AppConstants.radiusMd),
+                              borderRadius:
+                                  BorderRadius.circular(AppConstants.radiusMd),
                               border: Border.all(
                                 color: active
                                     ? AppColors.primary
@@ -1771,8 +1862,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                         activeTrackColor: AppColors.primary,
                         inactiveTrackColor: AppColors.primaryLight,
                         thumbColor: AppColors.primary,
-                        overlayColor:
-                            AppColors.primary.withValues(alpha: 0.15),
+                        overlayColor: AppColors.primary.withValues(alpha: 0.15),
                         rangeThumbShape: const RoundRangeSliderThumbShape(
                             enabledThumbRadius: 10),
                         trackHeight: 4,
@@ -1782,8 +1872,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                         min: 0,
                         max: 15,
                         divisions: 15,
-                        onChanged: (v) =>
-                            setState(() => _local = _local.copyWith(priceRange: v)),
+                        onChanged: (v) => setState(
+                            () => _local = _local.copyWith(priceRange: v)),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -1795,10 +1885,9 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                         activeTrackColor: AppColors.primary,
                         inactiveTrackColor: AppColors.primaryLight,
                         thumbColor: AppColors.primary,
-                        overlayColor:
-                            AppColors.primary.withValues(alpha: 0.15),
-                        thumbShape: const RoundSliderThumbShape(
-                            enabledThumbRadius: 10),
+                        overlayColor: AppColors.primary.withValues(alpha: 0.15),
+                        thumbShape:
+                            const RoundSliderThumbShape(enabledThumbRadius: 10),
                         trackHeight: 4,
                       ),
                       child: Slider(
@@ -1806,8 +1895,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                         min: 10,
                         max: 80,
                         divisions: 7,
-                        onChanged: (v) =>
-                            setState(() => _local = _local.copyWith(maxArea: v)),
+                        onChanged: (v) => setState(
+                            () => _local = _local.copyWith(maxArea: v)),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -1821,7 +1910,10 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                         return GestureDetector(
                           onTap: () => setState(() {
                             final updated = Set<String>.from(_local.amenities);
-                            if (active) updated.remove(a); else updated.add(a);
+                            if (active)
+                              updated.remove(a);
+                            else
+                              updated.add(a);
                             _local = _local.copyWith(amenities: updated);
                           }),
                           child: AnimatedContainer(
@@ -1907,12 +1999,16 @@ class _HighlightText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (query.isEmpty) return Text(text, style: style, maxLines: maxLines, overflow: TextOverflow.ellipsis);
+    if (query.isEmpty)
+      return Text(text,
+          style: style, maxLines: maxLines, overflow: TextOverflow.ellipsis);
     // Normalize both for diacritic-insensitive matching
     final normalizedText = _removeDiacritics(text.toLowerCase());
     final normalizedQuery = _removeDiacritics(query.toLowerCase());
     final idx = normalizedText.indexOf(normalizedQuery);
-    if (idx == -1) return Text(text, style: style, maxLines: maxLines, overflow: TextOverflow.ellipsis);
+    if (idx == -1)
+      return Text(text,
+          style: style, maxLines: maxLines, overflow: TextOverflow.ellipsis);
     // Indices in normalized text map 1:1 to original (each VN char → 1 ASCII char)
     final matchLen = normalizedQuery.length;
     return RichText(
@@ -1998,7 +2094,11 @@ class _StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppConstants.radiusSm),
       ),
       child: Text(
-        isRented ? 'Đã thuê' : isHot ? '🔥 Hot' : 'Còn phòng',
+        isRented
+            ? 'Đã thuê'
+            : isHot
+                ? '🔥 Hot'
+                : 'Còn phòng',
         style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w600,
