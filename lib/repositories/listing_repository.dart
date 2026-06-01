@@ -62,6 +62,28 @@ class ListingRepository {
   }
 
   // Tăng lượt xem — fire-and-forget, không throw nếu lỗi
+  Future<List<Listing>> getMyListings() async {
+    try {
+      final response = await _authorizedRequest<Map<String, dynamic>>(
+        (accessToken) => _apiService.dio.get<Map<String, dynamic>>(
+          '/listings/my-listings',
+          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+        ),
+      );
+
+      final body = response.data ?? {};
+      final data = body['data'] ?? body['Data'];
+      if (data is! List) return const [];
+
+      return data
+          .whereType<Map>()
+          .map((item) => Listing.fromJson(Map<String, dynamic>.from(item)))
+          .toList();
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
   Future<void> incrementView(int id) async {
     try {
       await _apiService.dio.post<void>('/listings/$id/view');

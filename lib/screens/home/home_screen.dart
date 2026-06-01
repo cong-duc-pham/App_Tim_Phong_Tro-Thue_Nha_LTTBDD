@@ -28,6 +28,9 @@ class ListingItem {
   final bool isNew;
   final bool allowPet;
   final String status;
+  final String? badgeLabel;
+  final Color? badgeColor;
+  final bool allowBanner;
   final List<String> tags;
   final Color bgColor;
   final String type; // 'phong-tro' | 'can-ho' | 'o-ghep' | 'nha-nguyen-can'
@@ -45,6 +48,9 @@ class ListingItem {
     this.isNew = false,
     this.allowPet = false,
     this.status = 'available',
+    this.badgeLabel,
+    this.badgeColor,
+    this.allowBanner = false,
     this.tags = const [],
     required this.bgColor,
     this.type = 'phong-tro',
@@ -403,6 +409,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return featured.isEmpty ? _listingsForUi.take(4).toList() : featured;
   }
 
+  List<ListingItem> get _bannerListingsForUi {
+    final banner = _listingsForUi.where((e) => e.allowBanner).toList();
+    return banner.isEmpty ? _featuredListingsForUi : banner;
+  }
+
   List<ListingItem> get _suggestedListingsForUi {
     final suggested =
         _listingsForUi.where((e) => !e.isFeatured && !e.isNew).toList();
@@ -414,7 +425,24 @@ class _HomeScreenState extends State<HomeScreen> {
     final isNew = createdAt != null &&
         DateTime.now().difference(createdAt.toLocal()).inDays <= 7;
     final type = _typeKeyFromSqlListing(listing);
-    final status = listing.packageInfo != null ? 'hot' : 'available';
+    final packageInfo = listing.packageInfo;
+    final badgeType = _packageString(packageInfo, 'badgeType', 'BadgeType');
+    final isHighlighted =
+        _packageBool(packageInfo, 'isHighlighted', 'IsHighlighted');
+    final allowBanner =
+        _packageBool(packageInfo, 'allowBanner', 'AllowBanner');
+    final hasPackage = packageInfo != null;
+    final status = hasPackage ? 'hot' : 'available';
+    final badgeLabel = isHighlighted || badgeType == 'featured'
+        ? 'NỔI BẬT'
+        : hasPackage
+            ? 'VIP'
+            : null;
+    final badgeColor = isHighlighted || badgeType == 'featured'
+        ? AppColors.tagHot
+        : hasPackage
+            ? AppColors.tagVip
+            : null;
 
     return ListingItem(
       id: listing.listingId.toString(),
@@ -423,16 +451,39 @@ class _HomeScreenState extends State<HomeScreen> {
       price: listing.price,
       area: listing.area,
       isVerified: listing.isVerified,
-      isFeatured: listing.isFeatured || listing.packageInfo != null,
+      isFeatured: listing.isFeatured || hasPackage,
       isNew: isNew,
       allowPet: listing.allowPet,
       status: status,
+      badgeLabel: badgeLabel,
+      badgeColor: badgeColor,
+      allowBanner: allowBanner,
       tags: listing.amenityNames,
       bgColor: _colorForType(type),
       type: type,
       imageUrl: _resolveImageUrl(listing.image0),
       provinceName: listing.provinceName,
     );
+  }
+
+  String? _packageString(
+    Map<String, dynamic>? packageInfo,
+    String camel,
+    String pascal,
+  ) {
+    final value = packageInfo?[camel] ?? packageInfo?[pascal];
+    return value?.toString();
+  }
+
+  bool _packageBool(
+    Map<String, dynamic>? packageInfo,
+    String camel,
+    String pascal,
+  ) {
+    final value = packageInfo?[camel] ?? packageInfo?[pascal];
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    return value?.toString().toLowerCase() == 'true';
   }
 
   String? _resolveImageUrl(String? rawUrl) {
@@ -1476,61 +1527,90 @@ class _HomeScreenState extends State<HomeScreen> {
   // ── Banner ────────────────────────────────────────────────────────────────
 
   Widget _buildBanner() {
-    return Padding(
+    final bannerItems = _applyFilter(_bannerListingsForUi);
+    final bannerItem = bannerItems.isNotEmpty ? bannerItems.first : null;
+    final bannerTitle = bannerItem?.title ?? 'Phong VIP gia tot';
+    final bannerSubtitle = bannerItem == null
+        ? 'Xac thuc - Anh thuc te - An toan'
+        : '${_formatPrice(bannerItem.price)}/thang - ${bannerItem.area.toStringAsFixed(0)} m2';
+
+    final dynamicBanner = Padding(
       padding: const EdgeInsets.fromLTRB(AppConstants.paddingH,
           AppConstants.paddingV, AppConstants.paddingH, 0),
-      child: Container(
-        decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(AppConstants.radiusLg)),
-        padding: const EdgeInsets.all(AppConstants.spacingLg),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius:
-                            BorderRadius.circular(AppConstants.radiusSm)),
-                    child: const Text('🔥  HOT DEAL',
-                        style: TextStyle(
-                            fontSize: 10,
+      child: GestureDetector(
+        onTap: bannerItem == null
+            ? null
+            : () {
+                HapticFeedback.lightImpact();
+                context.push('/listing/${bannerItem.id}');
+              },
+        child: Container(
+          decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(AppConstants.radiusLg)),
+          padding: const EdgeInsets.all(AppConstants.spacingLg),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius:
+                              BorderRadius.circular(AppConstants.radiusSm)),
+                      child: const Text('HOT DEAL',
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(bannerTitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white)),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text('Phòng VIP giá tốt\ntháng 3/2026',
-                      style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          height: 1.3)),
-                  const SizedBox(height: 4),
-                  Text('Xác thực · Ảnh thực tế · An toàn',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.white.withValues(alpha: 0.8))),
-                ],
+                            color: Colors.white,
+                            height: 1.3)),
+                    const SizedBox(height: 4),
+                    Text(bannerSubtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.white.withValues(alpha: 0.8))),
+                  ],
+                ),
               ),
-            ),
-            Container(
-              width: 70,
-              height: 70,
-              decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(AppConstants.radiusMd)),
-              alignment: Alignment.center,
-              child: const Text('🏠', style: TextStyle(fontSize: 32)),
-            ),
-          ],
+              _buildListingImage(
+                bannerItem ??
+                    const ListingItem(
+                      id: 'banner-placeholder',
+                      title: '',
+                      address: '',
+                      price: 0,
+                      area: 0,
+                      type: 'room',
+                      bgColor: AppColors.primary,
+                    ),
+                width: 70,
+                height: 70,
+                borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                fallbackIcon: 'home',
+                fallbackIconSize: 20,
+              ),
+            ],
+          ),
         ),
       ),
     );
+
+    return dynamicBanner;
   }
 
   // ── Featured Cards ────────────────────────────────────────────────────────
@@ -1660,6 +1740,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildRoomCard(ListingItem item) {
     final saved = _savedIds.contains(item.id);
+    final showBadge = item.isNew || item.badgeLabel != null;
+    final badgeText = item.isNew ? 'MỚI' : (item.badgeLabel ?? 'VIP');
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -1695,20 +1777,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 alignment: Alignment.center,
                 child: const Text('🛋️', style: TextStyle(fontSize: 36)),
               ),
-              Positioned(
-                top: 8,
-                left: 8,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                  decoration: BoxDecoration(
-                      color: item.isNew ? AppColors.tagNew : AppColors.tagVip,
-                      borderRadius:
-                          BorderRadius.circular(AppConstants.radiusSm)),
-                  child: Text(item.isNew ? 'MỚI' : 'VIP',
-                      style: AppTextStyles.badge),
+              if (showBadge)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                        color: item.isNew
+                            ? AppColors.tagNew
+                            : (item.badgeColor ?? AppColors.tagVip),
+                        borderRadius:
+                            BorderRadius.circular(AppConstants.radiusSm)),
+                    child: Text(badgeText, style: AppTextStyles.badge),
+                  ),
                 ),
-              ),
               Positioned(
                 top: 8,
                 right: 8,
