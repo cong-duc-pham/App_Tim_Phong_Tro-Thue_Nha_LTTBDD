@@ -213,7 +213,7 @@ namespace Backend_API.Controllers.MVC
                     LandlordName = x.Landlord.FullName,
                     LandlordEmail = x.Landlord.Email,
                     StatusName = x.Status.StatusName,
-                    Image0 = x.Image0,
+                    Image0 = ToAdminImageUrl(x.Image0),
                     ViewCount = x.ViewCount,
                     SaveCount = x.SaveCount,
                     CreatedAt = x.CreatedAt
@@ -260,14 +260,19 @@ namespace Backend_API.Controllers.MVC
                     listing.Image5
                 }
                 .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Select(x => x!)
+                .Select(ToAdminImageUrl)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .OfType<string>()
                 .ToList();
 
             imageUrls.AddRange(listing.ListingImages
                 .OrderByDescending(x => x.IsCover == true)
                 .ThenBy(x => x.SortOrder)
                 .Select(x => string.IsNullOrWhiteSpace(x.SecureUrl) ? x.CloudinaryUrl : x.SecureUrl!)
-                .Where(x => !string.IsNullOrWhiteSpace(x)));
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(ToAdminImageUrl)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .OfType<string>());
 
             var model = new AdminListingDetailViewModel
             {
@@ -586,6 +591,23 @@ namespace Backend_API.Controllers.MVC
             {
                 await _context.SaveChangesAsync();
             }
+        }
+
+        private static string? ToAdminImageUrl(string? imageUrl)
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl))
+            {
+                return null;
+            }
+
+            var value = imageUrl.Trim();
+            if (Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+                uri.AbsolutePath.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+            {
+                return uri.AbsolutePath;
+            }
+
+            return value;
         }
 
         private static bool TryBuildStoragePublicId(string imageUrl, long listingId, out string publicId, out string? format)

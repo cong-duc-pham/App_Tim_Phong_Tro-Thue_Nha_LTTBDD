@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../models/listing.dart';
+import '../../repositories/favorite_repository.dart';
+import '../../services/api_service.dart';
 
 // ─── Model ────────────────────────────────────────────────────────────────────
 
@@ -20,6 +23,7 @@ class FavoriteListing {
   final List<String> tags;
   final Color bgColor;
   final String emoji;
+  final String? imageUrl;
   final DateTime savedAt;
 
   const FavoriteListing({
@@ -34,12 +38,14 @@ class FavoriteListing {
     this.tags = const [],
     required this.bgColor,
     required this.emoji,
+    this.imageUrl,
     required this.savedAt,
   });
 }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 
+/*
 final _mockFavorites = [
   FavoriteListing(
     id: '1',
@@ -109,6 +115,7 @@ final _mockFavorites = [
 
 // ─── Sort options ─────────────────────────────────────────────────────────────
 
+*/
 enum _SortOption { newest, priceAsc, priceDesc, areaAsc }
 
 extension _SortOptionExt on _SortOption {
@@ -154,26 +161,114 @@ class FavoritesScreen extends StatefulWidget {
 
 class _FavoritesScreenState extends State<FavoritesScreen>
     with SingleTickerProviderStateMixin {
-  late final List<FavoriteListing> _favorites;
+  final FavoriteRepository _favoriteRepository = FavoriteRepository();
+  final List<FavoriteListing> _favorites = [];
   final Set<String> _removingIds = {};
   _SortOption _sort = _SortOption.newest;
   String _searchQuery = '';
+  bool _isLoading = true;
+  String? _errorMessage;
   late final AnimationController _emptyAnim;
 
   @override
   void initState() {
     super.initState();
-    _favorites = List.from(_mockFavorites);
     _emptyAnim = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
+    _loadFavorites();
   }
 
   @override
   void dispose() {
     _emptyAnim.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadFavorites() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final listings = await _favoriteRepository.getFavorites();
+      if (!mounted) return;
+      setState(() {
+        _favorites
+          ..clear()
+          ..addAll(listings.map(_toFavoriteListing));
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = _cleanError(e);
+        _isLoading = false;
+      });
+    }
+  }
+
+  FavoriteListing _toFavoriteListing(Listing listing) {
+    return FavoriteListing(
+      id: listing.listingId.toString(),
+      title: listing.title.isNotEmpty ? listing.title : 'Tin đăng chưa có tiêu đề',
+      address: listing.displayAddress,
+      price: listing.price,
+      area: listing.area,
+      type: listing.typeName.isNotEmpty ? listing.typeName : 'Phòng trọ',
+      isVerified: listing.isVerified,
+      isNew: _isNewListing(listing.createdAt),
+      tags: listing.amenityNames.take(4).toList(),
+      bgColor: _colorForType(listing.typeId),
+      emoji: _emojiForType(listing.typeName),
+      imageUrl: _resolveImageUrl(listing.image0),
+      savedAt: listing.createdAt ?? DateTime.now(),
+    );
+  }
+
+  bool _isNewListing(DateTime? date) {
+    if (date == null) return false;
+    return DateTime.now().difference(date).inDays <= 7;
+  }
+
+  Color _colorForType(int typeId) {
+    switch (typeId) {
+      case 2:
+        return AppColors.illus2;
+      case 3:
+        return AppColors.illus3;
+      case 4:
+        return AppColors.illus4;
+      default:
+        return AppColors.illus1;
+    }
+  }
+
+  String _emojiForType(String type) {
+    final normalized = _removeDiacritics(type);
+    if (normalized.contains('can ho')) return '🏢';
+    if (normalized.contains('nha')) return '🏠';
+    if (normalized.contains('ghep')) return '👥';
+    return '🛋️';
+  }
+
+  String? _resolveImageUrl(String? url) {
+    final raw = url?.trim();
+    if (raw == null || raw.isEmpty) return null;
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+
+    final origin = ApiService.defaultBaseUrl.replaceFirst(RegExp(r'/api/?$'), '');
+    final path = raw.startsWith('/') ? raw : '/$raw';
+    return '$origin$path';
+  }
+
+  String _cleanError(Object e) {
+    final message = e.toString();
+    return message.startsWith('Exception: ')
+        ? message.substring('Exception: '.length)
+        : message;
   }
 
   List<FavoriteListing> get _filtered {
@@ -203,8 +298,28 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     return list;
   }
 
-  void _removeFavorite(String id) {
+  Future<void> _removeFavorite(String id) async {
     setState(() => _removingIds.add(id));
+    try {
+      final isStillFavorite = await _favoriteRepository.toggleFavorite(int.parse(id));
+      if (!mounted) return;
+      if (isStillFavorite) {
+        await _loadFavorites();
+        return;
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _removingIds.remove(id));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(_cleanError(e)),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+        ),
+      ));
+      return;
+    }
     Future.delayed(const Duration(milliseconds: 350), () {
       if (!mounted) return;
       setState(() {
@@ -268,7 +383,13 @@ class _FavoritesScreenState extends State<FavoritesScreen>
       body: Column(children: [
         _buildHeader(list.length),
         Expanded(
-          child: _favorites.isEmpty
+          child: _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                )
+              : _errorMessage != null
+                  ? _buildErrorState()
+                  : _favorites.isEmpty
               ? _buildEmptyState()
               : Column(children: [
                   _buildSearchAndSort(),
@@ -376,8 +497,14 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                     hintText: 'Tìm trong danh sách...',
                     hintStyle: TextStyle(fontSize: 13, color: AppColors.textMuted),
                     border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
+                    filled: false,
                     isDense: true,
-                    contentPadding: EdgeInsets.zero,
+                    contentPadding: EdgeInsets.symmetric(vertical: 8),
                   ),
                 ),
               ),
@@ -430,7 +557,9 @@ class _FavoritesScreenState extends State<FavoritesScreen>
               item: item,
               savedLabel: _formatSavedDate(item.savedAt),
               priceLabel: _formatPrice(item.price),
-              onRemove: () => _removeFavorite(item.id),
+              onRemove: () {
+                _removeFavorite(item.id);
+              },
             ),
           ),
         );
@@ -439,6 +568,67 @@ class _FavoritesScreenState extends State<FavoritesScreen>
   }
 
   // ── Empty states ──────────────────────────────────────────────────────────
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.paddingH),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              color: AppColors.errorBg,
+              borderRadius: BorderRadius.circular(AppConstants.radiusXxl),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.wifi_off_rounded,
+              color: AppColors.error,
+              size: 36,
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Không tải được danh sách yêu thích',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _errorMessage ?? 'Vui lòng thử lại.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textMuted,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _loadFavorites,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Thử lại'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                ),
+              ),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
 
   Widget _buildEmptyState() {
     return Center(
@@ -560,15 +750,30 @@ class _FavoriteCard extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // Image section
         Stack(children: [
-          Container(
-            height: 150,
-            decoration: BoxDecoration(
-              color: item.bgColor,
-              borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppConstants.radiusLg)),
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppConstants.radiusLg),
             ),
-            alignment: Alignment.center,
-            child: Text(item.emoji, style: const TextStyle(fontSize: 52)),
+            child: Container(
+              height: 150,
+              width: double.infinity,
+              color: item.bgColor,
+              alignment: Alignment.center,
+              child: item.imageUrl == null
+                  ? Text(item.emoji, style: const TextStyle(fontSize: 52))
+                  : Image.network(
+                      item.imageUrl!,
+                      width: double.infinity,
+                      height: 150,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) {
+                        return Text(
+                          item.emoji,
+                          style: const TextStyle(fontSize: 52),
+                        );
+                      },
+                    ),
+            ),
           ),
           // Type badge
           Positioned(
