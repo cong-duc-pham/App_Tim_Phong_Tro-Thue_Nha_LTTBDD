@@ -31,7 +31,9 @@ namespace Backend_API.Helpers
             var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+                new Claim(ClaimTypes.Role, user.Role?.RoleName ?? "Tenant"),
                 new Claim("RoleId", user.RoleId.ToString())
             };
 

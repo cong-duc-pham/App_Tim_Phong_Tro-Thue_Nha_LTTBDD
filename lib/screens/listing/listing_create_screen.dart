@@ -1,11 +1,17 @@
 ﻿import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../repositories/listing_repository.dart';
+import '../../services/post_listing_draft_service.dart';
 
 
 
@@ -71,6 +77,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
   String? _selectedProvince;
   String? _selectedDistrict;
   String? _selectedWard;
+  double? _selectedLatitude;
+  double? _selectedLongitude;
+  bool _isResolvingAddress = false;
 
   final _roomTypes = const [
     RoomType(id: 1, name: 'Phòng trọ SV',   icon: Icons.bed_outlined),
@@ -79,9 +88,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
     RoomType(id: 4, name: 'Nhà nguyên căn',  icon: Icons.home_outlined),
   ];
 
-  final _provinces = const ['TP. Hồ Chí Minh', 'Hà Nội', 'Đà Nẵng', 'Cần Thơ'];
-  final _districts = const ['Quận 1','Quận 2','Quận 3','Bình Thạnh','Gò Vấp','Tân Bình'];
-  final _wards     = const ['Phường 1','Phường 2','Phường 3','Phường Bến Nghé','Phường Đa Kao'];
+  final _provinces = ['TP. Hồ Chí Minh', 'Hà Nội', 'Đà Nẵng', 'Cần Thơ'];
+  final _districts = ['Quận 1','Quận 2','Quận 3','Bình Thạnh','Gò Vấp','Tân Bình'];
+  final _wards     = ['Phường 1','Phường 2','Phường 3','Phường Bến Nghé','Phường Đa Kao'];
 
   final _stepTitles = const [
     'Loại hình & Tiêu đề',
@@ -92,6 +101,18 @@ class _PostListingScreenState extends State<PostListingScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    for (final c in [
+      _titleCtrl, _descCtrl, _priceCtrl, _areaCtrl, _floorCtrl,
+      _totalFloorsCtrl, _maxOccupantsCtrl, _streetCtrl,
+      _electricCtrl, _waterCtrl, _internetCtrl, _parkingCtrl,
+    ]) {
+      c.addListener(_markDraftChanged);
+    }
+  }
+
+  @override
   void dispose() {
     for (final c in [
       _titleCtrl, _descCtrl, _priceCtrl, _areaCtrl, _floorCtrl,
@@ -100,12 +121,18 @@ class _PostListingScreenState extends State<PostListingScreen> {
     ]) {
       c.dispose();
     }
+    PostListingDraftService.clear();
     super.dispose();
   }
 
   void _goTo(int s) => setState(() => _currentStep = s);
-  void _next() { if (_currentStep < _totalSteps - 1) _goTo(_currentStep + 1); }
+  void _next() {
+    if (!_validateStepAndNotify(_currentStep)) return;
+    if (_currentStep < _totalSteps - 1) _goTo(_currentStep + 1);
+  }
   void _prev() { if (_currentStep > 0) _goTo(_currentStep - 1); }
+
+  void _markDraftChanged() => PostListingDraftService.markDirty();
 
   Future<void> _pickImage(int idx) async {
     final picked = await _imagePicker.pickImage(
@@ -120,11 +147,13 @@ class _PostListingScreenState extends State<PostListingScreen> {
       _slots[idx].file = File(picked.path);
       _slots[idx].networkUrl = null;
     });
+    _markDraftChanged();
   }
 
   void _removeImage(int idx) => setState(() {
     _slots[idx].file       = null;
     _slots[idx].networkUrl = null;
+    _markDraftChanged();
   });
 
   void _swapSlots(int a, int b) => setState(() {
@@ -134,6 +163,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
     _slots[a].networkUrl = _slots[b].networkUrl;
     _slots[b].file       = tf;
     _slots[b].networkUrl = tu;
+    _markDraftChanged();
   });
 
   int get _filledCount => _slots.where((s) => !s.isEmpty).length;
@@ -169,6 +199,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
       }
       if (!mounted) return;
 
+      PostListingDraftService.clear();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: const Row(children: [
           Icon(Icons.check_circle, color: Colors.white),
@@ -179,7 +210,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ));
-      Navigator.of(context).pop(true);
+      context.go(AppConstants.routeHome);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -196,17 +227,98 @@ class _PostListingScreenState extends State<PostListingScreen> {
   }
 
   String? _validateBeforeSubmit() {
-    if (_selectedType == null) return 'Vui lòng chọn loại hình phòng.';
-    if (_titleCtrl.text.trim().isEmpty) return 'Vui lòng nhập tiêu đề tin đăng.';
-    if (_slots[0].file == null && _slots[0].networkUrl == null) {
-      return 'Vui lòng thêm ảnh bìa để admin có thể duyệt tin.';
+    for (var step = 0; step < _totalSteps; step++) {
+      final message = _validateStep(step);
+      if (message != null) return message;
     }
-    if (_streetCtrl.text.trim().isEmpty) return 'Vui lòng nhập địa chỉ chi tiết.';
-    final area = _parseDecimal(_areaCtrl.text);
-    if (area == null || area <= 0) return 'Vui lòng nhập diện tích hợp lệ.';
-    final price = _parseDecimal(_priceCtrl.text);
-    if (price == null || price <= 0) return 'Vui lòng nhập giá thuê hợp lệ.';
     return null;
+  }
+
+  String? _validateStep(int step) {
+    switch (step) {
+      case 0:
+        if (_selectedType == null) return 'Vui lòng chọn loại hình phòng.';
+        if (_titleCtrl.text.trim().isEmpty) {
+          return 'Vui lòng nhập tiêu đề tin đăng.';
+        }
+        return null;
+      case 1:
+        if (_slots[0].file == null && _slots[0].networkUrl == null) {
+          return 'Vui lòng thêm ảnh bìa để admin có thể duyệt tin.';
+        }
+        return null;
+      case 2:
+        if (_selectedProvince == null) return 'Vui lòng chọn tỉnh / thành phố.';
+        if (_selectedDistrict == null) return 'Vui lòng chọn quận / huyện.';
+        if (_selectedWard == null) return 'Vui lòng chọn phường / xã.';
+        if (_streetCtrl.text.trim().isEmpty) {
+          return 'Vui lòng nhập địa chỉ chi tiết.';
+        }
+        return null;
+      case 3:
+        final area = _parseDecimal(_areaCtrl.text);
+        if (area == null || area <= 0) return 'Vui lòng nhập diện tích hợp lệ.';
+        final maxOccupants = _parseInt(_maxOccupantsCtrl.text);
+        if (maxOccupants == null || maxOccupants <= 0) {
+          return 'Vui lòng nhập số người tối đa hợp lệ.';
+        }
+        return null;
+      case 4:
+        final price = _parseDecimal(_priceCtrl.text);
+        if (price == null || price <= 0) return 'Vui lòng nhập giá thuê hợp lệ.';
+        return null;
+    }
+    return null;
+  }
+
+  bool _validateStepAndNotify(int step) {
+    final message = _validateStep(step);
+    if (message == null) return true;
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      backgroundColor: AppColors.error,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
+    return false;
+  }
+
+  Future<bool> _confirmDiscardDraft() async {
+    if (!PostListingDraftService.hasDraft.value) return true;
+
+    final shouldDiscard = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Bỏ thông tin đang nhập?'),
+        content: const Text(
+          'Bạn đang nhập dở tin đăng. Nếu rời khỏi trang này, thông tin chưa đăng sẽ bị mất.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Ở lại'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Rời trang'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDiscard == true) PostListingDraftService.clear();
+    return shouldDiscard == true;
+  }
+
+  Future<void> _handleBack() async {
+    if (_currentStep > 0) {
+      _prev();
+      return;
+    }
+    if (await _confirmDiscardDraft() && mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   Map<String, dynamic> _buildCreatePayload() {
@@ -220,6 +332,8 @@ class _PostListingScreenState extends State<PostListingScreen> {
       'provinceId': null,
       'districtId': null,
       'wardId': null,
+      'latitude': _selectedLatitude,
+      'longitude': _selectedLongitude,
       'floor': _parseInt(_floorCtrl.text),
       'totalFloors': _parseInt(_totalFloorsCtrl.text),
       'maxOccupants': _parseInt(_maxOccupantsCtrl.text),
@@ -285,64 +399,205 @@ class _PostListingScreenState extends State<PostListingScreen> {
     ].where((part) => part.isNotEmpty).join(', ');
   }
 
+  Future<void> _openLocationPicker() async {
+    final initialPoint = _selectedLatitude != null && _selectedLongitude != null
+        ? LatLng(_selectedLatitude!, _selectedLongitude!)
+        : LatLng(AppConstants.defaultLat, AppConstants.defaultLng);
+
+    final picked = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _LocationPickerScreen(initialPoint: initialPoint),
+      ),
+    );
+
+    if (picked == null || !mounted) return;
+    setState(() {
+      _selectedLatitude = picked.latitude;
+      _selectedLongitude = picked.longitude;
+      _markDraftChanged();
+    });
+    await _fillAddressFromCoordinates(picked);
+  }
+
+  Future<void> _fillAddressFromCoordinates(LatLng point) async {
+    setState(() => _isResolvingAddress = true);
+
+    try {
+      final response = await Dio().get<Map<String, dynamic>>(
+        'https://nominatim.openstreetmap.org/reverse',
+        queryParameters: {
+          'format': 'jsonv2',
+          'lat': point.latitude,
+          'lon': point.longitude,
+          'addressdetails': 1,
+          'accept-language': 'vi',
+        },
+        options: Options(headers: {
+          'User-Agent': 'SwingsHouse/1.0 (development)',
+        }),
+      );
+
+      final body = response.data ?? {};
+      final addressRaw = body['address'];
+      if (addressRaw is! Map) return;
+      final address = Map<String, dynamic>.from(addressRaw);
+
+      final province = _normalizeProvince(_firstNonEmpty([
+        address['city'],
+        address['state'],
+        address['province'],
+      ]));
+      final district = _firstNonEmpty([
+        address['city_district'],
+        address['district'],
+        address['county'],
+        address['suburb'],
+      ]);
+      final ward = _firstNonEmpty([
+        address['quarter'],
+        address['neighbourhood'],
+        address['suburb'],
+        address['village'],
+      ]);
+      final street = _composeStreetAddress(address);
+
+      if (!mounted) return;
+      setState(() {
+        _selectedProvince = _putAndSelect(_provinces, province);
+        _selectedDistrict = _putAndSelect(_districts, district);
+        _selectedWard = _putAndSelect(_wards, ward);
+        if (street.isNotEmpty) _streetCtrl.text = street;
+        _markDraftChanged();
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã chọn tọa độ, nhưng chưa tự nhận diện được địa chỉ.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isResolvingAddress = false);
+    }
+  }
+
+  String? _putAndSelect(List<String> items, String? value) {
+    final normalized = value?.trim();
+    if (normalized == null || normalized.isEmpty) return null;
+
+    final existing = items.where(
+      (item) => _addressKey(item) == _addressKey(normalized),
+    );
+    if (existing.isNotEmpty) return existing.first;
+
+    items.add(normalized);
+    return normalized;
+  }
+
+  String? _firstNonEmpty(List<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim();
+      if (text != null && text.isNotEmpty) return text;
+    }
+    return null;
+  }
+
+  String _normalizeProvince(String? value) {
+    final text = value?.trim();
+    if (text == null || text.isEmpty) return '';
+    final key = _addressKey(text);
+    if (key.contains('ho chi minh') || key.contains('sai gon')) {
+      return 'TP. Hồ Chí Minh';
+    }
+    if (key.contains('ha noi')) return 'Hà Nội';
+    if (key.contains('da nang')) return 'Đà Nẵng';
+    if (key.contains('can tho')) return 'Cần Thơ';
+    return text;
+  }
+
+  String _composeStreetAddress(Map<String, dynamic> address) {
+    final houseNumber = address['house_number']?.toString().trim();
+    final road = address['road']?.toString().trim();
+    final parts = [
+      if (houseNumber != null && houseNumber.isNotEmpty) houseNumber,
+      if (road != null && road.isNotEmpty) road,
+    ];
+    return parts.join(' ');
+  }
+
+  String _addressKey(String value) {
+    const from = 'àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ';
+    const to = 'aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyyd';
+    var result = value.toLowerCase();
+    for (var i = 0; i < from.length; i++) {
+      result = result.replaceAll(from[i], to[i]);
+    }
+    return result.replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
+  }
+
   // ─────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgPage,
-      body: Column(children: [
-        _Header(
-          step: _currentStep,
-          total: _totalSteps,
-          title: _stepTitles[_currentStep],
-          onBack: () {
-            if (_currentStep > 0) {
-              _prev();
-            } else {
-              Navigator.of(context).pop();
-            }
-          },
-        ),
-        _StepBar(current: _currentStep, total: _totalSteps),
-        Expanded(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 280),
-            transitionBuilder: (child, anim) => FadeTransition(
-              opacity: anim,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0.04, 0),
-                  end: Offset.zero,
-                ).animate(anim),
-                child: child,
+    return WillPopScope(
+      onWillPop: () async {
+        if (_currentStep > 0) {
+          _prev();
+          return false;
+        }
+        return _confirmDiscardDraft();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bgPage,
+        body: Column(children: [
+          _Header(
+            step: _currentStep,
+            total: _totalSteps,
+            title: _stepTitles[_currentStep],
+            onBack: _handleBack,
+          ),
+          _StepBar(current: _currentStep, total: _totalSteps),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              transitionBuilder: (child, anim) => FadeTransition(
+                opacity: anim,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.04, 0),
+                    end: Offset.zero,
+                  ).animate(anim),
+                  child: child,
+                ),
               ),
-            ),
-            child: KeyedSubtree(
-              key: ValueKey(_currentStep),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: [
-                  _buildStep1(),
-                  _buildStepImages(),
-                  _buildStep3(),
-                  _buildStep4(),
-                  _buildStep5(),
-                ][_currentStep],
+              child: KeyedSubtree(
+                key: ValueKey(_currentStep),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: [
+                    _buildStep1(),
+                    _buildStepImages(),
+                    _buildStep3(),
+                    _buildStep4(),
+                    _buildStep5(),
+                  ][_currentStep],
+                ),
               ),
             ),
           ),
-        ),
-        _BottomNav(
-          currentStep: _currentStep,
-          totalSteps: _totalSteps,
-          isSubmitting: _isSubmitting,
-          onNext: _next,
-          onPrev: _prev,
-          onSubmit: () {
-            _submit();
-          },
-        ),
-      ]),
+          _BottomNav(
+            currentStep: _currentStep,
+            totalSteps: _totalSteps,
+            isSubmitting: _isSubmitting,
+            onNext: _next,
+            onPrev: _prev,
+            onSubmit: () {
+              _submit();
+            },
+          ),
+        ]),
+      ),
     );
   }
 
@@ -364,7 +619,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
             children: _roomTypes.map((t) {
               final sel = _selectedType?.id == t.id;
               return GestureDetector(
-                onTap: () => setState(() => _selectedType = t),
+                onTap: () => setState(() {
+                  _selectedType = t;
+                  _markDraftChanged();
+                }),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   decoration: BoxDecoration(
@@ -424,7 +682,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
             const SizedBox(height: 14),
             _ToggleTile(
               value: _isFeatured,
-              onChanged: (v) => setState(() => _isFeatured = v),
+              onChanged: (v) => setState(() {
+                _isFeatured = v;
+                _markDraftChanged();
+              }),
               icon: Icons.workspace_premium_outlined,
               activeColor: AppColors.tagHot,
               title: 'Tin VIP / Nổi bật',
@@ -594,6 +855,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
                 _selectedProvince = v;
                 _selectedDistrict = null;
                 _selectedWard     = null;
+                _markDraftChanged();
               }),
             ),
             const SizedBox(height: 14),
@@ -605,6 +867,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
               onChanged: (v) => setState(() {
                 _selectedDistrict = v;
                 _selectedWard     = null;
+                _markDraftChanged();
               }),
             ),
             const SizedBox(height: 14),
@@ -613,7 +876,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
               value: _selectedWard,
               items: _wards,
               enabled: _selectedDistrict != null,
-              onChanged: (v) => setState(() => _selectedWard = v),
+              onChanged: (v) => setState(() {
+                _selectedWard = v;
+                _markDraftChanged();
+              }),
             ),
             const SizedBox(height: 14),
             _InputField(
@@ -625,7 +891,12 @@ class _PostListingScreenState extends State<PostListingScreen> {
           ]),
         ),
         const SizedBox(height: 14),
-        _MapPlaceholder(),
+        _MapPickerPreview(
+          latitude: _selectedLatitude,
+          longitude: _selectedLongitude,
+          isResolvingAddress: _isResolvingAddress,
+          onTap: _openLocationPicker,
+        ),
       ],
     );
   }
@@ -679,7 +950,12 @@ class _PostListingScreenState extends State<PostListingScreen> {
                   child: child!,
                 ),
               );
-              if (p != null) setState(() => _availableFrom = p);
+              if (p != null) {
+                setState(() {
+                  _availableFrom = p;
+                  _markDraftChanged();
+                });
+              }
             },
           ),
         ),
@@ -689,7 +965,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
           icon: Icons.policy_outlined,
           child: _ToggleTile(
             value: _allowPet,
-            onChanged: (v) => setState(() => _allowPet = v),
+            onChanged: (v) => setState(() {
+              _allowPet = v;
+              _markDraftChanged();
+            }),
             icon: Icons.pets_outlined,
             activeColor: AppColors.success,
             title: 'Cho phép nuôi thú cưng',
@@ -1544,85 +1823,381 @@ class _DatePickerTile extends StatelessWidget {
   }
 }
 
-class _MapPlaceholder extends StatelessWidget {
+class _MapPickerPreview extends StatelessWidget {
+  final double? latitude;
+  final double? longitude;
+  final bool isResolvingAddress;
+  final VoidCallback onTap;
+
+  const _MapPickerPreview({
+    required this.latitude,
+    required this.longitude,
+    required this.isResolvingAddress,
+    required this.onTap,
+  });
+
+  bool get _hasLocation => latitude != null && longitude != null;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 150,
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(
-          color: Colors.black.withValues(alpha: 0.05),
-          blurRadius: 10,
-          offset: const Offset(0, 2),
-        )],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.infoBg, AppColors.primaryLight],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+    final point = _hasLocation
+        ? LatLng(latitude!, longitude!)
+        : LatLng(AppConstants.defaultLat, AppConstants.defaultLng);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 170,
+        decoration: BoxDecoration(
+          color: AppColors.bgCard,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
             ),
-          ),
-          CustomPaint(
-            size: const Size(double.infinity, 150),
-            painter: _GridPainter(),
-          ),
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.4),
-                      blurRadius: 12,
-                      spreadRadius: 2,
-                    )],
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            children: [
+              FlutterMap(
+                options: MapOptions(
+                  initialCenter: point,
+                  initialZoom: _hasLocation ? 15 : 11,
+                  interactionOptions: const InteractionOptions(
+                    flags: InteractiveFlag.none,
                   ),
-                  child: const Icon(Icons.location_on,
-                      color: Colors.white, size: 24),
                 ),
-                const SizedBox(height: 8),
-                const Text('Chạm để chọn vị trí trên bản đồ',
-                    style: TextStyle(
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.example.ung_dung_tim_kiem_tro',
+                  ),
+                  if (_hasLocation)
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: point,
+                          width: 44,
+                          height: 44,
+                          child: const Icon(
+                            Icons.location_on,
+                            color: AppColors.error,
+                            size: 42,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withValues(alpha: _hasLocation ? 0 : 0.08),
+                ),
+              ),
+              Positioned(
+                left: 12,
+                right: 12,
+                bottom: 12,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.94),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _hasLocation
+                            ? Icons.location_on
+                            : Icons.add_location_alt_outlined,
                         color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13)),
-              ],
-            ),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          isResolvingAddress
+                              ? 'Đang tự điền địa chỉ...'
+                              : _hasLocation
+                                  ? '${latitude!.toStringAsFixed(6)}, ${longitude!.toStringAsFixed(6)}'
+                                  : 'Chạm để chọn vị trí trên bản đồ',
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: AppColors.textMuted,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ]),
+        ),
       ),
     );
   }
 }
 
-class _GridPainter extends CustomPainter {
+class _LocationPickerScreen extends StatefulWidget {
+  final LatLng initialPoint;
+
+  const _LocationPickerScreen({required this.initialPoint});
+
   @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.08)
-      ..strokeWidth = 1;
-    for (double x = 0; x < size.width; x += 30) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), p);
-    }
-    for (double y = 0; y < size.height; y += 30) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), p);
+  State<_LocationPickerScreen> createState() => _LocationPickerScreenState();
+}
+
+class _LocationPickerScreenState extends State<_LocationPickerScreen> {
+  late final MapController _mapController;
+  late LatLng _selectedPoint;
+  bool _isLocating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _mapController = MapController();
+    _selectedPoint = widget.initialPoint;
+  }
+
+  Future<void> _useCurrentLocation() async {
+    setState(() => _isLocating = true);
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _showMessage('Vui lòng bật dịch vụ vị trí trên thiết bị.');
+        return;
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        _showMessage('Ứng dụng chưa được cấp quyền vị trí.');
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      final point = LatLng(position.latitude, position.longitude);
+
+      if (!mounted) return;
+      setState(() => _selectedPoint = point);
+      _mapController.move(point, 16);
+    } catch (_) {
+      if (!mounted) return;
+      _showMessage('Không lấy được vị trí hiện tại.');
+    } finally {
+      if (mounted) setState(() => _isLocating = false);
     }
   }
 
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+    );
+  }
+
   @override
-  bool shouldRepaint(_) => false;
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _selectedPoint,
+              initialZoom: 15,
+              onTap: (_, point) => setState(() => _selectedPoint = point),
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.example.ung_dung_tim_kiem_tro',
+              ),
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: _selectedPoint,
+                    width: 52,
+                    height: 52,
+                    child: const Icon(
+                      Icons.location_on,
+                      color: AppColors.error,
+                      size: 48,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+              children: [
+                _MapRoundButton(
+                  icon: Icons.close_rounded,
+                  onTap: () => Navigator.of(context).pop(),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 14,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: const Text(
+                      'Chạm vào bản đồ để đặt vị trí',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _MapRoundButton(
+                  icon: Icons.my_location_rounded,
+                  isLoading: _isLocating,
+                  onTap: _useCurrentLocation,
+                ),
+              ],
+            ),
+          ),
+          ),
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: MediaQuery.of(context).padding.bottom + 16,
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.14),
+                    blurRadius: 18,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Vị trí đã chọn',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${_selectedPoint.latitude.toStringAsFixed(6)}, ${_selectedPoint.longitude.toStringAsFixed(6)}',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () =>
+                          Navigator.of(context).pop(_selectedPoint),
+                      icon: const Icon(Icons.check_rounded),
+                      label: const Text('Dùng vị trí này'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MapRoundButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool isLoading;
+
+  const _MapRoundButton({
+    required this.icon,
+    required this.onTap,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isLoading ? null : onTap,
+      child: Container(
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 14,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: isLoading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(icon, color: AppColors.primary),
+      ),
+    );
+  }
 }
 
 class _PreviewCard extends StatelessWidget {

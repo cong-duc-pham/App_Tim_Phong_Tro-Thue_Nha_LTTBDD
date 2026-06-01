@@ -1,4 +1,4 @@
-﻿// lib/screens/profile/profile_screen.dart
+// lib/screens/profile/profile_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -82,8 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final savedEmail = prefs.getString('user_email') ?? '';
       final savedFullName = prefs.getString('user_full_name');
       final savedRole = prefs.getString(AppConstants.keyUserRole);
-      final isVerifyMain =
-          prefs.getBool('verify_account_main_status') ?? false;
+      final isVerifyMain = prefs.getBool('verify_account_main_status') ?? false;
 
       if (!mounted) return;
       setState(() {
@@ -144,7 +143,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           email: (data['email'] as String?) ?? firebaseUser.email ?? '',
           phone: (data['phone'] as String?) ?? firebaseUser.phoneNumber ?? '',
           role: (data['role'] as String?) ?? 'tenant',
-          isVerified: (data['isVerified'] as bool?) ?? firebaseUser.emailVerified,
+          isVerified:
+              (data['isVerified'] as bool?) ?? firebaseUser.emailVerified,
           avatarUrl: (data['avatar'] as String?) ?? firebaseUser.photoURL,
           createdAt: createdAt is Timestamp
               ? createdAt.toDate()
@@ -210,7 +210,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         slivers: [
           SliverToBoxAdapter(child: _buildHeader()),
           SliverToBoxAdapter(child: _buildStats()),
-          SliverToBoxAdapter(child: _buildMenuSection(
+          SliverToBoxAdapter(
+              child: _buildMenuSection(
             title: 'Tài khoản',
             items: [
               _MenuItem(
@@ -229,9 +230,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _MenuItem(
                 icon: Icons.verified_user_outlined,
                 label: 'Xác thực tài khoản',
-                trailing: _user.isVerified
-                    ? _VerifiedBadge()
-                    : _UnverifiedBadge(),
+                trailing:
+                    _user.isVerified ? _VerifiedBadge() : _UnverifiedBadge(),
                 onTap: () async {
                   await context.push(AppConstants.routeVerifyAccount);
                   _loadCurrentUser();
@@ -246,23 +246,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           )),
-          SliverToBoxAdapter(child: _buildMenuSection(
+          SliverToBoxAdapter(
+              child: _buildMenuSection(
             title: 'Hoạt động',
             items: [
               _MenuItem(
                 icon: Icons.favorite_border_rounded,
                 label: 'Phòng đã lưu',
-                badge: _user.favoritesCount > 0
-                    ? '${_user.favoritesCount}'
-                    : null,
+                badge:
+                    _user.favoritesCount > 0 ? '${_user.favoritesCount}' : null,
                 onTap: () {},
               ),
               _MenuItem(
                 icon: Icons.rate_review_outlined,
                 label: 'Đánh giá của tôi',
-                badge: _user.reviewsCount > 0
-                    ? '${_user.reviewsCount}'
-                    : null,
+                badge: _user.reviewsCount > 0 ? '${_user.reviewsCount}' : null,
                 onTap: () => context.push(AppConstants.routeMyReviews),
               ),
               _MenuItem(
@@ -274,9 +272,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _MenuItem(
                   icon: Icons.home_work_outlined,
                   label: 'Tin đăng của tôi',
-                  badge: _user.listingsCount > 0
-                      ? '${_user.listingsCount}'
-                      : null,
+                  badge:
+                      _user.listingsCount > 0 ? '${_user.listingsCount}' : null,
                   onTap: () {},
                 ),
                 _MenuItem(
@@ -287,7 +284,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ],
           )),
-          SliverToBoxAdapter(child: _buildMenuSection(
+          SliverToBoxAdapter(
+              child: _buildMenuSection(
             title: 'Hỗ trợ',
             items: [
               _MenuItem(
@@ -339,7 +337,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   GestureDetector(
                     onTap: () => context.go('/home'),
                     child: Container(
-                      width: 36, height: 36,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.white.withValues(alpha: 0.18),
@@ -363,9 +362,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const Spacer(),
                   GestureDetector(
-                    onTap: () {},
+                    onTap: () => context.go(AppConstants.routeNotifications),
                     child: Container(
-                      width: 36, height: 36,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.white.withValues(alpha: 0.18),
@@ -387,7 +387,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               alignment: Alignment.bottomRight,
               children: [
                 Container(
-                  width: 84, height: 84,
+                  width: 84,
+                  height: 84,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.white.withValues(alpha: 0.2),
@@ -396,30 +397,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   alignment: Alignment.center,
                   child: _user.avatarUrl != null
                       ? ClipOval(
-                    child: Image.network(
-                      _user.avatarUrl!,
-                      width: 84, height: 84,
-                      fit: BoxFit.cover,
-                    ),
-                  )
+                          child: Image.network(
+                            _user.avatarUrl!,
+                            width: 84,
+                            height: 84,
+                            fit: BoxFit.cover,
+                          ),
+                        )
                       : Text(
-                    _user.fullName[0].toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
+                          _user.fullName[0].toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
                 GestureDetector(
                   onTap: () {},
                   child: Container(
-                    width: 28, height: 28,
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                          color: AppColors.primary, width: 2),
+                      border: Border.all(color: AppColors.primary, width: 2),
                     ),
                     alignment: Alignment.center,
                     child: const Icon(
@@ -456,14 +458,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius:
-                    BorderRadius.circular(AppConstants.radiusFull),
-                    border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.4)),
+                        BorderRadius.circular(AppConstants.radiusFull),
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: 0.4)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -490,12 +492,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 if (_user.isVerified) ...[
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColors.success.withValues(alpha: 0.2),
                       borderRadius:
-                      BorderRadius.circular(AppConstants.radiusFull),
+                          BorderRadius.circular(AppConstants.radiusFull),
                       border: Border.all(
                           color: AppColors.success.withValues(alpha: 0.5)),
                     ),
@@ -525,8 +527,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               height: 20,
               decoration: const BoxDecoration(
                 color: AppColors.bgPage,
-                borderRadius:
-                BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
             ),
           ],
@@ -701,11 +702,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        width: 80, height: 80,
+                        width: 80,
+                        height: 80,
                         decoration: BoxDecoration(
                           color: AppColors.primaryLight,
-                          borderRadius: BorderRadius.circular(
-                              AppConstants.radiusXl),
+                          borderRadius:
+                              BorderRadius.circular(AppConstants.radiusXl),
                         ),
                         alignment: Alignment.center,
                         child: const Icon(
@@ -729,8 +731,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () =>
-                              context.go(AppConstants.routeLogin),
+                          onPressed: () => context.go(AppConstants.routeLogin),
                           child: const Text('Đăng nhập ngay'),
                         ),
                       ),
@@ -764,8 +765,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             borderRadius: BorderRadius.circular(AppConstants.radiusLg)),
         title: const Text('Đăng xuất?',
             style: TextStyle(fontWeight: FontWeight.w700)),
-        content: const Text(
-            'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản không?'),
+        content:
+            const Text('Bạn có chắc chắn muốn đăng xuất khỏi tài khoản không?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -855,7 +856,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius:
-        BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXxl)),
+            BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXxl)),
       ),
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -868,7 +869,8 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
             // Handle
             Container(
               margin: const EdgeInsets.only(top: 12),
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
                 color: AppColors.border,
                 borderRadius: BorderRadius.circular(AppConstants.radiusFull),
@@ -879,8 +881,8 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
               child: Row(
                 children: [
                   const Text('Chỉnh sửa thông tin',
-                      style: TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w700)),
+                      style:
+                          TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
@@ -970,8 +972,8 @@ class _StatItem extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(label,
-                style: const TextStyle(
-                    fontSize: 11, color: AppColors.textMuted)),
+                style:
+                    const TextStyle(fontSize: 11, color: AppColors.textMuted)),
           ],
         ),
       ),
@@ -983,7 +985,8 @@ class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 1, height: 48,
+      width: 1,
+      height: 48,
       color: AppColors.borderLight,
     );
   }
@@ -1019,14 +1022,14 @@ class _MenuTile extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 36, height: 36,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: AppColors.primaryLight.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(AppConstants.radiusSm),
               ),
               alignment: Alignment.center,
-              child: Icon(item.icon,
-                  size: 18, color: AppColors.primary),
+              child: Icon(item.icon, size: 18, color: AppColors.primary),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -1146,16 +1149,15 @@ class _FormField extends StatelessWidget {
         TextFormField(
           controller: ctrl,
           keyboardType: keyboardType,
-          style: const TextStyle(
-              fontSize: 14, color: AppColors.textPrimary),
+          style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: AppTextStyles.inputHint,
             prefixIcon: Icon(icon, color: AppColors.primary, size: 18),
             filled: true,
             fillColor: AppColors.bgPage,
-            contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusMd),
               borderSide: const BorderSide(color: AppColors.border),
@@ -1167,7 +1169,7 @@ class _FormField extends StatelessWidget {
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusMd),
               borderSide:
-              const BorderSide(color: AppColors.primary, width: 1.5),
+                  const BorderSide(color: AppColors.primary, width: 1.5),
             ),
           ),
         ),

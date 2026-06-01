@@ -44,11 +44,12 @@ class ListingRepository {
 
   Future<Listing> createListing(Map<String, dynamic> payload) async {
     try {
-      final accessToken = await _getBackendAccessToken();
-      final response = await _apiService.dio.post<Map<String, dynamic>>(
-        '/listings',
-        data: payload,
-        options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+      final response = await _authorizedRequest<Map<String, dynamic>>(
+        (accessToken) => _apiService.dio.post<Map<String, dynamic>>(
+          '/listings',
+          data: payload,
+          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+        ),
       );
 
       final body = response.data ?? {};
@@ -65,11 +66,12 @@ class ListingRepository {
 
   Future<Listing> updateListing(int listingId, Map<String, dynamic> payload) async {
     try {
-      final accessToken = await _getBackendAccessToken();
-      final response = await _apiService.dio.put<Map<String, dynamic>>(
-        '/listings/$listingId',
-        data: payload,
-        options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+      final response = await _authorizedRequest<Map<String, dynamic>>(
+        (accessToken) => _apiService.dio.put<Map<String, dynamic>>(
+          '/listings/$listingId',
+          data: payload,
+          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+        ),
       );
 
       final body = response.data ?? {};
@@ -90,7 +92,6 @@ class ListingRepository {
     required bool isCover,
   }) async {
     try {
-      final accessToken = await _getBackendAccessToken();
       final fileName = filePath.split(RegExp(r'[\\/]')).last;
 
       final formData = FormData.fromMap({
@@ -98,10 +99,12 @@ class ListingRepository {
         'uploadType': isCover ? 'cover' : 'gallery',
       });
 
-      final response = await _apiService.dio.post<Map<String, dynamic>>(
-        '/storage/listings/$listingId/images',
-        data: formData,
-        options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+      final response = await _authorizedRequest<Map<String, dynamic>>(
+        (accessToken) => _apiService.dio.post<Map<String, dynamic>>(
+          '/storage/listings/$listingId/images',
+          data: formData,
+          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+        ),
       );
 
       final body = response.data ?? {};
@@ -118,6 +121,25 @@ class ListingRepository {
       return url;
     } on DioException catch (e) {
       throw Exception(_readBackendMessage(e));
+    }
+  }
+
+  Future<Response<T>> _authorizedRequest<T>(
+    Future<Response<T>> Function(String accessToken) request,
+  ) async {
+    final firstToken = await _getBackendAccessToken();
+
+    try {
+      return await request(firstToken);
+    } on DioException catch (e) {
+      if (e.response?.statusCode != 401) rethrow;
+
+      final refreshedToken = await _refreshBackendAccessToken();
+      if (refreshedToken == null) {
+        throw Exception('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      }
+
+      return request(refreshedToken);
     }
   }
 
@@ -159,7 +181,50 @@ class ListingRepository {
       throw Exception('Access token không hợp lệ.');
     }
 
+    await prefs.setString(AppConstants.keyUserToken, token);
     return token;
+  }
+
+  Future<String?> _refreshBackendAccessToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final refreshToken = prefs.getString('refresh_token');
+    if (refreshToken == null || refreshToken.isEmpty) {
+      await prefs.remove(AppConstants.keyUserToken);
+      return null;
+    }
+
+    try {
+      final response = await _apiService.dio.post<Map<String, dynamic>>(
+        '/auth/refresh-token',
+        data: {'refreshToken': refreshToken},
+      );
+
+      final body = response.data ?? {};
+      final data = body['data'] ?? body['Data'];
+      if (data is! Map) return null;
+
+      final accessToken = data['accessToken'] ?? data['AccessToken'];
+      final newRefreshToken = data['refreshToken'] ?? data['RefreshToken'];
+      final userId = data['userId'] ?? data['UserId'];
+      final fullName = data['fullName'] ?? data['FullName'];
+      final role = data['role'] ?? data['Role'];
+
+      if (accessToken is! String || accessToken.isEmpty) return null;
+
+      await prefs.setString(AppConstants.keyUserToken, accessToken);
+      if (newRefreshToken is String && newRefreshToken.isNotEmpty) {
+        await prefs.setString('refresh_token', newRefreshToken);
+      }
+      if (userId != null) await prefs.setString(AppConstants.keyUserId, userId.toString());
+      if (fullName != null) await prefs.setString('user_full_name', fullName.toString());
+      if (role != null) await prefs.setString(AppConstants.keyUserRole, role.toString());
+
+      return accessToken;
+    } on DioException {
+      await prefs.remove(AppConstants.keyUserToken);
+      await prefs.remove('refresh_token');
+      return null;
+    }
   }
 
   String _readBackendMessage(DioException e) {

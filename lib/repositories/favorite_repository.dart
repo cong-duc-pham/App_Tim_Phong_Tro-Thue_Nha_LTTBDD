@@ -3,20 +3,20 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constants/app_constants.dart';
-import '../models/app_notification.dart';
+import '../models/listing.dart';
 import '../services/api_service.dart';
 
-class NotificationRepository {
-  NotificationRepository({ApiService? apiService})
+class FavoriteRepository {
+  FavoriteRepository({ApiService? apiService})
       : _apiService = apiService ?? ApiService();
 
   final ApiService _apiService;
 
-  Future<List<AppNotification>> getNotifications() async {
+  Future<List<Listing>> getFavorites() async {
     try {
       final response = await _authorizedRequest<Map<String, dynamic>>(
         (accessToken) => _apiService.dio.get<Map<String, dynamic>>(
-          '/notifications',
+          '/favorites',
           options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
         ),
       );
@@ -27,40 +27,26 @@ class NotificationRepository {
 
       return data
           .whereType<Map>()
-          .map((item) =>
-              AppNotification.fromJson(Map<String, dynamic>.from(item)))
+          .map((item) => Listing.fromJson(Map<String, dynamic>.from(item)))
           .toList();
     } on DioException catch (e) {
       throw Exception(_readBackendMessage(e));
     }
   }
 
-  Future<int> getUnreadCount() async {
+  Future<bool> toggleFavorite(int listingId) async {
     try {
       final response = await _authorizedRequest<Map<String, dynamic>>(
-        (accessToken) => _apiService.dio.get<Map<String, dynamic>>(
-          '/notifications/unread-count',
+        (accessToken) => _apiService.dio.post<Map<String, dynamic>>(
+          '/favorites/$listingId',
           options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
         ),
       );
 
       final body = response.data ?? {};
-      final value = body['unreadCount'] ?? body['UnreadCount'];
-      if (value is num) return value.toInt();
-      return int.tryParse(value?.toString() ?? '') ?? 0;
-    } on DioException catch (e) {
-      throw Exception(_readBackendMessage(e));
-    }
-  }
-
-  Future<void> markAsRead(int notificationId) async {
-    try {
-      await _authorizedRequest<Map<String, dynamic>>(
-        (accessToken) => _apiService.dio.put<Map<String, dynamic>>(
-          '/notifications/$notificationId/read',
-          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
-        ),
-      );
+      final value = body['isFavorite'] ?? body['IsFavorite'];
+      if (value is bool) return value;
+      return value?.toString().toLowerCase() == 'true';
     } on DioException catch (e) {
       throw Exception(_readBackendMessage(e));
     }
@@ -94,7 +80,7 @@ class NotificationRepository {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      throw Exception('Bạn cần đăng nhập để xem thông báo.');
+      throw Exception('Bạn cần đăng nhập để xem danh sách yêu thích.');
     }
 
     final firebaseToken = await user.getIdToken(true);
@@ -157,12 +143,9 @@ class NotificationRepository {
       if (newRefreshToken is String && newRefreshToken.isNotEmpty) {
         await prefs.setString('refresh_token', newRefreshToken);
       }
-      if (userId != null)
-        await prefs.setString(AppConstants.keyUserId, userId.toString());
-      if (fullName != null)
-        await prefs.setString('user_full_name', fullName.toString());
-      if (role != null)
-        await prefs.setString(AppConstants.keyUserRole, role.toString());
+      if (userId != null) await prefs.setString(AppConstants.keyUserId, userId.toString());
+      if (fullName != null) await prefs.setString('user_full_name', fullName.toString());
+      if (role != null) await prefs.setString(AppConstants.keyUserRole, role.toString());
 
       return accessToken;
     } on DioException {
