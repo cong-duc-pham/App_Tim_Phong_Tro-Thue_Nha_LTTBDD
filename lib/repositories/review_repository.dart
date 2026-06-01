@@ -4,14 +4,14 @@ import 'package:dio/dio.dart';
 
 import '../services/api_service.dart';
 
-// Model nhỏ gọn cho hiển thị review trong detail screen
+// model dùng riêng cho màn hình detail, không dùng chung với Review model của my_reviews
 class ReviewItem {
   final int reviewId;
   final String reviewerName;
   final String? reviewerAvatar;
   final double rating;
   final String content;
-  final String? replyContent;
+  final String? replyContent; // phản hồi của chủ trọ nếu có
   final DateTime createdAt;
   final DateTime? repliedAt;
 
@@ -46,7 +46,8 @@ class ReviewItem {
       createdAt: createdRaw != null
           ? DateTime.tryParse(createdRaw.toString()) ?? DateTime.now()
           : DateTime.now(),
-      repliedAt: repliedRaw != null ? DateTime.tryParse(repliedRaw.toString()) : null,
+      repliedAt:
+          repliedRaw != null ? DateTime.tryParse(repliedRaw.toString()) : null,
     );
   }
 }
@@ -57,7 +58,7 @@ class ReviewRepository {
 
   final ApiService _apiService;
 
-  // Lấy danh sách đánh giá của một tin đăng — public, không cần auth
+  // lấy reviews của một tin đăng, không cần auth
   Future<({List<ReviewItem> reviews, double averageRating, int count})>
       getReviews(int listingId) async {
     try {
@@ -93,9 +94,7 @@ class ReviewRepository {
       final message = data['message'] ?? data['Message'];
       if (message != null) return message.toString();
     }
-    if (data is String && data.trim().isNotEmpty) {
-      return data;
-    }
+    if (data is String && data.trim().isNotEmpty) return data;
     return e.message ?? 'Không kết nối được backend.';
   }
 }

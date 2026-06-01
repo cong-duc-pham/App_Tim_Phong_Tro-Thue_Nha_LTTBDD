@@ -26,7 +26,7 @@ class ListingDetailLoaded extends ListingDetailState {
   final List<ReviewItem> reviews;
   final double averageRating;
   final int reviewCount;
-  // Khi đang xử lý toggle favorite (hiển thị loading trên nút)
+  // true khi đang gọi API toggle, tránh người dùng nhấn nhiều lần
   final bool isFavoriteLoading;
 
   const ListingDetailLoaded({

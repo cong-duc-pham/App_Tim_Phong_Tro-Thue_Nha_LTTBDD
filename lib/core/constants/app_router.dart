@@ -23,6 +23,7 @@ import '../../screens/auth/forgot_password_screen.dart';
 import '../../models/conversation.dart';
 import '../../screens/chat/conversations_screen.dart';
 import '../../screens/chat/chat_screen.dart';
+import '../../screens/listing/listing_detail_screen.dart';
 import '../../widgets/main_bottom_nav.dart';
 
 final appRouter = GoRouter(
@@ -89,6 +90,13 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final conv = state.extra as Conversation;
         return ChatScreen(conversation: conv);
+      },
+    ),
+    GoRoute(
+      path: '/listing/:id',
+      builder: (context, state) {
+        final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+        return ListingDetailScreen(listingId: id);
       },
     ),
   ],

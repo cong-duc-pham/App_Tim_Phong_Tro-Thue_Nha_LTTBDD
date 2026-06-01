@@ -1,7 +1,6 @@
 // lib/models/listing.dart
 
 class Listing {
-  // ── Thông tin cơ bản ─────────────────────────────────────────────────────
   final int listingId;
   final String title;
   final String? description;
@@ -10,7 +9,7 @@ class Listing {
   final int typeId;
   final String typeName;
 
-  // ── Địa chỉ ──────────────────────────────────────────────────────────────
+  // địa chỉ
   final String? provinceName;
   final String? districtName;
   final String? wardName;
@@ -18,7 +17,7 @@ class Listing {
   final double? latitude;
   final double? longitude;
 
-  // ── Ảnh (cover + gallery) ────────────────────────────────────────────────
+  // ảnh: image0 là ảnh bìa, image1-5 là gallery
   final String? image0;
   final String? image1;
   final String? image2;
@@ -26,37 +25,35 @@ class Listing {
   final String? image4;
   final String? image5;
 
-  // ── Thông tin chủ trọ ────────────────────────────────────────────────────
+  // thông tin chủ trọ
   final int? landlordId;
   final String? landlordName;
   final String? landlordAvatar;
   final String? landlordPhone;
 
-  // ── Giá dịch vụ ──────────────────────────────────────────────────────────
+  // giá điện nước internet xe - null = chưa có thông tin
   final double? electricPrice;
   final double? waterPrice;
   final double? internetPrice;
   final double? parkingPrice;
 
-  // ── Thông tin thêm ───────────────────────────────────────────────────────
+  // thông tin phòng
   final int? floor;
   final int? totalFloors;
   final int? maxOccupants;
   final bool allowPet;
   final DateTime? availableFrom;
 
-  // ── Trạng thái & thống kê ────────────────────────────────────────────────
   final bool isVerified;
   final bool isFeatured;
   final String statusName;
   final int? viewCount;
   final int? saveCount;
 
-  // ── Đánh giá ─────────────────────────────────────────────────────────────
+  // rating trung bình và số lượng đánh giá
   final double averageRating;
   final int reviewCount;
 
-  // ── Tiện ích & gói tin ───────────────────────────────────────────────────
   final List<String> amenityNames;
   final DateTime? createdAt;
   final Map<String, dynamic>? packageInfo;
@@ -107,6 +104,7 @@ class Listing {
   });
 
   factory Listing.fromJson(Map<String, dynamic> json) {
+    // hỗ trợ cả camelCase lẫn PascalCase vì backend .NET trả về PascalCase
     T? read<T>(String camel, String pascal) {
       final value = json[camel] ?? json[pascal];
       return value is T ? value : null;
@@ -181,7 +179,9 @@ class Listing {
       totalFloors: nullableInt('totalFloors', 'TotalFloors'),
       maxOccupants: nullableInt('maxOccupants', 'MaxOccupants'),
       allowPet: boolean('allowPet', 'AllowPet'),
-      availableFrom: availableRaw == null ? null : DateTime.tryParse(availableRaw.toString()),
+      availableFrom: availableRaw == null
+          ? null
+          : DateTime.tryParse(availableRaw.toString()),
       isVerified: boolean('isVerified', 'IsVerified'),
       isFeatured: boolean('isFeatured', 'IsFeatured'),
       statusName: read<String>('statusName', 'StatusName') ?? '',
@@ -192,12 +192,15 @@ class Listing {
       amenityNames: amenitiesRaw is List
           ? amenitiesRaw.map((e) => e.toString()).toList()
           : const [],
-      createdAt: createdRaw == null ? null : DateTime.tryParse(createdRaw.toString()),
-      packageInfo: packageRaw is Map<String, dynamic> ? packageRaw : null,
+      createdAt: createdRaw == null
+          ? null
+          : DateTime.tryParse(createdRaw.toString()),
+      packageInfo:
+          packageRaw is Map<String, dynamic> ? packageRaw : null,
     );
   }
 
-  // Địa chỉ hiển thị đầy đủ
+  // ghép địa chỉ đầy đủ để hiển thị
   String get displayAddress {
     final parts = [
       if (streetAddress.trim().isNotEmpty) streetAddress.trim(),
@@ -208,7 +211,7 @@ class Listing {
     return parts.isEmpty ? 'Chưa cập nhật địa chỉ' : parts.join(', ');
   }
 
-  // Danh sách ảnh gallery (lọc null)
+  // lấy tất cả ảnh không null để làm gallery
   List<String> get allImages {
     return [image0, image1, image2, image3, image4, image5]
         .whereType<String>()
@@ -216,6 +219,5 @@ class Listing {
         .toList();
   }
 
-  // Có toạ độ GPS hợp lệ không
   bool get hasLocation => latitude != null && longitude != null;
 }
