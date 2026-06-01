@@ -1,13 +1,49 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
 import '../core/constants/app_text_styles.dart';
+import '../services/chat_unread_service.dart';
 import '../services/post_listing_draft_service.dart';
 
-class MainBottomNav extends StatelessWidget {
+class MainBottomNav extends StatefulWidget {
   const MainBottomNav({super.key});
+
+  @override
+  State<MainBottomNav> createState() => _MainBottomNavState();
+}
+
+class _MainBottomNavState extends State<MainBottomNav>
+    with WidgetsBindingObserver {
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    ChatUnreadService.refresh();
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => ChatUnreadService.refresh(),
+    );
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ChatUnreadService.refresh();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,11 +98,17 @@ class MainBottomNav extends StatelessWidget {
               ],
             ),
           ),
-          _NavItem(
-            icon: Icons.chat_bubble_outline_rounded,
-            label: 'Tin nhắn',
-            active: path == AppConstants.routeChat,
-            onTap: () => _goTo(context, AppConstants.routeChat),
+          ValueListenableBuilder<int>(
+            valueListenable: ChatUnreadService.unreadCount,
+            builder: (context, unreadCount, child) {
+              return _NavItem(
+                icon: Icons.chat_bubble_outline_rounded,
+                label: 'Tin nhắn',
+                active: path == AppConstants.routeChat,
+                badgeCount: unreadCount,
+                onTap: () => _goTo(context, AppConstants.routeChat),
+              );
+            },
           ),
           _NavItem(
             icon: Icons.person_outline_rounded,
@@ -119,12 +161,14 @@ class _NavItem extends StatelessWidget {
     required this.label,
     required this.active,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   final IconData icon;
   final String label;
   final bool active;
   final VoidCallback onTap;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -135,10 +179,10 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: AppConstants.iconLg,
-              color: active ? AppColors.navActive : AppColors.navInactive,
+            _NavIconWithBadge(
+              icon: icon,
+              active: active,
+              badgeCount: badgeCount,
             ),
             const SizedBox(height: 3),
             Text(
@@ -149,6 +193,64 @@ class _NavItem extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _NavIconWithBadge extends StatelessWidget {
+  const _NavIconWithBadge({
+    required this.icon,
+    required this.active,
+    required this.badgeCount,
+  });
+
+  final IconData icon;
+  final bool active;
+  final int badgeCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayCount = badgeCount > 99 ? '99+' : '$badgeCount';
+
+    return SizedBox(
+      width: 34,
+      height: 28,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Icon(
+            icon,
+            size: AppConstants.iconLg,
+            color: active ? AppColors.navActive : AppColors.navInactive,
+          ),
+          if (badgeCount > 0)
+            Positioned(
+              top: -2,
+              right: 0,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 17),
+                height: 17,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.notifDot,
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                child: Text(
+                  displayCount,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    height: 1,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
