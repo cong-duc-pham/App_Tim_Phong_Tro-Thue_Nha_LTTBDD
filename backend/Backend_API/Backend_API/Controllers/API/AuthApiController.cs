@@ -198,5 +198,32 @@ namespace Backend_API.Controllers
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Đổi mật khẩu cho người dùng hiện tại.
+        /// </summary>
+        [Authorize]
+        [HttpPost("change-password")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequestDto request)
+        {
+            try
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdStr) || !long.TryParse(userIdStr, out long userId))
+                {
+                    return Unauthorized(new { success = false, message = "Không xác định được danh tính người dùng." });
+                }
+
+                await _authService.ChangePasswordAsync(userId, request);
+                return Ok(new { success = true, message = "Đổi mật khẩu thành công." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
     }
 }

@@ -13,11 +13,19 @@
 --    + Giữ nguyên Firebase Auth + FCM (không thay đổi)
 -- ============================================================
 
+SET ANSI_NULLS ON;
+GO
+SET QUOTED_IDENTIFIER ON;
+GO
+
 USE master;
 GO
 
 IF EXISTS (SELECT name FROM sys.databases WHERE name = N'PhongTroDB')
+BEGIN
+    ALTER DATABASE PhongTroDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
     DROP DATABASE PhongTroDB;
+END
 GO
 
 CREATE DATABASE PhongTroDB
@@ -890,6 +898,60 @@ CREATE TABLE DailyStats (
 );
 
 -- ============================================================
+-- 14.1 SEED DATA - DU LIEU NEN BAT BUOC
+-- ============================================================
+
+INSERT INTO Roles (role_name, description) VALUES
+    ('admin',    N'Quan tri vien he thong'),
+    ('tenant',   N'Nguoi thue phong'),
+    ('landlord', N'Chu nha / Nguoi cho thue');
+
+INSERT INTO RoomTypes (type_name, sort_order) VALUES
+    (N'Phong tro sinh vien',        1),
+    (N'Can ho dich vu / Chung cu',  2),
+    (N'O ghep (Roommate)',          3),
+    (N'Nha nguyen can',             4);
+
+INSERT INTO Amenities (name, category) VALUES
+    (N'Wifi',               'basic'),
+    (N'Dieu hoa',           'comfort'),
+    (N'May giat',           'basic'),
+    (N'Tu lanh',            'basic'),
+    (N'Bep',                'basic'),
+    (N'Bai xe',             'basic'),
+    (N'Camera an ninh',     'security'),
+    (N'Thang may',          'comfort'),
+    (N'Ho boi',             'comfort'),
+    (N'Gym',                'comfort'),
+    (N'Ban cong',           'comfort'),
+    (N'Noi that day du',    'comfort'),
+    (N'Cua tu',             'security'),
+    (N'Bao ve 24/7',        'security'),
+    (N'Cho nuoi thu cung',  'basic');
+
+-- Thu tu nay khop cac hang so trong ListingService:
+-- active = 1, pending = 2, hidden = 5.
+INSERT INTO ListingStatus (status_name) VALUES
+    ('active'), ('pending'), ('rented'), ('rejected'), ('hidden');
+
+INSERT INTO PaymentMethods (method_name) VALUES
+    ('bank_transfer'), ('momo'), ('vnpay'), ('zalopay'), ('cash');
+
+INSERT INTO PaymentStatus (status_name) VALUES
+    ('pending'), ('success'), ('failed'), ('refunded');
+
+INSERT INTO PostPackages
+    (package_name, package_type, duration_days, price, priority,
+     max_images, max_videos, allow_banner, badge_type, has_analytics, is_highlighted, description)
+VALUES
+(N'Tin Thuong',      'free',      30,       0,   0,  1, 0, 0, NULL,       0, 0, N'Dang tin mien phi, hien thi binh thuong trong danh sach'),
+(N'Tin VIP 7 ngay',  'vip',        7,   99000,   1,  5, 0, 0, 'vip',      1, 0, N'Uu tien hien thi cao hon, badge VIP xanh, xem thong ke luot xem'),
+(N'Tin VIP 30 ngay', 'vip',       30,  299000,   1, 10, 1, 0, 'vip',      1, 0, N'Nhu VIP 7 ngay nhung dai han hon, them ho tro 1 video'),
+(N'Tin Noi Bat',     'featured',  30,  499000,   2, 99, 3, 1, 'featured', 1, 1, N'Uu tien cao nhat, xuat hien tren banner trang chu, badge vang noi bat');
+
+GO
+
+-- ============================================================
 -- 15. STORED PROCEDURES
 -- ============================================================
 
@@ -1382,6 +1444,26 @@ INNER JOIN Roles r ON u.role_id = r.role_id;
 GO
 
 -- View: Tin đăng kèm gói VIP và ảnh Cloudinary
+-- View tuong thich voi backend Admin hien tai.
+CREATE OR ALTER VIEW vw_UserFirebaseInfo AS
+SELECT
+    user_id,
+    full_name,
+    email,
+    phone,
+    firebase_uid,
+    firebase_provider,
+    avatar_url,
+    avatar_source,
+    is_verified,
+    is_active,
+    role_name,
+    active_devices,
+    CASE WHEN firebase_uid IS NOT NULL THEN 1 ELSE 0 END AS uses_firebase,
+    auth_method
+FROM vw_UserInfo;
+GO
+
 CREATE OR ALTER VIEW vw_ListingWithPackage AS
 SELECT
     l.listing_id,
@@ -1500,6 +1582,7 @@ PRINT N'   - sp_UpdateNotificationFcmStatus';
 PRINT N'';
 PRINT N'👁️  VIEWS:';
 PRINT N'   - vw_UserInfo';
+PRINT N'   - vw_UserFirebaseInfo';
 PRINT N'   - vw_ListingWithPackage';
 PRINT N'   - vw_PendingFcmNotifications';
 PRINT N'   - vw_OrphanCloudinaryFiles';

@@ -412,5 +412,26 @@ namespace Backend_API.Services.Implementations
 
             return user;
         }
+
+        public async Task ChangePasswordAsync(long userId, ChangePasswordRequestDto dto)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                throw new Exception("Không tìm thấy người dùng.");
+            }
+
+            if (!string.IsNullOrEmpty(user.PasswordHash))
+            {
+                if (!PasswordHasher.Verify(dto.CurrentPassword, user.PasswordHash))
+                {
+                    throw new Exception("Mật khẩu hiện tại không chính xác.");
+                }
+            }
+
+            user.PasswordHash = PasswordHasher.Hash(dto.NewPassword);
+            user.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
     }
 }

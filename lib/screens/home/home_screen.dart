@@ -1359,21 +1359,25 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCategories() {
     final cats = [
       {
+        'type': 'phong-tro',
         'icon': Icons.home_rounded,
         'label': 'Phòng trọ\nSV',
         'color': AppColors.catBlue
       },
       {
+        'type': 'can-ho',
         'icon': Icons.apartment_rounded,
         'label': 'Căn hộ\nDV',
         'color': AppColors.catIndigo
       },
       {
+        'type': 'o-ghep',
         'icon': Icons.people_rounded,
         'label': 'Ở ghép',
         'color': AppColors.catCyan
       },
       {
+        'type': 'nha-nguyen-can',
         'icon': Icons.house_rounded,
         'label': 'Nhà\nnguyên căn',
         'color': AppColors.catSky
@@ -1384,35 +1388,82 @@ class _HomeScreenState extends State<HomeScreen> {
           AppConstants.paddingV, AppConstants.paddingH, 0),
       child: Column(
         children: [
-          _buildSectionHeader('Loại hình', 'Xem tất cả'),
+          _buildSectionHeader(
+            'Loại hình',
+            'Xem tất cả',
+            onTap: () {
+              HapticFeedback.lightImpact();
+              setState(() {
+                final updated = Set<String>.from(_filter.types)..clear();
+                _filter = _filter.copyWith(types: updated);
+              });
+            },
+          ),
           const SizedBox(height: AppConstants.spacingSm),
           Row(
-            children: cats
-                .map((c) => Expanded(
-                      child: Column(children: [
-                        Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                              color: c['color'] as Color,
-                              borderRadius:
-                                  BorderRadius.circular(AppConstants.radiusMd)),
-                          alignment: Alignment.center,
-                          child: Icon(c['icon'] as IconData,
-                              size: AppConstants.iconLg,
-                              color: AppColors.primary),
+            children: cats.map((c) {
+              final typeKey = c['type'] as String;
+              final isSelected = _filter.types.contains(typeKey);
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    setState(() {
+                      final updated = Set<String>.from(_filter.types);
+                      if (isSelected) {
+                        updated.remove(typeKey);
+                      } else {
+                        updated.clear(); // Chọn duy nhất loại này
+                        updated.add(typeKey);
+                      }
+                      _filter = _filter.copyWith(types: updated);
+                    });
+                  },
+                  child: Column(
+                    children: [
+                      AnimatedContainer(
+                        duration: AppConstants.animFast,
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary : (c['color'] as Color),
+                          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                          border: isSelected
+                              ? Border.all(color: AppColors.primary, width: 2)
+                              : Border.all(color: Colors.transparent, width: 2),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.primary.withValues(alpha: 0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  )
+                                ]
+                              : null,
                         ),
-                        const SizedBox(height: 6),
-                        Text(c['label'] as String,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textSecondary,
-                                height: 1.3)),
-                      ]),
-                    ))
-                .toList(),
+                        alignment: Alignment.center,
+                        child: Icon(
+                          c['icon'] as IconData,
+                          size: AppConstants.iconLg,
+                          color: isSelected ? Colors.white : AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        c['label'] as String,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                          color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -1830,7 +1881,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title, String action) {
+  Widget _buildSectionHeader(String title, String action, {VoidCallback? onTap}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppConstants.paddingH,
           AppConstants.paddingV, AppConstants.paddingH, 0),
@@ -1838,7 +1889,10 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title, style: AppTextStyles.sectionTitle),
-          Text(action, style: AppTextStyles.sectionLink),
+          GestureDetector(
+            onTap: onTap,
+            child: Text(action, style: AppTextStyles.sectionLink),
+          ),
         ],
       ),
     );

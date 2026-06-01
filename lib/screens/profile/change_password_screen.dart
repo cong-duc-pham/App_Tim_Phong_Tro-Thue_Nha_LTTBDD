@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
+import '../../repositories/auth_repository.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -103,30 +104,30 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       _isSubmitting = true;
     });
 
-    final firebaseUser = FirebaseAuth.instance.currentUser;
+    final authRepo = AuthRepository();
     bool success = true;
     String errorMsg = '';
 
-    // Nếu có tài khoản Firebase thật và dùng email/password, thử đổi mật khẩu thực tế
-    if (firebaseUser != null && firebaseUser.email != null) {
-      try {
-        await firebaseUser.updatePassword(_newPwdCtrl.text.trim());
-      } on FirebaseAuthException catch (e) {
-        if (e.code == 'requires-recent-login') {
-          // Firebase yêu cầu đăng nhập lại do thao tác nhạy cảm
-          // Trong trường hợp này ta giả lập đổi lưu tại app để người dùng trải nghiệm mượt mà
-          success = true;
-        } else {
-          success = false;
-          errorMsg = e.message ?? 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+    try {
+      // 1. Thực hiện đổi mật khẩu ở Backend trước
+      await authRepo.changePassword(
+        currentPassword: _currentPwdCtrl.text,
+        newPassword: _newPwdCtrl.text.trim(),
+      );
+
+      // 2. Đồng thời nếu có tài khoản Firebase đang hoạt động, cập nhật song song để đồng bộ
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      if (firebaseUser != null && firebaseUser.email != null) {
+        try {
+          await firebaseUser.updatePassword(_newPwdCtrl.text.trim());
+        } catch (_) {
+          // Bỏ qua lỗi Firebase (chẳng hạn cần login gần đây)
+          // vì đổi mật khẩu trên Backend đã thành công xuất sắc!
         }
-      } catch (_) {
-        // Fallback giả lập thành công để trải nghiệm thử nếu offline/mock
-        success = true;
       }
-    } else {
-      // Giả lập loading gọi API
-      await Future.delayed(const Duration(milliseconds: 1200));
+    } catch (e) {
+      success = false;
+      errorMsg = e.toString().replaceAll('Exception: ', '');
     }
 
     if (mounted) {
