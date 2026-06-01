@@ -100,6 +100,8 @@ namespace Backend_API.Services.Implementations
         {
             var conv = await _context.Conversations.FindAsync(dto.ConvId)
                 ?? throw new Exception("Conversation not found.");
+            if (conv.TenantId != senderId && conv.LandlordId != senderId)
+                throw new Exception("You are not a participant of this conversation.");
 
             var message = new Message
             {
