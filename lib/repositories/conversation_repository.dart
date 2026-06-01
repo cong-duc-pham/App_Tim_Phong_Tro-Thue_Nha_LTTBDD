@@ -35,6 +35,34 @@ class ConversationRepository {
     }
   }
 
+  Future<Conversation> createConversation({
+    required int listingId,
+    required int landlordId,
+  }) async {
+    try {
+      final response = await _authorizedRequest<Map<String, dynamic>>(
+        (accessToken) => _apiService.dio.post<Map<String, dynamic>>(
+          '/conversations',
+          data: {
+            'listingId': listingId,
+            'landlordId': landlordId,
+          },
+          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+        ),
+      );
+
+      final data =
+          (response.data ?? {})['data'] ?? (response.data ?? {})['Data'];
+      if (data is! Map) {
+        throw Exception('Backend khÃ´ng tráº£ vá» há»™i thoáº¡i.');
+      }
+
+      return Conversation.fromJson(Map<String, dynamic>.from(data));
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
   Future<List<Message>> getMessages(int conversationId, {int page = 1}) async {
     try {
       final response = await _authorizedRequest<Map<String, dynamic>>(

@@ -5,6 +5,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../models/conversation.dart';
 import '../../repositories/conversation_repository.dart';
+import '../../services/chat_unread_service.dart';
 
 class ConversationsScreen extends StatefulWidget {
   const ConversationsScreen({super.key});
@@ -44,6 +45,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     try {
       final conversations = await _repository.getConversations();
       if (!mounted) return;
+      ChatUnreadService.setFromConversations(conversations);
       _allConversations = conversations;
       _isLoading = false;
       _applyFilters();
