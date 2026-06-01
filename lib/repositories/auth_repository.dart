@@ -1,4 +1,4 @@
-﻿// lib/repositories/auth_repository.dart
+// lib/repositories/auth_repository.dart
 
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -183,6 +183,31 @@ class AuthRepository {
     );
     await _saveBackendSession(session);
     return session;
+  }
+
+  /// Đổi mật khẩu tài khoản người dùng hiện tại trên backend.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AppConstants.keyUserToken);
+    if (token == null || token.isEmpty) {
+      throw Exception('Bạn cần đăng nhập để thực hiện đổi mật khẩu.');
+    }
+
+    try {
+      await _apiService.dio.post(
+        '/auth/change-password',
+        data: {
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } on DioException catch (e) {
+      throw Exception(readBackendMessage(e));
+    }
   }
 
   /// Đăng xuất.
