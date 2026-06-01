@@ -40,6 +40,16 @@ class ImageSlot {
   bool get isCover => slotIndex == 0;
 }
 
+class VideoSlot {
+  final int slotIndex;
+  File? file;
+  VideoSlot({required this.slotIndex, this.file});
+  bool get isEmpty => file == null;
+  String get fileName => file == null
+      ? ''
+      : file!.path.split(RegExp(r'[\\/]')).last;
+}
+
 const _mapTileUrlTemplate =
     'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
 
@@ -64,6 +74,8 @@ class _PostListingScreenState extends State<PostListingScreen> {
   // 6 slot ảnh cố định (slot_index 0-5)
   final List<ImageSlot> _slots =
   List.generate(6, (i) => ImageSlot(slotIndex: i));
+  final List<VideoSlot> _videoSlots =
+      List.generate(3, (i) => VideoSlot(slotIndex: i));
 
   // Form controllers
   RoomType? _selectedType;
@@ -181,6 +193,27 @@ class _PostListingScreenState extends State<PostListingScreen> {
     _markDraftChanged();
   });
 
+  Future<void> _pickVideo(int idx) async {
+    if (idx >= _maxSelectableVideos) return;
+
+    final picked = await _imagePicker.pickVideo(
+      source: ImageSource.gallery,
+      maxDuration: const Duration(minutes: 3),
+    );
+
+    if (picked == null) return;
+
+    setState(() {
+      _videoSlots[idx].file = File(picked.path);
+    });
+    _markDraftChanged();
+  }
+
+  void _removeVideo(int idx) => setState(() {
+        _videoSlots[idx].file = null;
+        _markDraftChanged();
+      });
+
   void _swapSlots(int a, int b) => setState(() {
     final tf = _slots[a].file;
     final tu = _slots[a].networkUrl;
@@ -192,6 +225,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
   });
 
   int get _filledCount => _slots.where((s) => !s.isEmpty).length;
+  int get _filledVideoCount => _videoSlots.where((s) => !s.isEmpty).length;
   PostPackage? get _effectivePackage =>
       _selectedPackage ??
       (_packages.where((package) => package.isFree).isNotEmpty
@@ -202,6 +236,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
   int get _maxSelectableImages {
     final configuredLimit = _effectivePackage?.maxImages ?? 1;
     return math.max(1, math.min(configuredLimit, _slots.length));
+  }
+  int get _maxSelectableVideos {
+    final configuredLimit = _effectivePackage?.maxVideos ?? 0;
+    return math.max(0, math.min(configuredLimit, _videoSlots.length));
   }
   Future<void> _loadPackages() async {
     setState(() {
@@ -241,6 +279,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
     for (var i = maxImages; i < _slots.length; i++) {
       _slots[i].file = null;
       _slots[i].networkUrl = null;
+    }
+    final maxVideos = math.max(0, math.min(package.maxVideos, _videoSlots.length));
+    for (var i = maxVideos; i < _videoSlots.length; i++) {
+      _videoSlots[i].file = null;
     }
   }
 
@@ -284,6 +326,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
       );
       await _markCurrentUserAsLandlord();
       final imageUploadMessage = await _tryUploadImages(created.listingId);
+      final videoUploadMessage = await _tryUploadVideos(created.listingId);
       if (!mounted) return;
 
       PostListingDraftService.clear();
@@ -300,6 +343,14 @@ class _PostListingScreenState extends State<PostListingScreen> {
       if (imageUploadMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(imageUploadMessage),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+      }
+      if (videoUploadMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(videoUploadMessage),
           backgroundColor: AppColors.warning,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -361,6 +412,22 @@ class _PostListingScreenState extends State<PostListingScreen> {
     return null;
   }
 
+  Future<String?> _tryUploadVideos(int listingId) async {
+    if (_maxSelectableVideos <= 0 || _filledVideoCount == 0) return null;
+
+    try {
+      await _uploadSelectedVideos(listingId).timeout(
+        const Duration(seconds: 90),
+      );
+    } on TimeoutException {
+      return 'Tin đã được tạo, nhưng upload video quá lâu. Bạn có thể bổ sung video sau.';
+    } catch (_) {
+      return 'Tin đã được tạo, nhưng chưa upload được video.';
+    }
+
+    return null;
+  }
+
   String? _validateBeforeSubmit() {
     for (var step = 0; step < _totalSteps; step++) {
       final message = _validateStep(step);
@@ -383,6 +450,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
         }
         if (_filledCount > _maxSelectableImages) {
           return 'Gói đã chọn chỉ cho phép tối đa $_maxSelectableImages ảnh.';
+        }
+        if (_filledVideoCount > _maxSelectableVideos) {
+          return 'Gói đã chọn chỉ cho phép tối đa $_maxSelectableVideos video.';
         }
         return null;
       case 2:
@@ -511,6 +581,21 @@ class _PostListingScreenState extends State<PostListingScreen> {
         isCover: slot.slotIndex == 0,
       );
       slot.networkUrl = url;
+      urls.add(url);
+    }
+
+    return urls;
+  }
+
+  Future<List<String>> _uploadSelectedVideos(int listingId) async {
+    final urls = <String>[];
+
+    for (final slot in _videoSlots.take(_maxSelectableVideos)) {
+      if (slot.file == null) continue;
+      final url = await _listingRepository.uploadListingVideo(
+        listingId: listingId,
+        filePath: slot.file!.path,
+      );
       urls.add(url);
     }
 
@@ -901,6 +986,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
   // ── Step 2: ẢNH PHÒNG ────────────────────────
   Widget _buildStepImages() {
     final maxImages = _maxSelectableImages;
+    final maxVideos = _maxSelectableVideos;
     final packageName = _effectivePackage?.packageName ?? 'gói hiện tại';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1014,7 +1100,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
               onMakeCover:
                   _slots[i + 1].isEmpty ? null : () => _swapSlots(0, i + 1),
             ),
-          ),
+        ),
+        const SizedBox(height: 14),
+        _buildVideoSection(maxVideos),
         const SizedBox(height: 14),
 
         // Tip
@@ -1038,6 +1126,77 @@ class _PostListingScreenState extends State<PostListingScreen> {
           ]),
         ),
       ],
+    );
+  }
+
+  Widget _buildVideoSection(int maxVideos) {
+    if (maxVideos <= 0) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.warningBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.warning.withValues(alpha: 0.25)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.videocam_off_outlined,
+                color: AppColors.warning, size: 18),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Gói hiện tại không hỗ trợ video.',
+                style: TextStyle(
+                    fontSize: 12, color: AppColors.warningText, height: 1.4),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return _SectionCard(
+      title: 'Video phòng',
+      icon: Icons.video_library_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Danh sách video',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: AppColors.textPrimary)),
+              Text(
+                '$_filledVideoCount / $maxVideos video',
+                style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    color: AppColors.primary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...List.generate(
+            maxVideos,
+            (index) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _VideoSlotCard(
+                slot: _videoSlots[index],
+                onPick: () => _pickVideo(index),
+                onRemove: () => _removeVideo(index),
+              ),
+            ),
+          ),
+          const Text(
+            'Hỗ trợ MP4/MOV/WebM, tối đa 100 MB mỗi video.',
+            style: TextStyle(
+                fontSize: 12, color: AppColors.textSecondary, height: 1.4),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1245,6 +1404,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
               : _streetCtrl.text,
           isFeatured: _shouldBuyPackage,
           imageCount: _filledCount,
+          videoCount: _filledVideoCount,
         ),
       ],
     );
@@ -1751,6 +1911,7 @@ class _SectionCard extends StatelessWidget {
       ),
     );
   }
+
 }
 
 class _PackageChoiceTile extends StatelessWidget {
@@ -2111,6 +2272,76 @@ class _DatePickerTile extends StatelessWidget {
                   ? AppColors.primary
                   : AppColors.textMuted),
         ]),
+      ),
+    );
+  }
+}
+
+class _VideoSlotCard extends StatelessWidget {
+  final VideoSlot slot;
+  final VoidCallback onPick;
+  final VoidCallback onRemove;
+
+  const _VideoSlotCard({
+    required this.slot,
+    required this.onPick,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasVideo = !slot.isEmpty;
+    return InkWell(
+      onTap: hasVideo ? null : onPick,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: hasVideo ? AppColors.primaryLight : AppColors.bgPage,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: hasVideo ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                hasVideo
+                    ? Icons.play_circle_outline_rounded
+                    : Icons.video_call_outlined,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                hasVideo ? slot.fileName : 'Chọn video ${slot.slotIndex + 1}',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            if (hasVideo)
+              IconButton(
+                onPressed: onRemove,
+                icon: const Icon(Icons.close_rounded, color: AppColors.error),
+              )
+            else
+              const Icon(Icons.add_rounded, color: AppColors.primary),
+          ],
+        ),
       ),
     );
   }
@@ -2497,6 +2728,7 @@ class _PreviewCard extends StatelessWidget {
   final String    title, typeName, price, address;
   final bool      isFeatured;
   final int       imageCount;
+  final int       videoCount;
 
   const _PreviewCard({
     required this.coverSlot,
@@ -2506,6 +2738,7 @@ class _PreviewCard extends StatelessWidget {
     required this.address,
     required this.isFeatured,
     required this.imageCount,
+    required this.videoCount,
   });
 
   @override
@@ -2666,6 +2899,21 @@ class _PreviewCard extends StatelessWidget {
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600)),
                       ),
+                      if (videoCount > 0) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.play_circle_outline_rounded,
+                                size: 13, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Text('$videoCount video',
+                                style: const TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
