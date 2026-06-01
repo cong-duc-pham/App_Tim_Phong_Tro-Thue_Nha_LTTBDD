@@ -56,6 +56,7 @@ class AppConstants {
   static const String keyPreferenceAreas = 'preference_areas';
   static const String keyPreferenceAmenities = 'preference_amenities';
   static const String keyPreferenceMaxBudget = 'preference_max_budget';
+  static const String keySelectedHomeLocation = 'selected_home_location';
 
   // ─── Routes ──────────────────────────────────────────────────────────────
   static const String routeSplash = '/';
