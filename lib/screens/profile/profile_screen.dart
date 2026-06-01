@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../repositories/listing_repository.dart';
 
 // ─── Model tạm (thay bằng Bloc/Repository sau) ────────────────────────────────
 
@@ -83,6 +84,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final savedFullName = prefs.getString('user_full_name');
       final savedRole = prefs.getString(AppConstants.keyUserRole);
       final isVerifyMain = prefs.getBool('verify_account_main_status') ?? false;
+      var effectiveRole = _normalizeRole(savedRole);
+      var listingsCount = 0;
+      try {
+        final listings = await ListingRepository().getMyListings();
+        listingsCount = listings.length;
+        if (listings.isNotEmpty && effectiveRole != 'admin') {
+          effectiveRole = 'landlord';
+          await prefs.setString(AppConstants.keyUserRole, 'landlord');
+        }
+      } catch (_) {
+        // Giữ role đã lưu nếu backend chưa sẵn sàng.
+      }
 
       if (!mounted) return;
       setState(() {
@@ -94,9 +107,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   : 'Người dùng'),
           email: savedEmail,
           phone: '',
-          role: _normalizeRole(savedRole),
+          role: effectiveRole,
           isVerified: isVerifyMain,
           createdAt: DateTime.now(),
+          listingsCount: listingsCount,
         );
         _isLoggedIn = true;
         _isLoading = false;
@@ -191,6 +205,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     }
 
+    try {
+      final listings = await ListingRepository().getMyListings();
+      if (listings.isNotEmpty && _normalizeRole(userInfo.role) != 'admin') {
+        userInfo = _UserInfo(
+          fullName: userInfo.fullName,
+          email: userInfo.email,
+          phone: userInfo.phone,
+          role: 'landlord',
+          isVerified: userInfo.isVerified,
+          avatarUrl: userInfo.avatarUrl,
+          createdAt: userInfo.createdAt,
+          favoritesCount: userInfo.favoritesCount,
+          listingsCount: listings.length,
+          reviewsCount: userInfo.reviewsCount,
+        );
+        await prefs.setString(AppConstants.keyUserRole, 'landlord');
+      }
+    } catch (_) {
+      // Không chặn profile nếu không tải được danh sách tin.
+    }
+
     if (!mounted) return;
     setState(() {
       _user = userInfo;
@@ -274,7 +309,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   label: 'Tin đăng của tôi',
                   badge:
                       _user.listingsCount > 0 ? '${_user.listingsCount}' : null,
-                  onTap: () {},
+                  onTap: () => context.push(AppConstants.routeMyListings),
                 ),
                 _MenuItem(
                   icon: Icons.receipt_long_outlined,

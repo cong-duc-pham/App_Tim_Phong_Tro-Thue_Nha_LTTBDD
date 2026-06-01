@@ -143,6 +143,14 @@ namespace Backend_API.Services.Implementations
                 PackageInfo    = activePackage == null ? null : new PackageInfoDto
                 {
                     PackageName = activePackage.Package.PackageName,
+                    PackageType = activePackage.Package.PackageType,
+                    Priority = activePackage.Package.Priority,
+                    MaxImages = activePackage.Package.MaxImages,
+                    MaxVideos = activePackage.Package.MaxVideos,
+                    AllowBanner = activePackage.Package.AllowBanner,
+                    BadgeType = activePackage.Package.BadgeType,
+                    HasAnalytics = activePackage.Package.HasAnalytics,
+                    IsHighlighted = activePackage.Package.IsHighlighted,
                     StartDate   = activePackage.StartDate,
                     EndDate     = activePackage.EndDate,
                     IsActive    = activePackage.IsActive == true
