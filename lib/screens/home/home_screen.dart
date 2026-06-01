@@ -1065,7 +1065,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildSearchResultItem(ListingItem item) {
     final saved = _savedIds.contains(item.id);
     return GestureDetector(
-      onTap: () {},
+      onTap: () {
+        HapticFeedback.lightImpact();
+        context.push('/listing/${item.id}');
+      },
       child: Container(
         margin: const EdgeInsets.fromLTRB(AppConstants.paddingH, 0,
             AppConstants.paddingH, AppConstants.spacingSm),
@@ -1658,7 +1661,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildRoomCard(ListingItem item) {
     final saved = _savedIds.contains(item.id);
     return GestureDetector(
-      onTap: () {},
+      onTap: () {
+        HapticFeedback.lightImpact();
+        context.push('/listing/${item.id}');
+      },
       child: Container(
         width: AppConstants.cardWidth,
         decoration: BoxDecoration(
@@ -1782,7 +1788,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildFullCard(ListingItem item) {
     final saved = _savedIds.contains(item.id);
     return GestureDetector(
-      onTap: () {},
+      onTap: () {
+        HapticFeedback.lightImpact();
+        context.push('/listing/${item.id}');
+      },
       child: Container(
         margin: const EdgeInsets.fromLTRB(AppConstants.paddingH, 0,
             AppConstants.paddingH, AppConstants.spacingSm),

@@ -9,7 +9,6 @@ abstract class ListingDetailEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-// Tải chi tiết tin đăng
 class LoadListingDetail extends ListingDetailEvent {
   final int listingId;
   const LoadListingDetail(this.listingId);
@@ -18,7 +17,6 @@ class LoadListingDetail extends ListingDetailEvent {
   List<Object?> get props => [listingId];
 }
 
-// Toggle yêu thích
 class ToggleListingFavorite extends ListingDetailEvent {
   final int listingId;
   const ToggleListingFavorite(this.listingId);

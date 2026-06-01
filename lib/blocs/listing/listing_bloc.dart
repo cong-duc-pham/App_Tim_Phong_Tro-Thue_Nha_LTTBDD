@@ -32,7 +32,7 @@ class ListingDetailBloc extends Bloc<ListingDetailEvent, ListingDetailState> {
     emit(const ListingDetailLoading());
 
     try {
-      // Tải chi tiết listing + reviews song song để nhanh hơn
+      // gọi song song để giảm thời gian chờ
       final results = await Future.wait([
         _listingRepo.getListingById(event.listingId),
         _reviewRepo.getReviews(event.listingId),
@@ -45,16 +45,16 @@ class ListingDetailBloc extends Bloc<ListingDetailEvent, ListingDetailState> {
         int count,
       });
 
-      // Tăng lượt xem (fire-and-forget, không block UI)
+      // tăng view không cần chờ kết quả
       _listingRepo.incrementView(event.listingId);
 
-      // Kiểm tra trạng thái yêu thích — fail silently nếu chưa đăng nhập
+      // kiểm tra đã lưu yêu thích chưa, người chưa đăng nhập thì bỏ qua
       bool isFavorite = false;
       try {
         final favorites = await _favoriteRepo.getFavorites();
         isFavorite = favorites.any((f) => f.listingId == event.listingId);
       } catch (_) {
-        // Người dùng chưa đăng nhập → mặc định không yêu thích
+        // chưa đăng nhập thì isFavorite giữ false
       }
 
       emit(ListingDetailLoaded(
@@ -79,25 +79,16 @@ class ListingDetailBloc extends Bloc<ListingDetailEvent, ListingDetailState> {
     final current = state;
     if (current is! ListingDetailLoaded) return;
 
-    // Optimistic update: đổi trạng thái ngay trên UI
+    // cập nhật UI ngay không cần chờ API (optimistic update)
     final wasLiked = current.isFavorite;
-    emit(current.copyWith(
-      isFavorite: !wasLiked,
-      isFavoriteLoading: true,
-    ));
+    emit(current.copyWith(isFavorite: !wasLiked, isFavoriteLoading: true));
 
     try {
       final newState = await _favoriteRepo.toggleFavorite(event.listingId);
-      emit(current.copyWith(
-        isFavorite: newState,
-        isFavoriteLoading: false,
-      ));
+      emit(current.copyWith(isFavorite: newState, isFavoriteLoading: false));
     } catch (_) {
-      // Rollback về trạng thái cũ nếu API lỗi
-      emit(current.copyWith(
-        isFavorite: wasLiked,
-        isFavoriteLoading: false,
-      ));
+      // API lỗi thì roll back lại trạng thái cũ
+      emit(current.copyWith(isFavorite: wasLiked, isFavoriteLoading: false));
     }
   }
 }
