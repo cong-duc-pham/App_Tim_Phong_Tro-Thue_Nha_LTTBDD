@@ -175,7 +175,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final ListingRepository _listingRepository = ListingRepository();
-  int _navIndex = 0;
   int _activeFilter = 0;
   final List<String> _filters = [
     'Gần đây', 'Theo ngân sách', 'Phòng mới', 'Nuôi thú cưng', 'VIP'
@@ -509,7 +508,6 @@ class _HomeScreenState extends State<HomeScreen> {
               const SliverToBoxAdapter(child: SizedBox(height: 90)),
             ],
           ),
-          Positioned(bottom: 0, left: 0, right: 0, child: _buildBottomNav()),
         ],
       ),
     );
@@ -1219,11 +1217,11 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
     return SizedBox(
-      height: 210,
+      height: 220,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(
-            AppConstants.paddingH, AppConstants.spacingSm, AppConstants.paddingH, 0),
+            AppConstants.paddingH, AppConstants.spacingSm, AppConstants.paddingH, 6),
         itemCount: list.length,
         separatorBuilder: (_, __) => const SizedBox(width: AppConstants.spacingMd),
         itemBuilder: (_, i) => _buildRoomCard(list[i]),
@@ -1526,76 +1524,6 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text(title, style: AppTextStyles.sectionTitle),
           Text(action, style: AppTextStyles.sectionLink),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: AppColors.borderLight))),
-      padding: EdgeInsets.only(
-          top: 10, bottom: MediaQuery.of(context).padding.bottom + 8),
-      child: Row(
-        children: [
-          _NavItem(
-              icon: Icons.home_rounded,
-              label: 'Trang chủ',
-              active: _navIndex == 0,
-              onTap: () => setState(() => _navIndex = 0)),
-          _NavItem(
-              icon: Icons.favorite_border_rounded,
-              label: 'Yêu thích',
-              active: _navIndex == 1,
-              onTap: () {
-                setState(() => _navIndex = 1);
-                context.go(AppConstants.routeFavorites);
-              }),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () async {
-                    final created = await context.push('/listing');
-                    if (created == true) {
-                      _loadListingsFromSql();
-                    }
-                  },
-                  child: Container(
-                    width: AppConstants.navAddBtnSize,
-                    height: AppConstants.navAddBtnSize,
-                    margin: const EdgeInsets.only(bottom: 2),
-                    decoration: const BoxDecoration(
-                        color: AppColors.primary, shape: BoxShape.circle),
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.add_rounded,
-                        color: Colors.white, size: 26),
-                  ),
-                ),
-                const Text('Đăng tin', style: AppTextStyles.navLabel),
-              ],
-            ),
-          ),
-          _NavItem(
-              icon: Icons.chat_bubble_outline_rounded,
-              label: 'Tin nhắn',
-              active: _navIndex == 3,
-              onTap: () {
-                setState(() => _navIndex = 3);
-                context.go(AppConstants.routeChat);
-              }),
-          _NavItem(
-            icon: Icons.person_outline_rounded,
-            label: 'Cá nhân',
-            active: _navIndex == 4,
-            onTap: () {
-              setState(() => _navIndex = 4);
-              context.go(AppConstants.routeProfile);
-            },
-          ),
         ],
       ),
     );
@@ -1987,41 +1915,6 @@ class _IconBtn extends StatelessWidget {
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-  const _NavItem(
-      {required this.icon,
-      required this.label,
-      required this.active,
-      required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon,
-                size: AppConstants.iconLg,
-                color: active ? AppColors.navActive : AppColors.navInactive),
-            const SizedBox(height: 3),
-            Text(label,
-                style: AppTextStyles.navLabel.copyWith(
-                    color: active
-                        ? AppColors.navActive
-                        : AppColors.navInactive)),
-          ],
-        ),
       ),
     );
   }
