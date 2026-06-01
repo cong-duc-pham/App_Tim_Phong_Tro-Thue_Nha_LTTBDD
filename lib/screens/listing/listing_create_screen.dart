@@ -1,5 +1,6 @@
 ﻿import 'dart:io';
 import 'package:dio/dio.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -9,8 +10,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
-import '../../core/constants/app_text_styles.dart';
 import '../../repositories/listing_repository.dart';
+import '../../screens/payment/package_screen.dart';
 import '../../services/post_listing_draft_service.dart';
 
 
@@ -35,6 +36,9 @@ class ImageSlot {
   bool get isCover => slotIndex == 0;
 }
 
+const _mapTileUrlTemplate =
+    'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+
 // ─────────────────────────────────────────────
 // Screen
 // ─────────────────────────────────────────────
@@ -50,6 +54,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
   int _currentStep = 0;
   static const int _totalSteps = 5;
   bool _isSubmitting = false;
+  int? _createdListingIdForVip;
 
   // 6 slot ảnh cố định (slot_index 0-5)
   final List<ImageSlot> _slots =
@@ -185,18 +190,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final created = await _listingRepository.createListing(_buildCreatePayload());
-      final imageUrls = await _uploadSelectedImages(created.listingId);
-      if (imageUrls.isNotEmpty) {
-        await _listingRepository.updateListing(created.listingId, {
-          'image0': imageUrls.length > 0 ? imageUrls[0] : null,
-          'image1': imageUrls.length > 1 ? imageUrls[1] : null,
-          'image2': imageUrls.length > 2 ? imageUrls[2] : null,
-          'image3': imageUrls.length > 3 ? imageUrls[3] : null,
-          'image4': imageUrls.length > 4 ? imageUrls[4] : null,
-          'image5': imageUrls.length > 5 ? imageUrls[5] : null,
-        });
-      }
+      final created = await _listingRepository.createListing(
+        _buildCreatePayload(),
+      );
+      final imageUploadMessage = await _tryUploadImages(created.listingId);
       if (!mounted) return;
 
       PostListingDraftService.clear();
@@ -210,7 +207,19 @@ class _PostListingScreenState extends State<PostListingScreen> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ));
-      context.go(AppConstants.routeHome);
+      if (imageUploadMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(imageUploadMessage),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+      }
+      if (_isFeatured) {
+        setState(() => _createdListingIdForVip = created.listingId);
+      } else {
+        _goAfterCurrentFrame(AppConstants.routeHome);
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -224,6 +233,37 @@ class _PostListingScreenState extends State<PostListingScreen> {
         setState(() => _isSubmitting = false);
       }
     }
+  }
+
+  void _goAfterCurrentFrame(String route) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.go(route);
+    });
+  }
+
+  Future<String?> _tryUploadImages(int listingId) async {
+    try {
+      final imageUrls = await _uploadSelectedImages(listingId).timeout(
+        const Duration(seconds: 45),
+      );
+      if (imageUrls.isEmpty) return null;
+
+      await _listingRepository.updateListing(listingId, {
+        'image0': imageUrls.isNotEmpty ? imageUrls[0] : null,
+        'image1': imageUrls.length > 1 ? imageUrls[1] : null,
+        'image2': imageUrls.length > 2 ? imageUrls[2] : null,
+        'image3': imageUrls.length > 3 ? imageUrls[3] : null,
+        'image4': imageUrls.length > 4 ? imageUrls[4] : null,
+        'image5': imageUrls.length > 5 ? imageUrls[5] : null,
+      }).timeout(const Duration(seconds: 20));
+    } on TimeoutException {
+      return 'Tin đã được tạo, nhưng upload ảnh quá lâu. Bạn vẫn có thể mua gói VIP.';
+    } catch (_) {
+      return 'Tin đã được tạo, nhưng chưa cập nhật được ảnh. Bạn vẫn có thể mua gói VIP.';
+    }
+
+    return null;
   }
 
   String? _validateBeforeSubmit() {
@@ -540,6 +580,11 @@ class _PostListingScreenState extends State<PostListingScreen> {
   // ─────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final vipListingId = _createdListingIdForVip;
+    if (vipListingId != null) {
+      return PackageScreen(listingId: vipListingId);
+    }
+
     return WillPopScope(
       onWillPop: () async {
         if (_currentStep > 0) {
@@ -688,8 +733,8 @@ class _PostListingScreenState extends State<PostListingScreen> {
               }),
               icon: Icons.workspace_premium_outlined,
               activeColor: AppColors.tagHot,
-              title: 'Tin VIP / Nổi bật',
-              subtitle: 'Hiển thị ưu tiên, tiếp cận nhiều người hơn',
+              title: 'Nâng cấp VIP sau khi đăng',
+              subtitle: 'Chọn VIP Tuần, VIP Tháng hoặc Nổi bật 30 ngày',
             ),
           ]),
         ),
@@ -1873,8 +1918,7 @@ class _MapPickerPreview extends StatelessWidget {
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate: _mapTileUrlTemplate,
                     userAgentPackageName: 'com.example.ung_dung_tim_kiem_tro',
                   ),
                   if (_hasLocation)
@@ -2028,7 +2072,7 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: _mapTileUrlTemplate,
                 userAgentPackageName: 'com.example.ung_dung_tim_kiem_tro',
               ),
               MarkerLayer(
