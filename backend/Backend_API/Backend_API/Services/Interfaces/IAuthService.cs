@@ -18,5 +18,7 @@ namespace Backend_API.Services.Interfaces
         Task RequestPasswordResetOtpAsync(ForgotPasswordRequestDto dto);
 
         Task ResetPasswordWithOtpAsync(ResetPasswordWithOtpRequestDto dto);
+
+        Task ChangePasswordAsync(long userId, ChangePasswordRequestDto dto);
     }
 }
