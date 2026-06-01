@@ -1,4 +1,5 @@
 ﻿import 'dart:io';
+import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -8,9 +9,12 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
+import '../../models/post_package.dart';
 import '../../repositories/listing_repository.dart';
+import '../../repositories/package_repository.dart';
 import '../../screens/payment/package_screen.dart';
 import '../../services/post_listing_draft_service.dart';
 
@@ -50,6 +54,7 @@ class PostListingScreen extends StatefulWidget {
 
 class _PostListingScreenState extends State<PostListingScreen> {
   final ListingRepository _listingRepository = ListingRepository();
+  final PackageRepository _packageRepository = PackageRepository();
   final ImagePicker _imagePicker = ImagePicker();
   int _currentStep = 0;
   static const int _totalSteps = 5;
@@ -76,8 +81,11 @@ class _PostListingScreenState extends State<PostListingScreen> {
   final _parkingCtrl      = TextEditingController();
 
   bool      _allowPet   = false;
-  bool      _isFeatured = false;
   DateTime? _availableFrom;
+  List<PostPackage> _packages = [];
+  PostPackage? _selectedPackage;
+  bool _isLoadingPackages = false;
+  String? _packageError;
 
   String? _selectedProvince;
   String? _selectedDistrict;
@@ -108,6 +116,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
   @override
   void initState() {
     super.initState();
+    _loadPackages();
     for (final c in [
       _titleCtrl, _descCtrl, _priceCtrl, _areaCtrl, _floorCtrl,
       _totalFloorsCtrl, _maxOccupantsCtrl, _streetCtrl,
@@ -140,6 +149,17 @@ class _PostListingScreenState extends State<PostListingScreen> {
   void _markDraftChanged() => PostListingDraftService.markDirty();
 
   Future<void> _pickImage(int idx) async {
+    if (idx >= _maxSelectableImages) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+          'Gói ${_effectivePackage?.packageName ?? 'hiện tại'} chỉ cho phép tối đa $_maxSelectableImages ảnh.',
+        ),
+        backgroundColor: AppColors.warning,
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
+
     final picked = await _imagePicker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 85,
@@ -172,6 +192,75 @@ class _PostListingScreenState extends State<PostListingScreen> {
   });
 
   int get _filledCount => _slots.where((s) => !s.isEmpty).length;
+  PostPackage? get _effectivePackage =>
+      _selectedPackage ??
+      (_packages.where((package) => package.isFree).isNotEmpty
+          ? _packages.firstWhere((package) => package.isFree)
+          : null);
+  bool get _shouldBuyPackage =>
+      _effectivePackage != null && !_effectivePackage!.isFree;
+  int get _maxSelectableImages {
+    final configuredLimit = _effectivePackage?.maxImages ?? 1;
+    return math.max(1, math.min(configuredLimit, _slots.length));
+  }
+  Future<void> _loadPackages() async {
+    setState(() {
+      _isLoadingPackages = true;
+      _packageError = null;
+    });
+
+    try {
+      final packages = await _packageRepository.getPackages();
+      if (!mounted) return;
+      setState(() {
+        _packages = packages;
+        _selectedPackage = packages.where((package) => package.isFree).isNotEmpty
+            ? packages.firstWhere((package) => package.isFree)
+            : (packages.isNotEmpty ? packages.first : null);
+        _isLoadingPackages = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _packageError = _cleanError(e);
+        _isLoadingPackages = false;
+      });
+    }
+  }
+
+  void _selectPackage(PostPackage package) {
+    setState(() {
+      _selectedPackage = package;
+      _trimImagesToPackageLimit(package);
+      _markDraftChanged();
+    });
+  }
+
+  void _trimImagesToPackageLimit(PostPackage package) {
+    final maxImages = math.max(1, math.min(package.maxImages, _slots.length));
+    for (var i = maxImages; i < _slots.length; i++) {
+      _slots[i].file = null;
+      _slots[i].networkUrl = null;
+    }
+  }
+
+  String _cleanError(Object e) {
+    final message = e.toString();
+    return message.startsWith('Exception: ')
+        ? message.substring('Exception: '.length)
+        : message;
+  }
+
+  String _formatPackagePrice(double price) {
+    if (price <= 0) return 'Miễn phí';
+    final raw = price.toInt().toString();
+    final buffer = StringBuffer();
+    for (var i = 0; i < raw.length; i++) {
+      if (i > 0 && (raw.length - i) % 3 == 0) buffer.write('.');
+      buffer.write(raw[i]);
+    }
+    return '${buffer.toString()}đ';
+  }
 
   Future<void> _submit() async {
     if (_isSubmitting) return;
@@ -193,6 +282,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
       final created = await _listingRepository.createListing(
         _buildCreatePayload(),
       );
+      await _markCurrentUserAsLandlord();
       final imageUploadMessage = await _tryUploadImages(created.listingId);
       if (!mounted) return;
 
@@ -215,7 +305,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ));
       }
-      if (_isFeatured) {
+      if (_shouldBuyPackage) {
         setState(() => _createdListingIdForVip = created.listingId);
       } else {
         _goAfterCurrentFrame(AppConstants.routeHome);
@@ -240,6 +330,11 @@ class _PostListingScreenState extends State<PostListingScreen> {
       if (!mounted) return;
       context.go(route);
     });
+  }
+
+  Future<void> _markCurrentUserAsLandlord() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(AppConstants.keyUserRole, 'landlord');
   }
 
   Future<String?> _tryUploadImages(int listingId) async {
@@ -285,6 +380,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
       case 1:
         if (_slots[0].file == null && _slots[0].networkUrl == null) {
           return 'Vui lòng thêm ảnh bìa để admin có thể duyệt tin.';
+        }
+        if (_filledCount > _maxSelectableImages) {
+          return 'Gói đã chọn chỉ cho phép tối đa $_maxSelectableImages ảnh.';
         }
         return null;
       case 2:
@@ -356,8 +454,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
       _prev();
       return;
     }
+    final router = GoRouter.of(context);
     if (await _confirmDiscardDraft() && mounted) {
-      Navigator.of(context).pop();
+      router.go(AppConstants.routeHome);
     }
   }
 
@@ -386,19 +485,19 @@ class _PostListingScreenState extends State<PostListingScreen> {
           ? null
           : _availableFrom!.toIso8601String().split('T').first,
       'amenityIds': <int>[],
-      'image0': _slots[0].networkUrl,
-      'image1': _slots[1].networkUrl,
-      'image2': _slots[2].networkUrl,
-      'image3': _slots[3].networkUrl,
-      'image4': _slots[4].networkUrl,
-      'image5': _slots[5].networkUrl,
+      'image0': _maxSelectableImages > 0 ? _slots[0].networkUrl : null,
+      'image1': _maxSelectableImages > 1 ? _slots[1].networkUrl : null,
+      'image2': _maxSelectableImages > 2 ? _slots[2].networkUrl : null,
+      'image3': _maxSelectableImages > 3 ? _slots[3].networkUrl : null,
+      'image4': _maxSelectableImages > 4 ? _slots[4].networkUrl : null,
+      'image5': _maxSelectableImages > 5 ? _slots[5].networkUrl : null,
     };
   }
 
   Future<List<String>> _uploadSelectedImages(int listingId) async {
     final urls = <String>[];
 
-    for (final slot in _slots) {
+    for (final slot in _slots.take(_maxSelectableImages)) {
       if (slot.file == null) {
         if (slot.networkUrl != null) {
           urls.add(slot.networkUrl!);
@@ -582,7 +681,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
   Widget build(BuildContext context) {
     final vipListingId = _createdListingIdForVip;
     if (vipListingId != null) {
-      return PackageScreen(listingId: vipListingId);
+      return PackageScreen(
+        listingId: vipListingId,
+        initialPackageId: _effectivePackage?.packageId,
+      );
     }
 
     return WillPopScope(
@@ -591,7 +693,12 @@ class _PostListingScreenState extends State<PostListingScreen> {
           _prev();
           return false;
         }
-        return _confirmDiscardDraft();
+        final router = GoRouter.of(context);
+        final shouldLeave = await _confirmDiscardDraft();
+        if (shouldLeave && mounted) {
+          router.go(AppConstants.routeHome);
+        }
+        return false;
       },
       child: Scaffold(
         backgroundColor: AppColors.bgPage,
@@ -724,26 +831,77 @@ class _PostListingScreenState extends State<PostListingScreen> {
               maxLines: 4,
               maxLength: 2000,
             ),
-            const SizedBox(height: 14),
-            _ToggleTile(
-              value: _isFeatured,
-              onChanged: (v) => setState(() {
-                _isFeatured = v;
-                _markDraftChanged();
-              }),
-              icon: Icons.workspace_premium_outlined,
-              activeColor: AppColors.tagHot,
-              title: 'Nâng cấp VIP sau khi đăng',
-              subtitle: 'Chọn VIP Tuần, VIP Tháng hoặc Nổi bật 30 ngày',
-            ),
           ]),
         ),
+        const SizedBox(height: 14),
+        _buildPackageSelector(),
       ],
+    );
+  }
+
+  Widget _buildPackageSelector() {
+    if (_isLoadingPackages) {
+      return const _SectionCard(
+        title: 'Gói đăng tin',
+        icon: Icons.workspace_premium_outlined,
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: CircularProgressIndicator(color: AppColors.primary),
+          ),
+        ),
+      );
+    }
+
+    if (_packageError != null) {
+      return _SectionCard(
+        title: 'Gói đăng tin',
+        icon: Icons.workspace_premium_outlined,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _packageError!,
+              style: const TextStyle(color: AppColors.error, fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _loadPackages,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Tải lại gói'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return _SectionCard(
+      title: 'Gói đăng tin',
+      icon: Icons.workspace_premium_outlined,
+      child: Column(
+        children: _packages
+            .map(
+              (package) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _PackageChoiceTile(
+                  package: package,
+                  selected: _effectivePackage?.packageId == package.packageId,
+                  imageLimit:
+                      math.max(1, math.min(package.maxImages, _slots.length)),
+                  priceLabel: _formatPackagePrice(package.price),
+                  onTap: () => _selectPackage(package),
+                ),
+              ),
+            )
+            .toList(),
+      ),
     );
   }
 
   // ── Step 2: ẢNH PHÒNG ────────────────────────
   Widget _buildStepImages() {
+    final maxImages = _maxSelectableImages;
+    final packageName = _effectivePackage?.packageName ?? 'gói hiện tại';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -768,21 +926,21 @@ class _PostListingScreenState extends State<PostListingScreen> {
                     color: AppColors.primary, size: 22),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Ảnh phòng - tối đa 6 ảnh',
-                        style: TextStyle(
+                    Text('Ảnh phòng - tối đa $maxImages ảnh',
+                        style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 14,
                             color: AppColors.textPrimary)),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      '- Ảnh đầu tiên (Slot 1) là ẢNH BÌA hiển thị trên danh sách\n'
-                          '- Định dạng JPG/PNG, tối đa 5 MB mỗi ảnh\n'
-                          '- Nhấn giữ để đặt ảnh phụ thành ảnh bìa',
-                      style: TextStyle(
+                      '- Gói $packageName cho phép $maxImages ảnh trong bản hiện tại\n'
+                      '- Ảnh đầu tiên là ảnh bìa hiển thị trên danh sách\n'
+                      '- Định dạng JPG/PNG, tối đa 5 MB mỗi ảnh',
+                      style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,
                           height: 1.6),
@@ -814,7 +972,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                '$_filledCount / 6 ảnh',
+                '$_filledCount / $maxImages ảnh',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -837,26 +995,26 @@ class _PostListingScreenState extends State<PostListingScreen> {
         ),
         const SizedBox(height: 10),
 
-        // Slot 1-5: Ảnh phụ (grid 2 cột)
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 1.2,
+        if (maxImages > 1)
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 1.2,
+            ),
+            itemCount: maxImages - 1,
+            itemBuilder: (_, i) => _ImageSlotCard(
+              slot: _slots[i + 1],
+              isCoverLayout: false,
+              onPick: () => _pickImage(i + 1),
+              onRemove: () => _removeImage(i + 1),
+              onMakeCover:
+                  _slots[i + 1].isEmpty ? null : () => _swapSlots(0, i + 1),
+            ),
           ),
-          itemCount: 5,
-          itemBuilder: (_, i) => _ImageSlotCard(
-            slot: _slots[i + 1],
-            isCoverLayout: false,
-            onPick: () => _pickImage(i + 1),
-            onRemove: () => _removeImage(i + 1),
-            onMakeCover:
-            _slots[i + 1].isEmpty ? null : () => _swapSlots(0, i + 1),
-          ),
-        ),
         const SizedBox(height: 14),
 
         // Tip
@@ -1085,7 +1243,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
           address: _streetCtrl.text.isEmpty
               ? 'Chưa nhập địa chỉ'
               : _streetCtrl.text,
-          isFeatured: _isFeatured,
+          isFeatured: _shouldBuyPackage,
           imageCount: _filledCount,
         ),
       ],
@@ -1590,6 +1748,96 @@ class _SectionCard extends StatelessWidget {
           Divider(height: 1, color: AppColors.border),
           Padding(padding: const EdgeInsets.all(14), child: child),
         ],
+      ),
+    );
+  }
+}
+
+class _PackageChoiceTile extends StatelessWidget {
+  final PostPackage package;
+  final bool selected;
+  final int imageLimit;
+  final String priceLabel;
+  final VoidCallback onTap;
+
+  const _PackageChoiceTile({
+    required this.package,
+    required this.selected,
+    required this.imageLimit,
+    required this.priceLabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = package.isFeatured
+        ? AppColors.tagHot
+        : package.isVip
+            ? AppColors.primary
+            : AppColors.textSecondary;
+    final videoLabel = package.maxVideos > 0
+        ? '${package.maxVideos} video'
+        : 'Không video';
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: 0.08) : AppColors.bgPage,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? accent : AppColors.borderLight,
+            width: selected ? 1.6 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              selected
+                  ? Icons.radio_button_checked_rounded
+                  : Icons.radio_button_off_rounded,
+              color: accent,
+              size: 22,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    package.packageName,
+                    style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$imageLimit ảnh trong app hiện tại • $videoLabel • ${package.durationDays} ngày',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              priceLabel,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

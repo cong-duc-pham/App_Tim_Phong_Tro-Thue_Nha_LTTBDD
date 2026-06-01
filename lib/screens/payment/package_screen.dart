@@ -7,9 +7,10 @@ import '../../models/post_package.dart';
 import '../../repositories/package_repository.dart';
 
 class PackageScreen extends StatefulWidget {
-  const PackageScreen({super.key, this.listingId});
+  const PackageScreen({super.key, this.listingId, this.initialPackageId});
 
   final int? listingId;
+  final int? initialPackageId;
 
   @override
   State<PackageScreen> createState() => _PackageScreenState();
@@ -39,7 +40,7 @@ class _PackageScreenState extends State<PackageScreen> {
       final packages = await _repository.getPackages();
       if (!mounted) return;
       setState(() {
-        _packages = packages;
+        _packages = _sortPackages(packages);
         _isLoading = false;
       });
     } catch (e) {
@@ -49,6 +50,16 @@ class _PackageScreenState extends State<PackageScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  List<PostPackage> _sortPackages(List<PostPackage> packages) {
+    final selectedId = widget.initialPackageId;
+    if (selectedId == null) return packages;
+    return [...packages]..sort((a, b) {
+        if (a.packageId == selectedId) return -1;
+        if (b.packageId == selectedId) return 1;
+        return a.price.compareTo(b.price);
+      });
   }
 
   Future<void> _purchase(PostPackage package) async {
@@ -253,6 +264,7 @@ class _PackageScreenState extends State<PackageScreen> {
             isPopular: package.packageType == 'vip' &&
                 package.durationDays >= 30 &&
                 !package.isFeatured,
+            isSelected: package.packageId == widget.initialPackageId,
             isPurchasing:
                 _purchasingPackageId == package.packageId ||
                 _isSimulatingPayment,
@@ -269,6 +281,7 @@ class _PackagePlanCard extends StatelessWidget {
     required this.package,
     required this.priceLabel,
     required this.isPopular,
+    required this.isSelected,
     required this.isPurchasing,
     required this.onPressed,
   });
@@ -276,6 +289,7 @@ class _PackagePlanCard extends StatelessWidget {
   final PostPackage package;
   final String priceLabel;
   final bool isPopular;
+  final bool isSelected;
   final bool isPurchasing;
   final VoidCallback onPressed;
 
@@ -297,8 +311,12 @@ class _PackagePlanCard extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(AppConstants.radiusLg),
             border: Border.all(
-              color: isPopular ? AppColors.primary : AppColors.borderLight,
-              width: isPopular ? 1.7 : 1,
+              color: isSelected
+                  ? accent
+                  : isPopular
+                      ? AppColors.primary
+                      : AppColors.borderLight,
+              width: isSelected || isPopular ? 1.7 : 1,
             ),
             boxShadow: [
               BoxShadow(
@@ -326,6 +344,11 @@ class _PackagePlanCard extends StatelessWidget {
                   if (package.isFeatured)
                     const Icon(Icons.workspace_premium_rounded,
                         color: AppColors.tagHot),
+                  if (isSelected) ...[
+                    const SizedBox(width: 8),
+                    const Icon(Icons.check_circle_rounded,
+                        color: AppColors.success),
+                  ],
                 ],
               ),
               const SizedBox(height: 10),
