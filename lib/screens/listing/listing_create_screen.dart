@@ -1,11 +1,13 @@
 ﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../repositories/listing_repository.dart';
+import '../../services/post_listing_draft_service.dart';
 
 
 
@@ -92,6 +94,18 @@ class _PostListingScreenState extends State<PostListingScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    for (final c in [
+      _titleCtrl, _descCtrl, _priceCtrl, _areaCtrl, _floorCtrl,
+      _totalFloorsCtrl, _maxOccupantsCtrl, _streetCtrl,
+      _electricCtrl, _waterCtrl, _internetCtrl, _parkingCtrl,
+    ]) {
+      c.addListener(_markDraftChanged);
+    }
+  }
+
+  @override
   void dispose() {
     for (final c in [
       _titleCtrl, _descCtrl, _priceCtrl, _areaCtrl, _floorCtrl,
@@ -100,12 +114,18 @@ class _PostListingScreenState extends State<PostListingScreen> {
     ]) {
       c.dispose();
     }
+    PostListingDraftService.clear();
     super.dispose();
   }
 
   void _goTo(int s) => setState(() => _currentStep = s);
-  void _next() { if (_currentStep < _totalSteps - 1) _goTo(_currentStep + 1); }
+  void _next() {
+    if (!_validateStepAndNotify(_currentStep)) return;
+    if (_currentStep < _totalSteps - 1) _goTo(_currentStep + 1);
+  }
   void _prev() { if (_currentStep > 0) _goTo(_currentStep - 1); }
+
+  void _markDraftChanged() => PostListingDraftService.markDirty();
 
   Future<void> _pickImage(int idx) async {
     final picked = await _imagePicker.pickImage(
@@ -120,11 +140,13 @@ class _PostListingScreenState extends State<PostListingScreen> {
       _slots[idx].file = File(picked.path);
       _slots[idx].networkUrl = null;
     });
+    _markDraftChanged();
   }
 
   void _removeImage(int idx) => setState(() {
     _slots[idx].file       = null;
     _slots[idx].networkUrl = null;
+    _markDraftChanged();
   });
 
   void _swapSlots(int a, int b) => setState(() {
@@ -134,6 +156,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
     _slots[a].networkUrl = _slots[b].networkUrl;
     _slots[b].file       = tf;
     _slots[b].networkUrl = tu;
+    _markDraftChanged();
   });
 
   int get _filledCount => _slots.where((s) => !s.isEmpty).length;
@@ -169,6 +192,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
       }
       if (!mounted) return;
 
+      PostListingDraftService.clear();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: const Row(children: [
           Icon(Icons.check_circle, color: Colors.white),
@@ -179,7 +203,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ));
-      Navigator.of(context).pop(true);
+      context.go(AppConstants.routeHome);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -196,17 +220,98 @@ class _PostListingScreenState extends State<PostListingScreen> {
   }
 
   String? _validateBeforeSubmit() {
-    if (_selectedType == null) return 'Vui lòng chọn loại hình phòng.';
-    if (_titleCtrl.text.trim().isEmpty) return 'Vui lòng nhập tiêu đề tin đăng.';
-    if (_slots[0].file == null && _slots[0].networkUrl == null) {
-      return 'Vui lòng thêm ảnh bìa để admin có thể duyệt tin.';
+    for (var step = 0; step < _totalSteps; step++) {
+      final message = _validateStep(step);
+      if (message != null) return message;
     }
-    if (_streetCtrl.text.trim().isEmpty) return 'Vui lòng nhập địa chỉ chi tiết.';
-    final area = _parseDecimal(_areaCtrl.text);
-    if (area == null || area <= 0) return 'Vui lòng nhập diện tích hợp lệ.';
-    final price = _parseDecimal(_priceCtrl.text);
-    if (price == null || price <= 0) return 'Vui lòng nhập giá thuê hợp lệ.';
     return null;
+  }
+
+  String? _validateStep(int step) {
+    switch (step) {
+      case 0:
+        if (_selectedType == null) return 'Vui lòng chọn loại hình phòng.';
+        if (_titleCtrl.text.trim().isEmpty) {
+          return 'Vui lòng nhập tiêu đề tin đăng.';
+        }
+        return null;
+      case 1:
+        if (_slots[0].file == null && _slots[0].networkUrl == null) {
+          return 'Vui lòng thêm ảnh bìa để admin có thể duyệt tin.';
+        }
+        return null;
+      case 2:
+        if (_selectedProvince == null) return 'Vui lòng chọn tỉnh / thành phố.';
+        if (_selectedDistrict == null) return 'Vui lòng chọn quận / huyện.';
+        if (_selectedWard == null) return 'Vui lòng chọn phường / xã.';
+        if (_streetCtrl.text.trim().isEmpty) {
+          return 'Vui lòng nhập địa chỉ chi tiết.';
+        }
+        return null;
+      case 3:
+        final area = _parseDecimal(_areaCtrl.text);
+        if (area == null || area <= 0) return 'Vui lòng nhập diện tích hợp lệ.';
+        final maxOccupants = _parseInt(_maxOccupantsCtrl.text);
+        if (maxOccupants == null || maxOccupants <= 0) {
+          return 'Vui lòng nhập số người tối đa hợp lệ.';
+        }
+        return null;
+      case 4:
+        final price = _parseDecimal(_priceCtrl.text);
+        if (price == null || price <= 0) return 'Vui lòng nhập giá thuê hợp lệ.';
+        return null;
+    }
+    return null;
+  }
+
+  bool _validateStepAndNotify(int step) {
+    final message = _validateStep(step);
+    if (message == null) return true;
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      backgroundColor: AppColors.error,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
+    return false;
+  }
+
+  Future<bool> _confirmDiscardDraft() async {
+    if (!PostListingDraftService.hasDraft.value) return true;
+
+    final shouldDiscard = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Bỏ thông tin đang nhập?'),
+        content: const Text(
+          'Bạn đang nhập dở tin đăng. Nếu rời khỏi trang này, thông tin chưa đăng sẽ bị mất.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Ở lại'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Rời trang'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDiscard == true) PostListingDraftService.clear();
+    return shouldDiscard == true;
+  }
+
+  Future<void> _handleBack() async {
+    if (_currentStep > 0) {
+      _prev();
+      return;
+    }
+    if (await _confirmDiscardDraft() && mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   Map<String, dynamic> _buildCreatePayload() {
@@ -288,61 +393,64 @@ class _PostListingScreenState extends State<PostListingScreen> {
   // ─────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgPage,
-      body: Column(children: [
-        _Header(
-          step: _currentStep,
-          total: _totalSteps,
-          title: _stepTitles[_currentStep],
-          onBack: () {
-            if (_currentStep > 0) {
-              _prev();
-            } else {
-              Navigator.of(context).pop();
-            }
-          },
-        ),
-        _StepBar(current: _currentStep, total: _totalSteps),
-        Expanded(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 280),
-            transitionBuilder: (child, anim) => FadeTransition(
-              opacity: anim,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0.04, 0),
-                  end: Offset.zero,
-                ).animate(anim),
-                child: child,
+    return WillPopScope(
+      onWillPop: () async {
+        if (_currentStep > 0) {
+          _prev();
+          return false;
+        }
+        return _confirmDiscardDraft();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bgPage,
+        body: Column(children: [
+          _Header(
+            step: _currentStep,
+            total: _totalSteps,
+            title: _stepTitles[_currentStep],
+            onBack: _handleBack,
+          ),
+          _StepBar(current: _currentStep, total: _totalSteps),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              transitionBuilder: (child, anim) => FadeTransition(
+                opacity: anim,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.04, 0),
+                    end: Offset.zero,
+                  ).animate(anim),
+                  child: child,
+                ),
               ),
-            ),
-            child: KeyedSubtree(
-              key: ValueKey(_currentStep),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: [
-                  _buildStep1(),
-                  _buildStepImages(),
-                  _buildStep3(),
-                  _buildStep4(),
-                  _buildStep5(),
-                ][_currentStep],
+              child: KeyedSubtree(
+                key: ValueKey(_currentStep),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: [
+                    _buildStep1(),
+                    _buildStepImages(),
+                    _buildStep3(),
+                    _buildStep4(),
+                    _buildStep5(),
+                  ][_currentStep],
+                ),
               ),
             ),
           ),
-        ),
-        _BottomNav(
-          currentStep: _currentStep,
-          totalSteps: _totalSteps,
-          isSubmitting: _isSubmitting,
-          onNext: _next,
-          onPrev: _prev,
-          onSubmit: () {
-            _submit();
-          },
-        ),
-      ]),
+          _BottomNav(
+            currentStep: _currentStep,
+            totalSteps: _totalSteps,
+            isSubmitting: _isSubmitting,
+            onNext: _next,
+            onPrev: _prev,
+            onSubmit: () {
+              _submit();
+            },
+          ),
+        ]),
+      ),
     );
   }
 
@@ -364,7 +472,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
             children: _roomTypes.map((t) {
               final sel = _selectedType?.id == t.id;
               return GestureDetector(
-                onTap: () => setState(() => _selectedType = t),
+                onTap: () => setState(() {
+                  _selectedType = t;
+                  _markDraftChanged();
+                }),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   decoration: BoxDecoration(
@@ -424,7 +535,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
             const SizedBox(height: 14),
             _ToggleTile(
               value: _isFeatured,
-              onChanged: (v) => setState(() => _isFeatured = v),
+              onChanged: (v) => setState(() {
+                _isFeatured = v;
+                _markDraftChanged();
+              }),
               icon: Icons.workspace_premium_outlined,
               activeColor: AppColors.tagHot,
               title: 'Tin VIP / Nổi bật',
@@ -594,6 +708,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
                 _selectedProvince = v;
                 _selectedDistrict = null;
                 _selectedWard     = null;
+                _markDraftChanged();
               }),
             ),
             const SizedBox(height: 14),
@@ -605,6 +720,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
               onChanged: (v) => setState(() {
                 _selectedDistrict = v;
                 _selectedWard     = null;
+                _markDraftChanged();
               }),
             ),
             const SizedBox(height: 14),
@@ -613,7 +729,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
               value: _selectedWard,
               items: _wards,
               enabled: _selectedDistrict != null,
-              onChanged: (v) => setState(() => _selectedWard = v),
+              onChanged: (v) => setState(() {
+                _selectedWard = v;
+                _markDraftChanged();
+              }),
             ),
             const SizedBox(height: 14),
             _InputField(
@@ -679,7 +798,12 @@ class _PostListingScreenState extends State<PostListingScreen> {
                   child: child!,
                 ),
               );
-              if (p != null) setState(() => _availableFrom = p);
+              if (p != null) {
+                setState(() {
+                  _availableFrom = p;
+                  _markDraftChanged();
+                });
+              }
             },
           ),
         ),
@@ -689,7 +813,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
           icon: Icons.policy_outlined,
           child: _ToggleTile(
             value: _allowPet,
-            onChanged: (v) => setState(() => _allowPet = v),
+            onChanged: (v) => setState(() {
+              _allowPet = v;
+              _markDraftChanged();
+            }),
             icon: Icons.pets_outlined,
             activeColor: AppColors.success,
             title: 'Cho phép nuôi thú cưng',
