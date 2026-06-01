@@ -18,6 +18,11 @@ namespace Backend_API.Controllers.API
         {
             ".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"
         };
+        private static readonly HashSet<string> AllowedVideoExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".mp4", ".mov", ".m4v", ".webm"
+        };
+        private const int MaxListingVideos = 3;
 
         private readonly PhongTroDbContext _context;
         private readonly CloudinaryStorageHelper _storageHelper;
@@ -144,6 +149,112 @@ namespace Backend_API.Controllers.API
                     relativeUrl,
                     fileName,
                     uploadType = safeUploadType
+                }
+            });
+        }
+
+        [HttpPost("listings/{listingId:long}/videos")]
+        [RequestSizeLimit(100 * 1024 * 1024)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UploadListingVideo(long listingId, IFormFile file)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return Unauthorized(new { success = false, message = "Chua dang nhap." });
+            }
+
+            var listing = await _context.Listings
+                .FirstOrDefaultAsync(l => l.ListingId == listingId);
+
+            if (listing == null)
+            {
+                return NotFound(new { success = false, message = "Khong tim thay tin dang." });
+            }
+
+            if (listing.LandlordId != userId.Value)
+            {
+                return Forbid();
+            }
+
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { success = false, message = "Vui long chon video." });
+            }
+
+            if (file.Length > 100 * 1024 * 1024)
+            {
+                return BadRequest(new { success = false, message = "Video khong duoc vuot qua 100 MB." });
+            }
+
+            if (!TryResolveVideoExtension(file.FileName, file.ContentType, out var extension))
+            {
+                return BadRequest(new { success = false, message = "Dinh dang video khong hop le." });
+            }
+
+            var existingVideoCount = await _context.ListingVideos
+                .CountAsync(v => v.ListingId == listingId);
+            if (existingVideoCount >= MaxListingVideos)
+            {
+                return BadRequest(new { success = false, message = $"Moi tin chi duoc upload toi da {MaxListingVideos} video." });
+            }
+
+            var fileName = $"{Guid.NewGuid():N}{extension}";
+            var webRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            var relativeDirectory = Path.Combine("uploads", "listings", listingId.ToString(), "videos");
+            var physicalDirectory = Path.Combine(webRoot, relativeDirectory);
+            Directory.CreateDirectory(physicalDirectory);
+
+            var physicalPath = Path.Combine(physicalDirectory, fileName);
+            await using (var stream = System.IO.File.Create(physicalPath))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var relativeUrl = $"/uploads/listings/{listingId}/videos/{fileName}";
+            var absoluteUrl = $"{Request.Scheme}://{Request.Host}{relativeUrl}";
+            var publicId = $"uploads/listings/{listingId}/videos/{Path.GetFileNameWithoutExtension(fileName)}";
+
+            await _context.ListingVideos.AddAsync(new ListingVideo
+            {
+                ListingId = listingId,
+                CloudinaryUrl = absoluteUrl,
+                CloudinaryPublicId = publicId,
+                FileSizeKb = (int)Math.Ceiling(file.Length / 1024d),
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _context.CloudinaryFiles.AddAsync(new CloudinaryFile
+            {
+                UserId = userId.Value,
+                PublicId = publicId,
+                SecureUrl = absoluteUrl,
+                DeliveryUrl = absoluteUrl,
+                ResourceType = "video",
+                Format = extension.TrimStart('.').ToLowerInvariant(),
+                FileSizeKb = (int)Math.Ceiling(file.Length / 1024d),
+                Folder = $"uploads/listings/{listingId}/videos",
+                RefType = "listing_video",
+                RefId = listingId,
+                IsActive = true,
+                UploadStatus = "uploaded",
+                CreatedAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
+                    url = absoluteUrl,
+                    relativeUrl,
+                    fileName
                 }
             });
         }
@@ -366,6 +477,42 @@ namespace Backend_API.Controllers.API
                 "image/webp" => ".webp",
                 "image/gif" => ".gif",
                 "image/bmp" => ".bmp",
+                _ => null
+            };
+        }
+
+        private static bool TryResolveVideoExtension(string fileName, string? contentType, out string extension)
+        {
+            extension = GetSafeExtension(fileName);
+
+            if (!string.IsNullOrEmpty(extension) && AllowedVideoExtensions.Contains(extension))
+            {
+                return true;
+            }
+
+            var mapped = MapVideoExtensionFromContentType(contentType);
+            if (!string.IsNullOrEmpty(mapped))
+            {
+                extension = mapped;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static string? MapVideoExtensionFromContentType(string? contentType)
+        {
+            if (string.IsNullOrWhiteSpace(contentType))
+            {
+                return null;
+            }
+
+            return contentType.Trim().ToLowerInvariant() switch
+            {
+                "video/mp4" => ".mp4",
+                "video/quicktime" => ".mov",
+                "video/webm" => ".webm",
+                "video/x-m4v" => ".m4v",
                 _ => null
             };
         }

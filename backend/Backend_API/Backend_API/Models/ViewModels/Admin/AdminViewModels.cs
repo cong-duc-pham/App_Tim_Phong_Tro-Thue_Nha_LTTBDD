@@ -58,6 +58,7 @@ public class AdminListingManagementViewModel
 
 public class AdminListingDetailViewModel
 {
+    public bool IsManagementContext { get; set; }
     public long ListingId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
@@ -91,7 +92,39 @@ public class AdminListingDetailViewModel
     public string? LandlordPhone { get; set; }
     public string? LandlordFirebaseUid { get; set; }
     public List<string> ImageUrls { get; set; } = new();
+    public List<AdminListingVideoViewModel> Videos { get; set; } = new();
     public List<string> Amenities { get; set; } = new();
+    public List<AdminListingPackageViewModel> Packages { get; set; } = new();
+}
+
+public class AdminListingVideoViewModel
+{
+    public long VideoId { get; set; }
+    public string Url { get; set; } = string.Empty;
+    public string? ThumbnailUrl { get; set; }
+    public int? DurationSec { get; set; }
+    public int? FileSizeKb { get; set; }
+    public DateTime? CreatedAt { get; set; }
+}
+
+public class AdminListingPackageViewModel
+{
+    public string PackageName { get; set; } = string.Empty;
+    public string PackageType { get; set; } = string.Empty;
+    public decimal Price { get; set; }
+    public int Priority { get; set; }
+    public int MaxImages { get; set; }
+    public int MaxVideos { get; set; }
+    public bool AllowBanner { get; set; }
+    public string? BadgeType { get; set; }
+    public bool HasAnalytics { get; set; }
+    public bool IsHighlighted { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    public long? PaymentId { get; set; }
+    public string? PaymentStatus { get; set; }
+    public DateTime? PaidAt { get; set; }
 }
 
 public class AdminReportItemViewModel

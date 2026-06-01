@@ -174,6 +174,42 @@ class ListingRepository {
     }
   }
 
+  Future<String> uploadListingVideo({
+    required int listingId,
+    required String filePath,
+  }) async {
+    try {
+      final fileName = filePath.split(RegExp(r'[\\/]')).last;
+
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(filePath, filename: fileName),
+      });
+
+      final response = await _authorizedRequest<Map<String, dynamic>>(
+        (accessToken) => _apiService.dio.post<Map<String, dynamic>>(
+          '/storage/listings/$listingId/videos',
+          data: formData,
+          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+        ),
+      );
+
+      final body = response.data ?? {};
+      final data = body['data'] ?? body['Data'];
+      if (data is! Map) {
+        throw Exception('Backend khong tra ve URL video.');
+      }
+
+      final url = data['url'] ?? data['Url'];
+      if (url is! String || url.isEmpty) {
+        throw Exception('URL video khong hop le.');
+      }
+
+      return url;
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
   Future<Response<T>> _authorizedRequest<T>(
     Future<Response<T>> Function(String accessToken) request,
   ) async {
