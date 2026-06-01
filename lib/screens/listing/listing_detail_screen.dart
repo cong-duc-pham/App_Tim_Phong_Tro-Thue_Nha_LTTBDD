@@ -15,8 +15,8 @@ import '../../blocs/listing/listing_state.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
-import '../../models/conversation.dart';
 import '../../models/listing.dart';
+import '../../repositories/conversation_repository.dart';
 import '../../repositories/review_repository.dart';
 
 class ListingDetailScreen extends StatefulWidget {
@@ -33,7 +33,10 @@ class ListingDetailScreen extends StatefulWidget {
 
 class _ListingDetailScreenState extends State<ListingDetailScreen> {
   final PageController _imagePageCtrl = PageController();
+  final ConversationRepository _conversationRepository =
+      ConversationRepository();
   bool _isDescExpanded = false;
+  bool _isStartingChat = false;
 
   @override
   void dispose() {
@@ -102,21 +105,34 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   }
 
   // Bắt đầu chat với chủ trọ
-  void _startChat(BuildContext context, Listing listing) {
-    if (listing.landlordId == null) return;
-    
-    // Tạo object conversation giả lập ban đầu để truyền qua chat detail screen
-    final conv = Conversation(
-      convId: 0,
-      listingId: listing.listingId,
-      listingTitle: listing.title,
-      listingImage: listing.image0,
-      otherUserId: listing.landlordId!,
-      otherUserName: listing.landlordName ?? 'Chủ nhà',
-      otherUserAvatar: listing.landlordAvatar,
-    );
+  Future<void> _startChat(Listing listing) async {
+    if (listing.landlordId == null || _isStartingChat) return;
 
-    context.push('/chat/detail', extra: conv);
+    setState(() => _isStartingChat = true);
+    try {
+      final conv = await _conversationRepository.createConversation(
+        listingId: listing.listingId,
+        landlordId: listing.landlordId!,
+      );
+      if (!mounted) return;
+      context.push('/chat/detail', extra: conv);
+    } catch (e) {
+      if (!mounted) return;
+      final message = e.toString().startsWith('Exception: ')
+          ? e.toString().substring('Exception: '.length)
+          : e.toString();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isStartingChat = false);
+      }
+    }
   }
 
   @override
@@ -862,8 +878,21 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  onPressed: () => _startChat(context, listing),
-                  icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.primary),
+                  onPressed:
+                      _isStartingChat ? null : () => _startChat(listing),
+                  icon: _isStartingChat
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          color: AppColors.primary,
+                        ),
                   style: IconButton.styleFrom(
                     backgroundColor: AppColors.primaryLight,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1108,8 +1137,23 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             Expanded(
               flex: 3,
               child: ElevatedButton.icon(
-                onPressed: listing.landlordId != null ? () => _startChat(context, listing) : null,
-                icon: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 20),
+                onPressed: listing.landlordId != null && !_isStartingChat
+                    ? () => _startChat(listing)
+                    : null,
+                icon: _isStartingChat
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.chat_bubble_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                 label: const Text(
                   'Nhắn tin ngay',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),

@@ -7,6 +7,7 @@ import '../../core/constants/app_constants.dart';
 import '../../models/conversation.dart';
 import '../../models/message.dart';
 import '../../repositories/conversation_repository.dart';
+import '../../services/chat_unread_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final Conversation conversation;
@@ -54,6 +55,7 @@ class _ChatScreenState extends State<ChatScreen> {
           await _repository.getMessages(widget.conversation.convId);
       await _repository.markAsRead(widget.conversation.convId);
       if (!mounted) return;
+      ChatUnreadService.markConversationRead(widget.conversation);
       setState(() {
         _currentUserId = currentUserId;
         _messages
