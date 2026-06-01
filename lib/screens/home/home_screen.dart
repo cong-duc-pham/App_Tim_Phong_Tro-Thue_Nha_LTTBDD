@@ -1585,7 +1585,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
     return SizedBox(
-      height: 220,
+      height: 235,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(AppConstants.paddingH,
@@ -1860,7 +1860,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       const Icon(Icons.location_on_rounded,
                           size: 11, color: AppColors.textMuted),
                       const SizedBox(width: 2),
-                      Text(item.address, style: AppTextStyles.cardAddress),
+                      Expanded(
+                        child: Text(
+                          item.address,
+                          style: AppTextStyles.cardAddress,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ]),
                     const SizedBox(height: 8),
                     Row(
