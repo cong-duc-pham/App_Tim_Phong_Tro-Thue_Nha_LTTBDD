@@ -1,11 +1,9 @@
-// lib/models/message.dart
-
 class Message {
   final int messageId;
   final int convId;
   final int senderId;
   final String content;
-  final String msgType; // 'text', 'image', 'file'
+  final String msgType;
   final String? fileUrl;
   final bool isRead;
   final DateTime sentAt;
@@ -21,23 +19,40 @@ class Message {
     required this.sentAt,
   });
 
-  /// Factory constructor to parse JSON from .NET API
   factory Message.fromJson(Map<String, dynamic> json) {
+    T? read<T>(String camel, String pascal) {
+      final value = json[camel] ?? json[pascal];
+      return value is T ? value : null;
+    }
+
+    int integer(String camel, String pascal) {
+      final value = json[camel] ?? json[pascal];
+      if (value is num) return value.toInt();
+      return int.tryParse(value?.toString() ?? '') ?? 0;
+    }
+
+    bool boolean(String camel, String pascal) {
+      final value = json[camel] ?? json[pascal];
+      if (value is bool) return value;
+      return value?.toString().toLowerCase() == 'true';
+    }
+
+    final sentAtRaw = json['sentAt'] ?? json['SentAt'];
+
     return Message(
-      messageId: (json['messageId'] as num?)?.toInt() ?? 0,
-      convId: (json['convId'] as num?)?.toInt() ?? 0,
-      senderId: (json['senderId'] as num?)?.toInt() ?? 0,
-      content: json['content'] as String? ?? '',
-      msgType: json['msgType'] as String? ?? 'text',
-      fileUrl: json['fileUrl'] as String?,
-      isRead: json['isRead'] as bool? ?? false,
-      sentAt: json['sentAt'] != null
-          ? DateTime.tryParse(json['sentAt'].toString()) ?? DateTime.now()
-          : DateTime.now(),
+      messageId: integer('messageId', 'MessageId'),
+      convId: integer('convId', 'ConvId'),
+      senderId: integer('senderId', 'SenderId'),
+      content: read<String>('content', 'Content') ?? '',
+      msgType: read<String>('msgType', 'MsgType') ?? 'text',
+      fileUrl: read<String>('fileUrl', 'FileUrl'),
+      isRead: boolean('isRead', 'IsRead'),
+      sentAt: sentAtRaw == null
+          ? DateTime.now()
+          : DateTime.tryParse(sentAtRaw.toString()) ?? DateTime.now(),
     );
   }
 
-  /// Convert model to JSON for API requests
   Map<String, dynamic> toJson() {
     return {
       'messageId': messageId,
@@ -51,7 +66,6 @@ class Message {
     };
   }
 
-  /// Create a copy of the message with modified fields (useful for local state updates)
   Message copyWith({
     int? messageId,
     int? convId,

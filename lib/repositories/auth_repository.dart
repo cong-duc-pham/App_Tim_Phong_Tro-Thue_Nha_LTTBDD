@@ -1,4 +1,7 @@
-// lib/repositories/auth_repository.dart
+﻿// lib/repositories/auth_repository.dart
+
+
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -71,8 +74,18 @@ class AuthRepository {
   /// Đăng nhập bằng Google qua Firebase Auth.
   Future<BackendAuthSession> signInWithGoogle() async {
     try {
-      await GoogleSignIn.instance.initialize();
-      final googleUser = await GoogleSignIn.instance.authenticate();
+      await GoogleSignIn.instance.initialize().timeout(
+            const Duration(seconds: 15),
+            onTimeout: () => throw TimeoutException(
+              'Google Sign-In khởi tạo quá lâu.',
+            ),
+          );
+      final googleUser = await GoogleSignIn.instance.authenticate().timeout(
+            const Duration(seconds: 60),
+            onTimeout: () => throw TimeoutException(
+              'Google Sign-In không phản hồi. Vui lòng thử lại.',
+            ),
+          );
       final googleAuth = googleUser.authentication;
 
       if (googleAuth.idToken == null) {
@@ -95,6 +108,11 @@ class AuthRepository {
             : 'google-login-failed',
         message: e.description ?? e.toString(),
       );
+    } on TimeoutException catch (e) {
+      throw FirebaseAuthException(
+        code: 'google-login-timeout',
+        message: e.message,
+      );
     }
   }
 
@@ -102,6 +120,11 @@ class AuthRepository {
   Future<BackendAuthSession> signInWithFacebook() async {
     final result = await FacebookAuth.instance.login(
       permissions: const ['public_profile'],
+    ).timeout(
+      const Duration(seconds: 60),
+      onTimeout: () => throw TimeoutException(
+        'Facebook Login không phản hồi. Vui lòng thử lại.',
+      ),
     );
 
     if (result.status == LoginStatus.cancelled) {
@@ -130,7 +153,7 @@ class AuthRepository {
     AuthCredential credential,
   ) async {
     final userCredential = await _auth.signInWithCredential(credential);
-    await _syncSocialProfile(userCredential.user);
+    unawaited(_syncSocialProfile(userCredential.user));
     final session = await _loginBackendWithFirebase(userCredential.user);
     await _saveBackendSession(session);
     return session;
@@ -154,8 +177,8 @@ class AuthRepository {
         'lastLoginAt': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-    } on FirebaseException catch (e) {
-      debugPrint('Firebase social profile sync failed: ${e.code} - ${e.message}');
+    } catch (e) {
+      debugPrint('Firebase social profile sync failed: $e');
     }
   }
 
