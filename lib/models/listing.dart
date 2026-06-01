@@ -1,4 +1,7 @@
-﻿class Listing {
+// lib/models/listing.dart
+
+class Listing {
+  // ── Thông tin cơ bản ─────────────────────────────────────────────────────
   final int listingId;
   final String title;
   final String? description;
@@ -6,15 +9,54 @@
   final double area;
   final int typeId;
   final String typeName;
+
+  // ── Địa chỉ ──────────────────────────────────────────────────────────────
   final String? provinceName;
   final String? districtName;
   final String? wardName;
   final String streetAddress;
+  final double? latitude;
+  final double? longitude;
+
+  // ── Ảnh (cover + gallery) ────────────────────────────────────────────────
   final String? image0;
+  final String? image1;
+  final String? image2;
+  final String? image3;
+  final String? image4;
+  final String? image5;
+
+  // ── Thông tin chủ trọ ────────────────────────────────────────────────────
+  final int? landlordId;
+  final String? landlordName;
+  final String? landlordAvatar;
+  final String? landlordPhone;
+
+  // ── Giá dịch vụ ──────────────────────────────────────────────────────────
+  final double? electricPrice;
+  final double? waterPrice;
+  final double? internetPrice;
+  final double? parkingPrice;
+
+  // ── Thông tin thêm ───────────────────────────────────────────────────────
+  final int? floor;
+  final int? totalFloors;
+  final int? maxOccupants;
+  final bool allowPet;
+  final DateTime? availableFrom;
+
+  // ── Trạng thái & thống kê ────────────────────────────────────────────────
   final bool isVerified;
   final bool isFeatured;
-  final bool allowPet;
   final String statusName;
+  final int? viewCount;
+  final int? saveCount;
+
+  // ── Đánh giá ─────────────────────────────────────────────────────────────
+  final double averageRating;
+  final int reviewCount;
+
+  // ── Tiện ích & gói tin ───────────────────────────────────────────────────
   final List<String> amenityNames;
   final DateTime? createdAt;
   final Map<String, dynamic>? packageInfo;
@@ -31,11 +73,34 @@
     this.districtName,
     this.wardName,
     required this.streetAddress,
+    this.latitude,
+    this.longitude,
     this.image0,
+    this.image1,
+    this.image2,
+    this.image3,
+    this.image4,
+    this.image5,
+    this.landlordId,
+    this.landlordName,
+    this.landlordAvatar,
+    this.landlordPhone,
+    this.electricPrice,
+    this.waterPrice,
+    this.internetPrice,
+    this.parkingPrice,
+    this.floor,
+    this.totalFloors,
+    this.maxOccupants,
+    required this.allowPet,
+    this.availableFrom,
     required this.isVerified,
     required this.isFeatured,
-    required this.allowPet,
     required this.statusName,
+    this.viewCount,
+    this.saveCount,
+    this.averageRating = 0,
+    this.reviewCount = 0,
     required this.amenityNames,
     this.createdAt,
     this.packageInfo,
@@ -53,10 +118,24 @@
       return double.tryParse(value?.toString() ?? '') ?? 0;
     }
 
+    double? nullableNumber(String camel, String pascal) {
+      final value = json[camel] ?? json[pascal];
+      if (value == null) return null;
+      if (value is num) return value.toDouble();
+      return double.tryParse(value.toString());
+    }
+
     int integer(String camel, String pascal) {
       final value = json[camel] ?? json[pascal];
       if (value is num) return value.toInt();
       return int.tryParse(value?.toString() ?? '') ?? 0;
+    }
+
+    int? nullableInt(String camel, String pascal) {
+      final value = json[camel] ?? json[pascal];
+      if (value == null) return null;
+      if (value is num) return value.toInt();
+      return int.tryParse(value.toString());
     }
 
     bool boolean(String camel, String pascal) {
@@ -68,6 +147,7 @@
     final amenitiesRaw = json['amenityNames'] ?? json['AmenityNames'];
     final packageRaw = json['packageInfo'] ?? json['PackageInfo'];
     final createdRaw = json['createdAt'] ?? json['CreatedAt'];
+    final availableRaw = json['availableFrom'] ?? json['AvailableFrom'];
 
     return Listing(
       listingId: integer('listingId', 'ListingId'),
@@ -81,11 +161,34 @@
       districtName: read<String>('districtName', 'DistrictName'),
       wardName: read<String>('wardName', 'WardName'),
       streetAddress: read<String>('streetAddress', 'StreetAddress') ?? '',
+      latitude: nullableNumber('latitude', 'Latitude'),
+      longitude: nullableNumber('longitude', 'Longitude'),
       image0: read<String>('image0', 'Image0'),
+      image1: read<String>('image1', 'Image1'),
+      image2: read<String>('image2', 'Image2'),
+      image3: read<String>('image3', 'Image3'),
+      image4: read<String>('image4', 'Image4'),
+      image5: read<String>('image5', 'Image5'),
+      landlordId: nullableInt('landlordId', 'LandlordId'),
+      landlordName: read<String>('landlordName', 'LandlordName'),
+      landlordAvatar: read<String>('landlordAvatar', 'LandlordAvatar'),
+      landlordPhone: read<String>('landlordPhone', 'LandlordPhone'),
+      electricPrice: nullableNumber('electricPrice', 'ElectricPrice'),
+      waterPrice: nullableNumber('waterPrice', 'WaterPrice'),
+      internetPrice: nullableNumber('internetPrice', 'InternetPrice'),
+      parkingPrice: nullableNumber('parkingPrice', 'ParkingPrice'),
+      floor: nullableInt('floor', 'Floor'),
+      totalFloors: nullableInt('totalFloors', 'TotalFloors'),
+      maxOccupants: nullableInt('maxOccupants', 'MaxOccupants'),
+      allowPet: boolean('allowPet', 'AllowPet'),
+      availableFrom: availableRaw == null ? null : DateTime.tryParse(availableRaw.toString()),
       isVerified: boolean('isVerified', 'IsVerified'),
       isFeatured: boolean('isFeatured', 'IsFeatured'),
-      allowPet: boolean('allowPet', 'AllowPet'),
       statusName: read<String>('statusName', 'StatusName') ?? '',
+      viewCount: nullableInt('viewCount', 'ViewCount'),
+      saveCount: nullableInt('saveCount', 'SaveCount'),
+      averageRating: number('averageRating', 'AverageRating'),
+      reviewCount: integer('reviewCount', 'ReviewCount'),
       amenityNames: amenitiesRaw is List
           ? amenitiesRaw.map((e) => e.toString()).toList()
           : const [],
@@ -94,6 +197,7 @@
     );
   }
 
+  // Địa chỉ hiển thị đầy đủ
   String get displayAddress {
     final parts = [
       if (streetAddress.trim().isNotEmpty) streetAddress.trim(),
@@ -103,4 +207,15 @@
     ];
     return parts.isEmpty ? 'Chưa cập nhật địa chỉ' : parts.join(', ');
   }
+
+  // Danh sách ảnh gallery (lọc null)
+  List<String> get allImages {
+    return [image0, image1, image2, image3, image4, image5]
+        .whereType<String>()
+        .where((url) => url.trim().isNotEmpty)
+        .toList();
+  }
+
+  // Có toạ độ GPS hợp lệ không
+  bool get hasLocation => latitude != null && longitude != null;
 }
