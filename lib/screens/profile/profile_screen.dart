@@ -304,7 +304,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 label: 'Phòng đã lưu',
                 badge:
                     _user.favoritesCount > 0 ? '${_user.favoritesCount}' : null,
-                onTap: () {},
+                onTap: () => context.push(AppConstants.routeFavorites),
               ),
               _MenuItem(
                 icon: Icons.rate_review_outlined,
@@ -328,7 +328,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _MenuItem(
                   icon: Icons.receipt_long_outlined,
                   label: 'Hóa đơn & Thanh toán',
-                  onTap: () {},
+                  onTap: () => context.push(AppConstants.routeInvoices),
                 ),
               ],
             ],
