@@ -17,14 +17,18 @@ import '../../screens/profile/report_issue_screen.dart';
 import '../../screens/profile/support_center_screen.dart';
 import '../../screens/profile/search_history_screen.dart';
 import '../../screens/profile/my_reviews_screen.dart';
+import '../../screens/profile/my_listings_screen.dart';
 import '../../screens/profile/verification_screen.dart';
 import '../../screens/profile/change_password_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
 import '../../screens/auth/forgot_password_screen.dart';
+import '../../screens/payment/package_screen.dart';
 import '../../models/conversation.dart';
+import '../../models/listing.dart';
 import '../../screens/chat/conversations_screen.dart';
 import '../../screens/chat/chat_screen.dart';
+import '../../screens/listing/listing_detail_screen.dart';
 import '../../widgets/main_bottom_nav.dart';
 
 final appRouter = GoRouter(
@@ -60,6 +64,15 @@ final appRouter = GoRouter(
             path: '/favorites', builder: (_, __) => const FavoritesScreen()),
         GoRoute(path: '/chat', builder: (_, __) => const ConversationsScreen()),
         GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+        GoRoute(
+          path: '/packages',
+          builder: (context, state) {
+            final listingId = int.tryParse(
+              state.uri.queryParameters['listingId'] ?? '',
+            );
+            return PackageScreen(listingId: listingId);
+          },
+        ),
       ],
     ),
     GoRoute(
@@ -77,6 +90,17 @@ final appRouter = GoRouter(
         path: '/search-history',
         builder: (_, __) => const SearchHistoryScreen()),
     GoRoute(path: '/my-reviews', builder: (_, __) => const MyReviewsScreen()),
+    GoRoute(
+        path: '/my-listings',
+        builder: (_, __) => const MyListingsScreen()),
+    GoRoute(
+      path: '/listing-analytics/:id',
+      builder: (context, state) {
+        final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+        final listing = state.extra is Listing ? state.extra as Listing : null;
+        return ListingAnalyticsScreen(listingId: id, initialListing: listing);
+      },
+    ),
     GoRoute(
         path: '/verify-account',
         builder: (_, __) => const AccountVerificationScreen()),
@@ -96,13 +120,9 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/listing/:id',
       builder: (context, state) {
-        final id = state.pathParameters['id']!;
-        return ListingDetailScreen(id: id);
+        final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+        return ListingDetailScreen(listingId: id);
       },
-    ),
-    GoRoute(
-      path: '/my-listings',
-      builder: (_, __) => const MyListingsScreen(),
     ),
   ],
 );

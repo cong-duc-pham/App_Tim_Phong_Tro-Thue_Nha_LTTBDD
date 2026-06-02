@@ -1,0 +1,81 @@
+// lib/blocs/listing/listing_state.dart
+
+import 'package:equatable/equatable.dart';
+
+import '../../models/listing.dart';
+import '../../repositories/review_repository.dart';
+
+abstract class ListingDetailState extends Equatable {
+  const ListingDetailState();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class ListingDetailInitial extends ListingDetailState {
+  const ListingDetailInitial();
+}
+
+class ListingDetailLoading extends ListingDetailState {
+  const ListingDetailLoading();
+}
+
+class ListingDetailLoaded extends ListingDetailState {
+  final Listing listing;
+  final bool isFavorite;
+  final List<ReviewItem> reviews;
+  final double averageRating;
+  final int reviewCount;
+  // true khi đang gọi API toggle, tránh người dùng nhấn nhiều lần
+  final bool isFavoriteLoading;
+  final String? favoriteError;
+
+  const ListingDetailLoaded({
+    required this.listing,
+    required this.isFavorite,
+    required this.reviews,
+    required this.averageRating,
+    required this.reviewCount,
+    this.isFavoriteLoading = false,
+    this.favoriteError,
+  });
+
+  ListingDetailLoaded copyWith({
+    Listing? listing,
+    bool? isFavorite,
+    List<ReviewItem>? reviews,
+    double? averageRating,
+    int? reviewCount,
+    bool? isFavoriteLoading,
+    String? favoriteError,
+  }) {
+    return ListingDetailLoaded(
+      listing: listing ?? this.listing,
+      isFavorite: isFavorite ?? this.isFavorite,
+      reviews: reviews ?? this.reviews,
+      averageRating: averageRating ?? this.averageRating,
+      reviewCount: reviewCount ?? this.reviewCount,
+      isFavoriteLoading: isFavoriteLoading ?? this.isFavoriteLoading,
+      favoriteError: favoriteError,
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+        listing,
+        isFavorite,
+        reviews,
+        averageRating,
+        reviewCount,
+        isFavoriteLoading,
+        favoriteError,
+      ];
+}
+
+class ListingDetailError extends ListingDetailState {
+  final String message;
+  const ListingDetailError(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}

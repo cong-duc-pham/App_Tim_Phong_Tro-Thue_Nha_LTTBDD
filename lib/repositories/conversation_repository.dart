@@ -3,228 +3,137 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constants/app_constants.dart';
-import '../models/listing.dart';
+import '../models/conversation.dart';
+import '../models/message.dart';
 import '../services/api_service.dart';
 
-class ListingRepository {
-  ListingRepository({ApiService? apiService})
+class ConversationRepository {
+  ConversationRepository({ApiService? apiService})
       : _apiService = apiService ?? ApiService();
 
   final ApiService _apiService;
 
-  Future<List<Listing>> getListings({
-    int page = 1,
-    int pageSize = 20,
-    String sortBy = 'newest',
-    bool? isFeatured,
-    String? keyword,
-  }) async {
-    final response = await _apiService.dio.get<Map<String, dynamic>>(
-      '/listings',
-      queryParameters: {
-        'page': page,
-        'pageSize': pageSize,
-        'sortBy': sortBy,
-        if (isFeatured != null) 'isFeatured': isFeatured,
-        if (keyword != null && keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
-      },
-    );
-
-    final body = response.data ?? {};
-    final data = body['data'] ?? body['Data'];
-    if (data is! List) {
-      return const [];
-    }
-
-    return data
-        .whereType<Map>()
-        .map((item) => Listing.fromJson(Map<String, dynamic>.from(item)))
-        .toList();
-  }
-
-  Future<Listing?> getListing(int listingId) async {
-    try {
-      final response = await _apiService.dio.get<Map<String, dynamic>>(
-        '/listings/$listingId',
-      );
-
-      final body = response.data ?? {};
-      final data = body['data'] ?? body['Data'];
-      if (data is! Map) {
-        return null;
-      }
-
-      return Listing.fromJson(Map<String, dynamic>.from(data));
-    } on DioException catch (e) {
-      throw Exception(_readBackendMessage(e));
-    }
-  }
-
-  // Lấy chi tiết một tin đăng theo ID — public, không cần auth
-  Future<Listing> getListingById(int id) async {
-    try {
-      final response = await _apiService.dio.get<Map<String, dynamic>>(
-        '/listings/$id',
-      );
-
-      final body = response.data ?? {};
-      final data = body['data'] ?? body['Data'];
-      if (data is! Map) {
-        throw Exception('Không tìm thấy tin đăng.');
-      }
-
-      return Listing.fromJson(Map<String, dynamic>.from(data));
-    } on DioException catch (e) {
-      throw Exception(_readBackendMessage(e));
-    }
-  }
-
-  Future<List<Listing>> getMyListings() async {
+  Future<List<Conversation>> getConversations() async {
     try {
       final response = await _authorizedRequest<Map<String, dynamic>>(
         (accessToken) => _apiService.dio.get<Map<String, dynamic>>(
-          '/listings/my-listings',
+          '/conversations',
           options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
         ),
       );
 
-      final body = response.data ?? {};
-      final data = body['data'] ?? body['Data'];
+      final data =
+          (response.data ?? {})['data'] ?? (response.data ?? {})['Data'];
       if (data is! List) return const [];
 
       return data
           .whereType<Map>()
-          .map((item) => Listing.fromJson(Map<String, dynamic>.from(item)))
+          .map((item) => Conversation.fromJson(Map<String, dynamic>.from(item)))
           .toList();
     } on DioException catch (e) {
       throw Exception(_readBackendMessage(e));
     }
   }
 
-  // Tăng lượt xem — fire-and-forget, không throw nếu lỗi
-  Future<void> incrementView(int id) async {
-    try {
-      await _apiService.dio.post<void>('/listings/$id/view');
-    } catch (_) {
-      // Bỏ qua lỗi — không ảnh hưởng trải nghiệm người dùng
-    }
-  }
-  Future<Listing> createListing(Map<String, dynamic> payload) async {
+  Future<Conversation> createConversation({
+    required int listingId,
+    required int landlordId,
+  }) async {
     try {
       final response = await _authorizedRequest<Map<String, dynamic>>(
         (accessToken) => _apiService.dio.post<Map<String, dynamic>>(
-          '/listings',
-          data: payload,
+          '/conversations',
+          data: {
+            'listingId': listingId,
+            'landlordId': landlordId,
+          },
           options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
         ),
       );
 
-      final body = response.data ?? {};
-      final data = body['data'] ?? body['Data'];
+      final data =
+          (response.data ?? {})['data'] ?? (response.data ?? {})['Data'];
       if (data is! Map) {
-        throw Exception('Backend không trả về thông tin tin đăng.');
+        throw Exception('Backend khÃ´ng tráº£ vá» há»™i thoáº¡i.');
       }
 
-      return Listing.fromJson(Map<String, dynamic>.from(data));
+      return Conversation.fromJson(Map<String, dynamic>.from(data));
     } on DioException catch (e) {
       throw Exception(_readBackendMessage(e));
     }
   }
 
-  Future<Listing> updateListing(int listingId, Map<String, dynamic> payload) async {
+  Future<List<Message>> getMessages(int conversationId, {int page = 1}) async {
     try {
       final response = await _authorizedRequest<Map<String, dynamic>>(
+        (accessToken) => _apiService.dio.get<Map<String, dynamic>>(
+          '/conversations/$conversationId/messages',
+          queryParameters: {'page': page},
+          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+        ),
+      );
+
+      final data =
+          (response.data ?? {})['data'] ?? (response.data ?? {})['Data'];
+      if (data is! List) return const [];
+
+      return data
+          .whereType<Map>()
+          .map((item) => Message.fromJson(Map<String, dynamic>.from(item)))
+          .toList();
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
+  Future<Message> sendMessage({
+    required int conversationId,
+    required String content,
+    String msgType = 'text',
+    String? fileUrl,
+  }) async {
+    try {
+      final response = await _authorizedRequest<Map<String, dynamic>>(
+        (accessToken) => _apiService.dio.post<Map<String, dynamic>>(
+          '/conversations/$conversationId/messages',
+          data: {
+            'convId': conversationId,
+            'content': content,
+            'msgType': msgType,
+            'fileUrl': fileUrl,
+          },
+          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+        ),
+      );
+
+      final data =
+          (response.data ?? {})['data'] ?? (response.data ?? {})['Data'];
+      if (data is! Map) {
+        throw Exception('Backend không trả về tin nhắn.');
+      }
+
+      return Message.fromJson(Map<String, dynamic>.from(data));
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
+  Future<void> markAsRead(int conversationId) async {
+    try {
+      await _authorizedRequest<Map<String, dynamic>>(
         (accessToken) => _apiService.dio.put<Map<String, dynamic>>(
-          '/listings/$listingId',
-          data: payload,
+          '/conversations/$conversationId/read',
           options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
         ),
       );
-
-      final body = response.data ?? {};
-      final data = body['data'] ?? body['Data'];
-      if (data is! Map) {
-        throw Exception('Backend không trả về thông tin tin đăng.');
-      }
-
-      return Listing.fromJson(Map<String, dynamic>.from(data));
     } on DioException catch (e) {
       throw Exception(_readBackendMessage(e));
     }
   }
 
-  Future<String> uploadListingImage({
-    required int listingId,
-    required String filePath,
-    required bool isCover,
-  }) async {
-    try {
-      final fileName = filePath.split(RegExp(r'[\\/]')).last;
-
-      final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(filePath, filename: fileName),
-        'uploadType': isCover ? 'cover' : 'gallery',
-      });
-
-      final response = await _authorizedRequest<Map<String, dynamic>>(
-        (accessToken) => _apiService.dio.post<Map<String, dynamic>>(
-          '/storage/listings/$listingId/images',
-          data: formData,
-          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
-        ),
-      );
-
-      final body = response.data ?? {};
-      final data = body['data'] ?? body['Data'];
-      if (data is! Map) {
-        throw Exception('Backend không trả về URL ảnh.');
-      }
-
-      final url = data['url'] ?? data['Url'];
-      if (url is! String || url.isEmpty) {
-        throw Exception('URL ảnh không hợp lệ.');
-      }
-
-      return url;
-    } on DioException catch (e) {
-      throw Exception(_readBackendMessage(e));
-    }
-  }
-
-  Future<String> uploadListingVideo({
-    required int listingId,
-    required String filePath,
-  }) async {
-    try {
-      final fileName = filePath.split(RegExp(r'[\\/]')).last;
-
-      final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(filePath, filename: fileName),
-      });
-
-      final response = await _authorizedRequest<Map<String, dynamic>>(
-        (accessToken) => _apiService.dio.post<Map<String, dynamic>>(
-          '/storage/listings/$listingId/videos',
-          data: formData,
-          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
-        ),
-      );
-
-      final body = response.data ?? {};
-      final data = body['data'] ?? body['Data'];
-      if (data is! Map) {
-        throw Exception('Backend khong tra ve URL video.');
-      }
-
-      final url = data['url'] ?? data['Url'];
-      if (url is! String || url.isEmpty) {
-        throw Exception('URL video khong hop le.');
-      }
-
-      return url;
-    } on DioException catch (e) {
-      throw Exception(_readBackendMessage(e));
-    }
+  Future<int?> getCurrentBackendUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return int.tryParse(prefs.getString(AppConstants.keyUserId) ?? '');
   }
 
   Future<Response<T>> _authorizedRequest<T>(
@@ -255,7 +164,7 @@ class ListingRepository {
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      throw Exception('Bạn cần đăng nhập trước khi đăng tin.');
+      throw Exception('Bạn cần đăng nhập để sử dụng tin nhắn.');
     }
 
     final firebaseToken = await user.getIdToken(true);
@@ -318,9 +227,15 @@ class ListingRepository {
       if (newRefreshToken is String && newRefreshToken.isNotEmpty) {
         await prefs.setString('refresh_token', newRefreshToken);
       }
-      if (userId != null) await prefs.setString(AppConstants.keyUserId, userId.toString());
-      if (fullName != null) await prefs.setString('user_full_name', fullName.toString());
-      if (role != null) await prefs.setString(AppConstants.keyUserRole, role.toString());
+      if (userId != null) {
+        await prefs.setString(AppConstants.keyUserId, userId.toString());
+      }
+      if (fullName != null) {
+        await prefs.setString('user_full_name', fullName.toString());
+      }
+      if (role != null) {
+        await prefs.setString(AppConstants.keyUserRole, role.toString());
+      }
 
       return accessToken;
     } on DioException {

@@ -27,24 +27,27 @@
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <a href="/admin/listings" class="btn btn-outline-secondary btn-sm">
+    <a href="@(Model.IsManagementContext ? "/admin/listing-management" : "/admin/listings")" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i>Quay l&#7841;i
     </a>
-    <div class="d-flex gap-2">
-        <form method="post" action="/admin/listings/@Model.ListingId/approve" class="m-0">
-            @Html.AntiForgeryToken()
-            <button type="submit" class="btn btn-success">
-                <i class="bi bi-check2-circle me-1"></i>Duy&#7879;t tin
-            </button>
-        </form>
-        <form method="post" action="/admin/listings/@Model.ListingId/reject" class="d-flex gap-2 m-0">
-            @Html.AntiForgeryToken()
-            <input type="text" name="reason" class="form-control" style="width: 280px;" placeholder="L&#253; do t&#7915; ch&#7889;i" />
-            <button type="submit" class="btn btn-outline-danger">
-                <i class="bi bi-x-circle me-1"></i>T&#7915; ch&#7889;i
-            </button>
-        </form>
-    </div>
+    @if (!Model.IsManagementContext)
+    {
+        <div class="d-flex gap-2">
+            <form method="post" action="/admin/listings/@Model.ListingId/approve" class="m-0">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check2-circle me-1"></i>Duy&#7879;t tin
+                </button>
+            </form>
+            <form method="post" action="/admin/listings/@Model.ListingId/reject" class="d-flex gap-2 m-0">
+                @Html.AntiForgeryToken()
+                <input type="text" name="reason" class="form-control" style="width: 280px;" placeholder="L&#253; do t&#7915; ch&#7889;i" />
+                <button type="submit" class="btn btn-outline-danger">
+                    <i class="bi bi-x-circle me-1"></i>T&#7915; ch&#7889;i
+                </button>
+            </form>
+        </div>
+    }
 </div>
 
 <div class="row g-4">
@@ -87,6 +90,38 @@
 
                 <h3 class="h6">M&#244; t&#7843;</h3>
                 <p class="mb-0" style="white-space: pre-line;">@(string.IsNullOrWhiteSpace(Model.Description) ? "Chua co mo ta." : Model.Description)</p>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white fw-semibold">Video</div>
+            <div class="card-body">
+                @if (Model.Videos.Any())
+                {
+                    <div class="row g-3">
+                        @foreach (var video in Model.Videos)
+                        {
+                            <div class="col-12 col-md-6">
+                                <video src="@video.Url" controls class="w-100 rounded border bg-dark" style="max-height: 260px;"></video>
+                                <div class="small text-muted mt-1">
+                                    #@video.VideoId
+                                    @if (video.FileSizeKb != null)
+                                    {
+                                        <span>- @video.FileSizeKb KB</span>
+                                    }
+                                    @if (video.CreatedAt != null)
+                                    {
+                                        <span>- @video.CreatedAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <span class="text-muted">Tin này chưa có video.</span>
+                }
             </div>
         </div>
 
@@ -148,6 +183,57 @@
                     <dt class="col-5">Gi&#7919; xe</dt>
                     <dd class="col-7">@(Model.ParkingPrice?.ToString("N0") ?? "-")</dd>
                 </dl>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white fw-semibold">G&#243;i VIP / Tin n&#7893;i b&#7853;t</div>
+            <div class="card-body">
+                @if (Model.Packages.Any())
+                {
+                    @foreach (var package in Model.Packages)
+                    {
+                        <div class="border rounded p-3 mb-3 @(package.IsActive ? "border-primary" : "")">
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                <div>
+                                    <div class="fw-semibold">@package.PackageName</div>
+                                    <div class="text-muted small">@package.PackageType - @package.Price.ToString("N0") &#273;</div>
+                                </div>
+                                <span class="badge @(package.IsActive ? "text-bg-primary" : "text-bg-secondary")">
+                                    @(package.IsActive ? "Đang hiệu lực" : "Không hiệu lực")
+                                </span>
+                            </div>
+                            <dl class="row mb-0 small">
+                                <dt class="col-5">Thời hạn</dt>
+                                <dd class="col-7">@package.StartDate.ToLocalTime().ToString("dd/MM/yyyy") - @package.EndDate.ToLocalTime().ToString("dd/MM/yyyy")</dd>
+                                <dt class="col-5">Ưu tiên</dt>
+                                <dd class="col-7">@package.Priority</dd>
+                                <dt class="col-5">Ảnh / Video</dt>
+                                <dd class="col-7">@package.MaxImages ảnh / @package.MaxVideos video</dd>
+                                <dt class="col-5">Banner</dt>
+                                <dd class="col-7">@(package.AllowBanner ? "Có" : "Không")</dd>
+                                <dt class="col-5">Badge</dt>
+                                <dd class="col-7">@(package.BadgeType ?? "-")</dd>
+                                <dt class="col-5">Thống kê</dt>
+                                <dd class="col-7">@(package.HasAnalytics ? "Có" : "Không")</dd>
+                                <dt class="col-5">Nổi bật</dt>
+                                <dd class="col-7">@(package.IsHighlighted ? "Có" : "Không")</dd>
+                                <dt class="col-5">Thanh toán</dt>
+                                <dd class="col-7">
+                                    @(package.PaymentId?.ToString() ?? "-")
+                                    @if (!string.IsNullOrWhiteSpace(package.PaymentStatus))
+                                    {
+                                        <span class="text-muted">(@package.PaymentStatus)</span>
+                                    }
+                                </dd>
+                            </dl>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-muted">Tin này chưa mua gói VIP hoặc Tin nổi bật.</div>
+                }
             </div>
         </div>
 

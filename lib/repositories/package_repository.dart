@@ -3,7 +3,7 @@
 import 'package:dio/dio.dart';
 import 'base_repository.dart';
 import '../models/post_package.dart';
-import '../models/invoice.dart';
+import '../models/payment.dart';
 
 class PackageRepository extends BaseRepository {
   PackageRepository({super.apiService});
@@ -21,10 +21,12 @@ class PackageRepository extends BaseRepository {
         return const [];
       }
 
-      return data
+      final packages = data
           .whereType<Map>()
           .map((item) => PostPackage.fromJson(Map<String, dynamic>.from(item)))
           .toList();
+      packages.sort((a, b) => a.price.compareTo(b.price));
+      return packages;
     } on DioException catch (e) {
       throw Exception(_readBackendMessage(e));
     }
@@ -53,6 +55,20 @@ class PackageRepository extends BaseRepository {
       }
 
       return Invoice.fromJson(Map<String, dynamic>.from(data));
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
+  /// Mô phỏng thanh toán Momo (dùng trong môi trường Dev/Test)
+  Future<void> simulateMomoPayment(String invoiceCode) async {
+    try {
+      final options = await getOptionsWithToken();
+      await dio.post<Map<String, dynamic>>(
+        '/packages/simulate-momo-payment',
+        data: {'invoiceCode': invoiceCode},
+        options: options,
+      );
     } on DioException catch (e) {
       throw Exception(_readBackendMessage(e));
     }

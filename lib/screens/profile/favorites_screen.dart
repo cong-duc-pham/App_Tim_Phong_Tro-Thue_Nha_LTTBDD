@@ -733,250 +733,255 @@ class _FavoriteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        border: Border.all(color: AppColors.borderLight),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Image section
-        Stack(children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(AppConstants.radiusLg),
+    return GestureDetector(
+      onTap: () {
+        context.push('/listing/${item.id}');
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+          border: Border.all(color: AppColors.borderLight),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
             ),
-            child: Container(
-              height: 150,
-              width: double.infinity,
-              color: item.bgColor,
-              alignment: Alignment.center,
-              child: item.imageUrl == null
-                  ? Text(item.emoji, style: const TextStyle(fontSize: 52))
-                  : Image.network(
-                      item.imageUrl!,
-                      width: double.infinity,
-                      height: 150,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) {
-                        return Text(
-                          item.emoji,
-                          style: const TextStyle(fontSize: 52),
-                        );
-                      },
-                    ),
-            ),
-          ),
-          // Type badge
-          Positioned(
-            top: 10, left: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+          ],
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Image section
+          Stack(children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppConstants.radiusLg),
               ),
-              child: Text(item.type,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  )),
+              child: Container(
+                height: 150,
+                width: double.infinity,
+                color: item.bgColor,
+                alignment: Alignment.center,
+                child: item.imageUrl == null
+                    ? Text(item.emoji, style: const TextStyle(fontSize: 52))
+                    : Image.network(
+                        item.imageUrl!,
+                        width: double.infinity,
+                        height: 150,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) {
+                          return Text(
+                            item.emoji,
+                            style: const TextStyle(fontSize: 52),
+                          );
+                        },
+                      ),
+              ),
             ),
-          ),
-          // NEW badge
-          if (item.isNew)
+            // Type badge
             Positioned(
-              top: 10, left: item.type.isNotEmpty ? null : 12,
-              right: 48,
+              top: 10, left: 12,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.tagNew,
+                  color: AppColors.primary,
                   borderRadius: BorderRadius.circular(AppConstants.radiusSm),
                 ),
-                child: const Text('MỚI',
-                    style: TextStyle(
+                child: Text(item.type,
+                    style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     )),
               ),
             ),
-          // Remove button
-          Positioned(
-            top: 10, right: 12,
-            child: GestureDetector(
-              onTap: onRemove,
-              child: Container(
-                width: 32, height: 32,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: const Icon(Icons.favorite_rounded,
-                    size: 17, color: AppColors.error),
-              ),
-            ),
-          ),
-          // Saved date bottom-left
-          Positioned(
-            bottom: 10, left: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.bookmark_rounded,
-                    size: 11, color: Colors.white),
-                const SizedBox(width: 4),
-                Text('Lưu $savedLabel',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    )),
-              ]),
-            ),
-          ),
-        ]),
-
-        // Info section
-        Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(item.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                  height: 1.3,
-                )),
-            const SizedBox(height: 6),
-            Row(children: [
-              const Icon(Icons.location_on_rounded,
-                  size: 13, color: AppColors.textMuted),
-              const SizedBox(width: 3),
-              Expanded(
-                child: Text(item.address,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    )),
-              ),
-            ]),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Price + area
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  RichText(
-                    text: TextSpan(children: [
-                      TextSpan(text: priceLabel, style: AppTextStyles.cardPrice),
-                      const TextSpan(text: '/tháng', style: AppTextStyles.cardPriceSub),
-                    ]),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(children: [
-                    const Icon(Icons.straighten_rounded,
-                        size: 12, color: AppColors.textMuted),
-                    const SizedBox(width: 3),
-                    Text('${item.area.toInt()} m²',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textMuted,
-                        )),
-                  ]),
-                ]),
-                // Verified + Contact
-                Row(children: [
-                  if (item.isVerified) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                      ),
-                      child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.verified_rounded,
-                            size: 12, color: AppColors.primary),
-                        SizedBox(width: 3),
-                        Text('Xác thực',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
-                            )),
-                      ]),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  GestureDetector(
-                    onTap: () {},
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-                      ),
-                      child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.phone_rounded, size: 13, color: Colors.white),
-                        SizedBox(width: 5),
-                        Text('Liên hệ',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            )),
-                      ]),
-                    ),
-                  ),
-                ]),
-              ],
-            ),
-            // Tags
-            if (item.tags.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              const Divider(height: 1, color: AppColors.borderLight),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: item.tags.map((t) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            // NEW badge
+            if (item.isNew)
+              Positioned(
+                top: 10, left: item.type.isNotEmpty ? null : 12,
+                right: 48,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.infoBg,
+                    color: AppColors.tagNew,
                     borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                    border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
                   ),
-                  child: Text(t,
+                  child: const Text('MỚI',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      )),
+                ),
+              ),
+            // Remove button
+            Positioned(
+              top: 10, right: 12,
+              child: GestureDetector(
+                onTap: onRemove,
+                child: Container(
+                  width: 32, height: 32,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.favorite_rounded,
+                      size: 17, color: AppColors.error),
+                ),
+              ),
+            ),
+            // Saved date bottom-left
+            Positioned(
+              bottom: 10, left: 12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.bookmark_rounded,
+                      size: 11, color: Colors.white),
+                  const SizedBox(width: 4),
+                  Text('Lưu $savedLabel',
                       style: const TextStyle(
                         fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.info,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
                       )),
-                )).toList(),
+                ]),
               ),
-            ],
+            ),
           ]),
-        ),
-      ]),
+  
+          // Info section
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(item.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                    height: 1.3,
+                  )),
+              const SizedBox(height: 6),
+              Row(children: [
+                const Icon(Icons.location_on_rounded,
+                    size: 13, color: AppColors.textMuted),
+                const SizedBox(width: 3),
+                Expanded(
+                  child: Text(item.address,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      )),
+                ),
+              ]),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Price + area
+                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    RichText(
+                      text: TextSpan(children: [
+                        TextSpan(text: priceLabel, style: AppTextStyles.cardPrice),
+                        const TextSpan(text: '/tháng', style: AppTextStyles.cardPriceSub),
+                      ]),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(children: [
+                      const Icon(Icons.straighten_rounded,
+                          size: 12, color: AppColors.textMuted),
+                      const SizedBox(width: 3),
+                      Text('${item.area.toInt()} m²',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textMuted,
+                          )),
+                    ]),
+                  ]),
+                  // Verified + Contact
+                  Row(children: [
+                    if (item.isVerified) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight,
+                          borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                        ),
+                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.verified_rounded,
+                              size: 12, color: AppColors.primary),
+                          SizedBox(width: 3),
+                          Text('Xác thực',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              )),
+                        ]),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    GestureDetector(
+                      onTap: () {},
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                        ),
+                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.phone_rounded, size: 13, color: Colors.white),
+                          SizedBox(width: 5),
+                          Text('Liên hệ',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              )),
+                        ]),
+                      ),
+                    ),
+                  ]),
+                ],
+              ),
+              // Tags
+              if (item.tags.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                const Divider(height: 1, color: AppColors.borderLight),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: item.tags.map((t) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.infoBg,
+                      borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                      border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+                    ),
+                    child: Text(t,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.info,
+                        )),
+                  )).toList(),
+                ),
+              ],
+            ]),
+          ),
+        ]),
+      ),
     );
   }
 }

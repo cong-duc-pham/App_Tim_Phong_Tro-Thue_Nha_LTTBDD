@@ -78,6 +78,41 @@ namespace Backend_API.Controllers.API
         }
 
         /// <summary>
+        /// Demo nội bộ: mô phỏng thanh toán MoMo thành công cho hóa đơn.
+        /// Chỉ dùng cho môi trường học tập/dev khi chưa tích hợp cổng thanh toán thật.
+        /// </summary>
+        [Authorize]
+        [HttpPost("simulate-momo-payment")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> SimulateMomoPayment([FromBody] SimulatePaymentDto dto)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dto.InvoiceCode))
+                {
+                    return BadRequest(new { success = false, message = "Mã hóa đơn không hợp lệ." });
+                }
+
+                await _paymentService.ProcessPaymentCallbackAsync(dto.InvoiceCode, "momo");
+                return Ok(new
+                {
+                    success = true,
+                    message = "Đã mô phỏng thanh toán MoMo thành công và kích hoạt gói VIP."
+                });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { success = false, message = "Chưa đăng nhập." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Lấy danh sách hoá đơn của tôi.
         /// </summary>
         /// <returns>Danh sách hoá đơn với trạng thái thanh toán</returns>
