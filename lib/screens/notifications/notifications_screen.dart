@@ -75,6 +75,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  Future<void> _openNotification(AppNotification item) async {
+    await _markAsRead(item);
+    if (!mounted) return;
+
+    final type = item.type.toLowerCase();
+    final refType = item.refType?.toLowerCase() ?? '';
+    final refId = item.refId;
+
+    if (refId != null &&
+        (type == 'listing_reviewed' ||
+            type.contains('review') ||
+            refType == 'review')) {
+      context.push('/listing/$refId?section=reviews');
+      return;
+    }
+
+    if (refId != null &&
+        (type.contains('listing') || refType.contains('listing'))) {
+      context.push('/listing/$refId');
+    }
+  }
+
   String _cleanError(Object e) {
     final message = e.toString();
     return message.startsWith('Exception: ')
@@ -187,7 +209,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           icon: _iconFor(item),
           color: _colorFor(item),
           timeLabel: _timeLabel(item.sentAt),
-          onTap: () => _markAsRead(item),
+          onTap: () => _openNotification(item),
         );
       },
     );

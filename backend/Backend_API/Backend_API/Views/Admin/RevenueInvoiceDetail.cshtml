@@ -1,0 +1,136 @@
+@model Backend_API.Models.ViewModels.Admin.AdminRevenueInvoiceDetailViewModel
+@{
+    ViewData["Title"] = "Chi tiết bill";
+
+    string StatusBadge(string status)
+    {
+        var normalized = status?.ToLowerInvariant() ?? "";
+        return normalized switch
+        {
+            "success" => "text-bg-success",
+            "pending" => "text-bg-warning",
+            "failed" => "text-bg-danger",
+            "refunded" => "text-bg-secondary",
+            _ => "text-bg-light"
+        };
+    }
+
+    string StatusText(string status)
+    {
+        var normalized = status?.ToLowerInvariant() ?? "";
+        return normalized switch
+        {
+            "success" => "Đã thanh toán",
+            "pending" => "Chờ thanh toán",
+            "failed" => "Thất bại",
+            "refunded" => "Hoàn tiền",
+            _ => status ?? "-"
+        };
+    }
+
+    string InvoiceTypeText(string type)
+    {
+        var normalized = type?.ToLowerInvariant() ?? "";
+        return normalized switch
+        {
+            "listing_post" => "Gói đăng tin",
+            "listing_package" => "Gói đăng tin",
+            "listing_extend" => "Gia hạn tin",
+            _ => string.IsNullOrWhiteSpace(type) ? "-" : type
+        };
+    }
+}
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+    <div>
+        <h4 class="mb-1">Bill @Model.InvoiceCode</h4>
+        <div class="text-muted">Thông tin hóa đơn và thanh toán</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/admin/revenue" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Quay lại
+        </a>
+        <a href="/admin/revenue/invoices/@Model.InvoiceId/export" class="btn btn-success">
+            <i class="bi bi-download me-1"></i>Xuất bill
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-xl-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white d-flex align-items-center justify-content-between">
+                <span class="fw-semibold">Thông tin bill</span>
+                <span class="badge @StatusBadge(Model.StatusName)">@StatusText(Model.StatusName)</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <div class="text-muted small">Mã hóa đơn</div>
+                        <div class="fw-semibold">@Model.InvoiceCode</div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="text-muted small">Loại hóa đơn</div>
+                        <div class="fw-semibold">@InvoiceTypeText(Model.InvoiceType)</div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="text-muted small">Số tiền</div>
+                        <div class="h4 text-success mb-0">@Model.TotalAmount.ToString("N0") đ</div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="text-muted small">Phương thức</div>
+                        <div class="fw-semibold">@(Model.PaymentMethod ?? "-")</div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="text-muted small">Ngày tạo</div>
+                        <div>@(Model.CreatedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="text-muted small">Hạn thanh toán</div>
+                        <div>@Model.DueDate.ToString("dd/MM/yyyy")</div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="text-muted small">Ngày thanh toán</div>
+                        <div>@(Model.PaidAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="text-muted small">Cập nhật lần cuối</div>
+                        <div>@(Model.UpdatedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="text-muted small">Ghi chú</div>
+                        <div>@(string.IsNullOrWhiteSpace(Model.Note) ? "-" : Model.Note)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-xl-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white fw-semibold">Người thanh toán</div>
+            <div class="card-body">
+                <div class="fw-semibold">@Model.LandlordName</div>
+                <div class="text-muted">@((Model.LandlordEmail ?? "-"))</div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white fw-semibold">Tin liên quan</div>
+            <div class="card-body">
+                @if (Model.ListingId.HasValue)
+                {
+                    <div class="fw-semibold mb-1">#@Model.ListingId</div>
+                    <div class="text-muted mb-3">@(Model.ListingTitle ?? "-")</div>
+                    <a href="/admin/listings/@Model.ListingId?from=management" class="btn btn-outline-primary w-100">
+                        <i class="bi bi-house-door me-1"></i>Xem tin
+                    </a>
+                }
+                else
+                {
+                    <div class="text-muted">Không gắn với tin đăng cụ thể.</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

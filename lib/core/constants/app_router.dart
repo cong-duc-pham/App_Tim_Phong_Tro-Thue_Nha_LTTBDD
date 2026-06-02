@@ -22,9 +22,12 @@ import '../../screens/profile/change_password_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
 import '../../screens/auth/forgot_password_screen.dart';
+import '../../screens/payment/invoice_detail_screen.dart';
+import '../../screens/payment/invoice_screen.dart';
 import '../../screens/payment/package_screen.dart';
 import '../../models/conversation.dart';
 import '../../models/listing.dart';
+import '../../models/payment.dart';
 import '../../screens/chat/conversations_screen.dart';
 import '../../screens/chat/chat_screen.dart';
 import '../../widgets/main_bottom_nav.dart';
@@ -88,9 +91,15 @@ final appRouter = GoRouter(
         path: '/search-history',
         builder: (_, __) => const SearchHistoryScreen()),
     GoRoute(path: '/my-reviews', builder: (_, __) => const MyReviewsScreen()),
+    GoRoute(path: '/my-listings', builder: (_, __) => const MyListingsScreen()),
+    GoRoute(path: '/invoices', builder: (_, __) => const InvoiceScreen()),
     GoRoute(
-        path: '/my-listings',
-        builder: (_, __) => const MyListingsScreen()),
+      path: '/invoices/detail',
+      builder: (context, state) {
+        final invoice = state.extra as Invoice;
+        return InvoiceDetailScreen(invoice: invoice);
+      },
+    ),
     GoRoute(
       path: '/listing-analytics/:id',
       builder: (context, state) {
@@ -119,7 +128,11 @@ final appRouter = GoRouter(
       path: '/listing/:id',
       builder: (context, state) {
         final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-        return ListingDetailScreen(listingId: id);
+        final section = state.uri.queryParameters['section'];
+        return ListingDetailScreen(
+          listingId: id,
+          scrollToReviews: section == 'reviews',
+        );
       },
     ),
   ],

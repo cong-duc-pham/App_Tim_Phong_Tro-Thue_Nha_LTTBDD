@@ -23,6 +23,7 @@
         }
 
         body { background: var(--admin-bg); }
+        .container-fluid { padding-left: 0; padding-right: 0; }
         .admin-shell { min-height: 100vh; }
         .admin-sidebar {
             min-height: 100vh;
@@ -72,6 +73,34 @@
             border-radius: .85rem;
             box-shadow: 0 .35rem 1.2rem rgba(15, 23, 42, .06);
         }
+
+        @@media (min-width: 768px) {
+            .admin-sidebar {
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                width: 25%;
+                overflow-y: auto;
+                z-index: 20;
+            }
+
+            .admin-content {
+                margin-left: 25%;
+                width: 75%;
+            }
+        }
+
+        @@media (min-width: 992px) {
+            .admin-sidebar {
+                width: 16.666667%;
+            }
+
+            .admin-content {
+                margin-left: 16.666667%;
+                width: 83.333333%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -91,6 +120,7 @@
                     <a class="nav-link @Active("/admin/users")" href="/admin/users"><i class="bi bi-people me-2"></i>Ng&#432;&#7901;i d&#249;ng</a>
                     <a class="nav-link @Active("/admin/listing-management")" href="/admin/listing-management"><i class="bi bi-card-list me-2"></i>Tin &#273;&#259;ng</a>
                     <a class="nav-link @Active("/admin/listings")" href="/admin/listings"><i class="bi bi-house-door me-2"></i>Duy&#7879;t tin</a>
+                    <a class="nav-link @Active("/admin/revenue")" href="/admin/revenue"><i class="bi bi-cash-coin me-2"></i>Doanh thu</a>
                     <a class="nav-link @Active("/admin/reports")" href="/admin/reports"><i class="bi bi-flag me-2"></i>B&#225;o c&#225;o</a>
                     <a class="nav-link @Active("/admin/storage")" href="/admin/storage"><i class="bi bi-cloud-arrow-up me-2"></i>Kho &#7843;nh</a>
                     <a class="nav-link" href="/swagger"><i class="bi bi-braces me-2"></i>Swagger API</a>
