@@ -1,8 +1,7 @@
-﻿// lib/blocs/auth/auth_bloc.dart
+// lib/blocs/auth/auth_bloc.dart
 
 import 'package:equatable/equatable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../repositories/auth_repository.dart';
@@ -153,6 +152,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         return 'Không thể đăng nhập bằng tài khoản xã hội.';
       case 'google-login-failed':
         return 'Không thể đăng nhập bằng Google.';
+      case 'google-login-timeout':
+        return 'Google Sign-In phản hồi quá lâu. Vui lòng thử lại.';
       case 'google-missing-id-token':
         return 'Google Sign-In chưa được cấu hình đầy đủ trên Firebase.';
       case 'operation-not-allowed':
@@ -173,6 +174,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     switch (e.code) {
       case 'social-login-failed':
       case 'google-login-failed':
+      case 'google-login-timeout':
       case 'google-missing-id-token':
       case 'operation-not-allowed':
       case 'invalid-credential':

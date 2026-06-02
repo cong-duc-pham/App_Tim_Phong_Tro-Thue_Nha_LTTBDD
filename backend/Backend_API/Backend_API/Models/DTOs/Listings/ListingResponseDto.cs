@@ -74,6 +74,14 @@ namespace Backend_API.Models.DTOs.Listings
     public class PackageInfoDto
     {
         public string PackageName { get; set; } = null!;
+        public string PackageType { get; set; } = null!;
+        public int Priority { get; set; }
+        public int MaxImages { get; set; }
+        public int MaxVideos { get; set; }
+        public bool AllowBanner { get; set; }
+        public string? BadgeType { get; set; }
+        public bool HasAnalytics { get; set; }
+        public bool IsHighlighted { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public bool IsActive { get; set; }

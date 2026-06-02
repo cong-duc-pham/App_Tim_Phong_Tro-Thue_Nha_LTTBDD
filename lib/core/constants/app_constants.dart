@@ -69,6 +69,7 @@ class AppConstants {
   static const String routeListingDetail = '/listing/:id';
   static const String routePostListing = '/listing';
   static const String routeChat = '/chat';
+  static const String routePackages = '/packages';
   static const String routeFavorites = '/favorites';
   static const String routeMyListings = '/my-listings';
   static const String routeNotifications = '/notifications';
@@ -77,6 +78,8 @@ class AppConstants {
   static const String routeSupportCenter = '/support-center';
   static const String routeSearchHistory = '/search-history';
   static const String routeMyReviews = '/my-reviews';
+  static const String routeMyListings = '/my-listings';
+  static const String routeListingAnalytics = '/listing-analytics';
   static const String routeVerifyAccount = '/verify-account';
   static const String routeChangePassword = '/change-password';
   static const String routeForgotPassword = '/forgot-password';

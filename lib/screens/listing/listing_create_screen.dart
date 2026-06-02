@@ -1,5 +1,7 @@
 ﻿import 'dart:io';
+import 'dart:math' as math;
 import 'package:dio/dio.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -7,10 +9,13 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
-import '../../core/constants/app_text_styles.dart';
+import '../../models/post_package.dart';
 import '../../repositories/listing_repository.dart';
+import '../../repositories/package_repository.dart';
+import '../../screens/payment/package_screen.dart';
 import '../../services/post_listing_draft_service.dart';
 
 
@@ -35,6 +40,19 @@ class ImageSlot {
   bool get isCover => slotIndex == 0;
 }
 
+class VideoSlot {
+  final int slotIndex;
+  File? file;
+  VideoSlot({required this.slotIndex, this.file});
+  bool get isEmpty => file == null;
+  String get fileName => file == null
+      ? ''
+      : file!.path.split(RegExp(r'[\\/]')).last;
+}
+
+const _mapTileUrlTemplate =
+    'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+
 // ─────────────────────────────────────────────
 // Screen
 // ─────────────────────────────────────────────
@@ -46,14 +64,18 @@ class PostListingScreen extends StatefulWidget {
 
 class _PostListingScreenState extends State<PostListingScreen> {
   final ListingRepository _listingRepository = ListingRepository();
+  final PackageRepository _packageRepository = PackageRepository();
   final ImagePicker _imagePicker = ImagePicker();
   int _currentStep = 0;
   static const int _totalSteps = 5;
   bool _isSubmitting = false;
+  int? _createdListingIdForVip;
 
   // 6 slot ảnh cố định (slot_index 0-5)
   final List<ImageSlot> _slots =
   List.generate(6, (i) => ImageSlot(slotIndex: i));
+  final List<VideoSlot> _videoSlots =
+      List.generate(3, (i) => VideoSlot(slotIndex: i));
 
   // Form controllers
   RoomType? _selectedType;
@@ -71,8 +93,11 @@ class _PostListingScreenState extends State<PostListingScreen> {
   final _parkingCtrl      = TextEditingController();
 
   bool      _allowPet   = false;
-  bool      _isFeatured = false;
   DateTime? _availableFrom;
+  List<PostPackage> _packages = [];
+  PostPackage? _selectedPackage;
+  bool _isLoadingPackages = false;
+  String? _packageError;
 
   String? _selectedProvince;
   String? _selectedDistrict;
@@ -103,6 +128,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
   @override
   void initState() {
     super.initState();
+    _loadPackages();
     for (final c in [
       _titleCtrl, _descCtrl, _priceCtrl, _areaCtrl, _floorCtrl,
       _totalFloorsCtrl, _maxOccupantsCtrl, _streetCtrl,
@@ -135,6 +161,17 @@ class _PostListingScreenState extends State<PostListingScreen> {
   void _markDraftChanged() => PostListingDraftService.markDirty();
 
   Future<void> _pickImage(int idx) async {
+    if (idx >= _maxSelectableImages) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+          'Gói ${_effectivePackage?.packageName ?? 'hiện tại'} chỉ cho phép tối đa $_maxSelectableImages ảnh.',
+        ),
+        backgroundColor: AppColors.warning,
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
+
     final picked = await _imagePicker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 85,
@@ -156,6 +193,27 @@ class _PostListingScreenState extends State<PostListingScreen> {
     _markDraftChanged();
   });
 
+  Future<void> _pickVideo(int idx) async {
+    if (idx >= _maxSelectableVideos) return;
+
+    final picked = await _imagePicker.pickVideo(
+      source: ImageSource.gallery,
+      maxDuration: const Duration(minutes: 3),
+    );
+
+    if (picked == null) return;
+
+    setState(() {
+      _videoSlots[idx].file = File(picked.path);
+    });
+    _markDraftChanged();
+  }
+
+  void _removeVideo(int idx) => setState(() {
+        _videoSlots[idx].file = null;
+        _markDraftChanged();
+      });
+
   void _swapSlots(int a, int b) => setState(() {
     final tf = _slots[a].file;
     final tu = _slots[a].networkUrl;
@@ -167,6 +225,84 @@ class _PostListingScreenState extends State<PostListingScreen> {
   });
 
   int get _filledCount => _slots.where((s) => !s.isEmpty).length;
+  int get _filledVideoCount => _videoSlots.where((s) => !s.isEmpty).length;
+  PostPackage? get _effectivePackage =>
+      _selectedPackage ??
+      (_packages.where((package) => package.isFree).isNotEmpty
+          ? _packages.firstWhere((package) => package.isFree)
+          : null);
+  bool get _shouldBuyPackage =>
+      _effectivePackage != null && !_effectivePackage!.isFree;
+  int get _maxSelectableImages {
+    final configuredLimit = _effectivePackage?.maxImages ?? 1;
+    return math.max(1, math.min(configuredLimit, _slots.length));
+  }
+  int get _maxSelectableVideos {
+    final configuredLimit = _effectivePackage?.maxVideos ?? 0;
+    return math.max(0, math.min(configuredLimit, _videoSlots.length));
+  }
+  Future<void> _loadPackages() async {
+    setState(() {
+      _isLoadingPackages = true;
+      _packageError = null;
+    });
+
+    try {
+      final packages = await _packageRepository.getPackages();
+      if (!mounted) return;
+      setState(() {
+        _packages = packages;
+        _selectedPackage = packages.where((package) => package.isFree).isNotEmpty
+            ? packages.firstWhere((package) => package.isFree)
+            : (packages.isNotEmpty ? packages.first : null);
+        _isLoadingPackages = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _packageError = _cleanError(e);
+        _isLoadingPackages = false;
+      });
+    }
+  }
+
+  void _selectPackage(PostPackage package) {
+    setState(() {
+      _selectedPackage = package;
+      _trimImagesToPackageLimit(package);
+      _markDraftChanged();
+    });
+  }
+
+  void _trimImagesToPackageLimit(PostPackage package) {
+    final maxImages = math.max(1, math.min(package.maxImages, _slots.length));
+    for (var i = maxImages; i < _slots.length; i++) {
+      _slots[i].file = null;
+      _slots[i].networkUrl = null;
+    }
+    final maxVideos = math.max(0, math.min(package.maxVideos, _videoSlots.length));
+    for (var i = maxVideos; i < _videoSlots.length; i++) {
+      _videoSlots[i].file = null;
+    }
+  }
+
+  String _cleanError(Object e) {
+    final message = e.toString();
+    return message.startsWith('Exception: ')
+        ? message.substring('Exception: '.length)
+        : message;
+  }
+
+  String _formatPackagePrice(double price) {
+    if (price <= 0) return 'Miễn phí';
+    final raw = price.toInt().toString();
+    final buffer = StringBuffer();
+    for (var i = 0; i < raw.length; i++) {
+      if (i > 0 && (raw.length - i) % 3 == 0) buffer.write('.');
+      buffer.write(raw[i]);
+    }
+    return '${buffer.toString()}đ';
+  }
 
   Future<void> _submit() async {
     if (_isSubmitting) return;
@@ -185,18 +321,12 @@ class _PostListingScreenState extends State<PostListingScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final created = await _listingRepository.createListing(_buildCreatePayload());
-      final imageUrls = await _uploadSelectedImages(created.listingId);
-      if (imageUrls.isNotEmpty) {
-        await _listingRepository.updateListing(created.listingId, {
-          'image0': imageUrls.length > 0 ? imageUrls[0] : null,
-          'image1': imageUrls.length > 1 ? imageUrls[1] : null,
-          'image2': imageUrls.length > 2 ? imageUrls[2] : null,
-          'image3': imageUrls.length > 3 ? imageUrls[3] : null,
-          'image4': imageUrls.length > 4 ? imageUrls[4] : null,
-          'image5': imageUrls.length > 5 ? imageUrls[5] : null,
-        });
-      }
+      final created = await _listingRepository.createListing(
+        _buildCreatePayload(),
+      );
+      await _markCurrentUserAsLandlord();
+      final imageUploadMessage = await _tryUploadImages(created.listingId);
+      final videoUploadMessage = await _tryUploadVideos(created.listingId);
       if (!mounted) return;
 
       PostListingDraftService.clear();
@@ -210,7 +340,27 @@ class _PostListingScreenState extends State<PostListingScreen> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ));
-      context.go(AppConstants.routeHome);
+      if (imageUploadMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(imageUploadMessage),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+      }
+      if (videoUploadMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(videoUploadMessage),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+      }
+      if (_shouldBuyPackage) {
+        setState(() => _createdListingIdForVip = created.listingId);
+      } else {
+        _goAfterCurrentFrame(AppConstants.routeHome);
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -224,6 +374,58 @@ class _PostListingScreenState extends State<PostListingScreen> {
         setState(() => _isSubmitting = false);
       }
     }
+  }
+
+  void _goAfterCurrentFrame(String route) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.go(route);
+    });
+  }
+
+  Future<void> _markCurrentUserAsLandlord() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(AppConstants.keyUserRole, 'landlord');
+  }
+
+  Future<String?> _tryUploadImages(int listingId) async {
+    try {
+      final imageUrls = await _uploadSelectedImages(listingId).timeout(
+        const Duration(seconds: 45),
+      );
+      if (imageUrls.isEmpty) return null;
+
+      await _listingRepository.updateListing(listingId, {
+        'image0': imageUrls.isNotEmpty ? imageUrls[0] : null,
+        'image1': imageUrls.length > 1 ? imageUrls[1] : null,
+        'image2': imageUrls.length > 2 ? imageUrls[2] : null,
+        'image3': imageUrls.length > 3 ? imageUrls[3] : null,
+        'image4': imageUrls.length > 4 ? imageUrls[4] : null,
+        'image5': imageUrls.length > 5 ? imageUrls[5] : null,
+      }).timeout(const Duration(seconds: 20));
+    } on TimeoutException {
+      return 'Tin đã được tạo, nhưng upload ảnh quá lâu. Bạn vẫn có thể mua gói VIP.';
+    } catch (_) {
+      return 'Tin đã được tạo, nhưng chưa cập nhật được ảnh. Bạn vẫn có thể mua gói VIP.';
+    }
+
+    return null;
+  }
+
+  Future<String?> _tryUploadVideos(int listingId) async {
+    if (_maxSelectableVideos <= 0 || _filledVideoCount == 0) return null;
+
+    try {
+      await _uploadSelectedVideos(listingId).timeout(
+        const Duration(seconds: 90),
+      );
+    } on TimeoutException {
+      return 'Tin đã được tạo, nhưng upload video quá lâu. Bạn có thể bổ sung video sau.';
+    } catch (_) {
+      return 'Tin đã được tạo, nhưng chưa upload được video.';
+    }
+
+    return null;
   }
 
   String? _validateBeforeSubmit() {
@@ -245,6 +447,12 @@ class _PostListingScreenState extends State<PostListingScreen> {
       case 1:
         if (_slots[0].file == null && _slots[0].networkUrl == null) {
           return 'Vui lòng thêm ảnh bìa để admin có thể duyệt tin.';
+        }
+        if (_filledCount > _maxSelectableImages) {
+          return 'Gói đã chọn chỉ cho phép tối đa $_maxSelectableImages ảnh.';
+        }
+        if (_filledVideoCount > _maxSelectableVideos) {
+          return 'Gói đã chọn chỉ cho phép tối đa $_maxSelectableVideos video.';
         }
         return null;
       case 2:
@@ -316,8 +524,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
       _prev();
       return;
     }
+    final router = GoRouter.of(context);
     if (await _confirmDiscardDraft() && mounted) {
-      Navigator.of(context).pop();
+      router.go(AppConstants.routeHome);
     }
   }
 
@@ -346,19 +555,19 @@ class _PostListingScreenState extends State<PostListingScreen> {
           ? null
           : _availableFrom!.toIso8601String().split('T').first,
       'amenityIds': <int>[],
-      'image0': _slots[0].networkUrl,
-      'image1': _slots[1].networkUrl,
-      'image2': _slots[2].networkUrl,
-      'image3': _slots[3].networkUrl,
-      'image4': _slots[4].networkUrl,
-      'image5': _slots[5].networkUrl,
+      'image0': _maxSelectableImages > 0 ? _slots[0].networkUrl : null,
+      'image1': _maxSelectableImages > 1 ? _slots[1].networkUrl : null,
+      'image2': _maxSelectableImages > 2 ? _slots[2].networkUrl : null,
+      'image3': _maxSelectableImages > 3 ? _slots[3].networkUrl : null,
+      'image4': _maxSelectableImages > 4 ? _slots[4].networkUrl : null,
+      'image5': _maxSelectableImages > 5 ? _slots[5].networkUrl : null,
     };
   }
 
   Future<List<String>> _uploadSelectedImages(int listingId) async {
     final urls = <String>[];
 
-    for (final slot in _slots) {
+    for (final slot in _slots.take(_maxSelectableImages)) {
       if (slot.file == null) {
         if (slot.networkUrl != null) {
           urls.add(slot.networkUrl!);
@@ -372,6 +581,21 @@ class _PostListingScreenState extends State<PostListingScreen> {
         isCover: slot.slotIndex == 0,
       );
       slot.networkUrl = url;
+      urls.add(url);
+    }
+
+    return urls;
+  }
+
+  Future<List<String>> _uploadSelectedVideos(int listingId) async {
+    final urls = <String>[];
+
+    for (final slot in _videoSlots.take(_maxSelectableVideos)) {
+      if (slot.file == null) continue;
+      final url = await _listingRepository.uploadListingVideo(
+        listingId: listingId,
+        filePath: slot.file!.path,
+      );
       urls.add(url);
     }
 
@@ -540,13 +764,26 @@ class _PostListingScreenState extends State<PostListingScreen> {
   // ─────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final vipListingId = _createdListingIdForVip;
+    if (vipListingId != null) {
+      return PackageScreen(
+        listingId: vipListingId,
+        initialPackageId: _effectivePackage?.packageId,
+      );
+    }
+
     return WillPopScope(
       onWillPop: () async {
         if (_currentStep > 0) {
           _prev();
           return false;
         }
-        return _confirmDiscardDraft();
+        final router = GoRouter.of(context);
+        final shouldLeave = await _confirmDiscardDraft();
+        if (shouldLeave && mounted) {
+          router.go(AppConstants.routeHome);
+        }
+        return false;
       },
       child: Scaffold(
         backgroundColor: AppColors.bgPage,
@@ -679,26 +916,78 @@ class _PostListingScreenState extends State<PostListingScreen> {
               maxLines: 4,
               maxLength: 2000,
             ),
-            const SizedBox(height: 14),
-            _ToggleTile(
-              value: _isFeatured,
-              onChanged: (v) => setState(() {
-                _isFeatured = v;
-                _markDraftChanged();
-              }),
-              icon: Icons.workspace_premium_outlined,
-              activeColor: AppColors.tagHot,
-              title: 'Tin VIP / Nổi bật',
-              subtitle: 'Hiển thị ưu tiên, tiếp cận nhiều người hơn',
-            ),
           ]),
         ),
+        const SizedBox(height: 14),
+        _buildPackageSelector(),
       ],
+    );
+  }
+
+  Widget _buildPackageSelector() {
+    if (_isLoadingPackages) {
+      return const _SectionCard(
+        title: 'Gói đăng tin',
+        icon: Icons.workspace_premium_outlined,
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: CircularProgressIndicator(color: AppColors.primary),
+          ),
+        ),
+      );
+    }
+
+    if (_packageError != null) {
+      return _SectionCard(
+        title: 'Gói đăng tin',
+        icon: Icons.workspace_premium_outlined,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _packageError!,
+              style: const TextStyle(color: AppColors.error, fontSize: 12),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _loadPackages,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Tải lại gói'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return _SectionCard(
+      title: 'Gói đăng tin',
+      icon: Icons.workspace_premium_outlined,
+      child: Column(
+        children: _packages
+            .map(
+              (package) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _PackageChoiceTile(
+                  package: package,
+                  selected: _effectivePackage?.packageId == package.packageId,
+                  imageLimit:
+                      math.max(1, math.min(package.maxImages, _slots.length)),
+                  priceLabel: _formatPackagePrice(package.price),
+                  onTap: () => _selectPackage(package),
+                ),
+              ),
+            )
+            .toList(),
+      ),
     );
   }
 
   // ── Step 2: ẢNH PHÒNG ────────────────────────
   Widget _buildStepImages() {
+    final maxImages = _maxSelectableImages;
+    final maxVideos = _maxSelectableVideos;
+    final packageName = _effectivePackage?.packageName ?? 'gói hiện tại';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -723,21 +1012,21 @@ class _PostListingScreenState extends State<PostListingScreen> {
                     color: AppColors.primary, size: 22),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Ảnh phòng - tối đa 6 ảnh',
-                        style: TextStyle(
+                    Text('Ảnh phòng - tối đa $maxImages ảnh',
+                        style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 14,
                             color: AppColors.textPrimary)),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      '- Ảnh đầu tiên (Slot 1) là ẢNH BÌA hiển thị trên danh sách\n'
-                          '- Định dạng JPG/PNG, tối đa 5 MB mỗi ảnh\n'
-                          '- Nhấn giữ để đặt ảnh phụ thành ảnh bìa',
-                      style: TextStyle(
+                      '- Gói $packageName cho phép $maxImages ảnh trong bản hiện tại\n'
+                      '- Ảnh đầu tiên là ảnh bìa hiển thị trên danh sách\n'
+                      '- Định dạng JPG/PNG, tối đa 5 MB mỗi ảnh',
+                      style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,
                           height: 1.6),
@@ -769,7 +1058,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                '$_filledCount / 6 ảnh',
+                '$_filledCount / $maxImages ảnh',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -792,26 +1081,28 @@ class _PostListingScreenState extends State<PostListingScreen> {
         ),
         const SizedBox(height: 10),
 
-        // Slot 1-5: Ảnh phụ (grid 2 cột)
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 1.2,
-          ),
-          itemCount: 5,
-          itemBuilder: (_, i) => _ImageSlotCard(
-            slot: _slots[i + 1],
-            isCoverLayout: false,
-            onPick: () => _pickImage(i + 1),
-            onRemove: () => _removeImage(i + 1),
-            onMakeCover:
-            _slots[i + 1].isEmpty ? null : () => _swapSlots(0, i + 1),
-          ),
+        if (maxImages > 1)
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: 1.2,
+            ),
+            itemCount: maxImages - 1,
+            itemBuilder: (_, i) => _ImageSlotCard(
+              slot: _slots[i + 1],
+              isCoverLayout: false,
+              onPick: () => _pickImage(i + 1),
+              onRemove: () => _removeImage(i + 1),
+              onMakeCover:
+                  _slots[i + 1].isEmpty ? null : () => _swapSlots(0, i + 1),
+            ),
         ),
+        const SizedBox(height: 14),
+        _buildVideoSection(maxVideos),
         const SizedBox(height: 14),
 
         // Tip
@@ -835,6 +1126,77 @@ class _PostListingScreenState extends State<PostListingScreen> {
           ]),
         ),
       ],
+    );
+  }
+
+  Widget _buildVideoSection(int maxVideos) {
+    if (maxVideos <= 0) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.warningBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.warning.withValues(alpha: 0.25)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.videocam_off_outlined,
+                color: AppColors.warning, size: 18),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Gói hiện tại không hỗ trợ video.',
+                style: TextStyle(
+                    fontSize: 12, color: AppColors.warningText, height: 1.4),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return _SectionCard(
+      title: 'Video phòng',
+      icon: Icons.video_library_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Danh sách video',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: AppColors.textPrimary)),
+              Text(
+                '$_filledVideoCount / $maxVideos video',
+                style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    color: AppColors.primary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...List.generate(
+            maxVideos,
+            (index) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _VideoSlotCard(
+                slot: _videoSlots[index],
+                onPick: () => _pickVideo(index),
+                onRemove: () => _removeVideo(index),
+              ),
+            ),
+          ),
+          const Text(
+            'Hỗ trợ MP4/MOV/WebM, tối đa 100 MB mỗi video.',
+            style: TextStyle(
+                fontSize: 12, color: AppColors.textSecondary, height: 1.4),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1040,8 +1402,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
           address: _streetCtrl.text.isEmpty
               ? 'Chưa nhập địa chỉ'
               : _streetCtrl.text,
-          isFeatured: _isFeatured,
+          isFeatured: _shouldBuyPackage,
           imageCount: _filledCount,
+          videoCount: _filledVideoCount,
         ),
       ],
     );
@@ -1548,6 +1911,97 @@ class _SectionCard extends StatelessWidget {
       ),
     );
   }
+
+}
+
+class _PackageChoiceTile extends StatelessWidget {
+  final PostPackage package;
+  final bool selected;
+  final int imageLimit;
+  final String priceLabel;
+  final VoidCallback onTap;
+
+  const _PackageChoiceTile({
+    required this.package,
+    required this.selected,
+    required this.imageLimit,
+    required this.priceLabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = package.isFeatured
+        ? AppColors.tagHot
+        : package.isVip
+            ? AppColors.primary
+            : AppColors.textSecondary;
+    final videoLabel = package.maxVideos > 0
+        ? '${package.maxVideos} video'
+        : 'Không video';
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: 0.08) : AppColors.bgPage,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? accent : AppColors.borderLight,
+            width: selected ? 1.6 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              selected
+                  ? Icons.radio_button_checked_rounded
+                  : Icons.radio_button_off_rounded,
+              color: accent,
+              size: 22,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    package.packageName,
+                    style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$imageLimit ảnh trong app hiện tại • $videoLabel • ${package.durationDays} ngày',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              priceLabel,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _InputField extends StatelessWidget {
@@ -1823,6 +2277,76 @@ class _DatePickerTile extends StatelessWidget {
   }
 }
 
+class _VideoSlotCard extends StatelessWidget {
+  final VideoSlot slot;
+  final VoidCallback onPick;
+  final VoidCallback onRemove;
+
+  const _VideoSlotCard({
+    required this.slot,
+    required this.onPick,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasVideo = !slot.isEmpty;
+    return InkWell(
+      onTap: hasVideo ? null : onPick,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: hasVideo ? AppColors.primaryLight : AppColors.bgPage,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: hasVideo ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                hasVideo
+                    ? Icons.play_circle_outline_rounded
+                    : Icons.video_call_outlined,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                hasVideo ? slot.fileName : 'Chọn video ${slot.slotIndex + 1}',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            if (hasVideo)
+              IconButton(
+                onPressed: onRemove,
+                icon: const Icon(Icons.close_rounded, color: AppColors.error),
+              )
+            else
+              const Icon(Icons.add_rounded, color: AppColors.primary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _MapPickerPreview extends StatelessWidget {
   final double? latitude;
   final double? longitude;
@@ -1873,8 +2397,7 @@ class _MapPickerPreview extends StatelessWidget {
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate: _mapTileUrlTemplate,
                     userAgentPackageName: 'com.example.ung_dung_tim_kiem_tro',
                   ),
                   if (_hasLocation)
@@ -2028,7 +2551,7 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: _mapTileUrlTemplate,
                 userAgentPackageName: 'com.example.ung_dung_tim_kiem_tro',
               ),
               MarkerLayer(
@@ -2205,6 +2728,7 @@ class _PreviewCard extends StatelessWidget {
   final String    title, typeName, price, address;
   final bool      isFeatured;
   final int       imageCount;
+  final int       videoCount;
 
   const _PreviewCard({
     required this.coverSlot,
@@ -2214,6 +2738,7 @@ class _PreviewCard extends StatelessWidget {
     required this.address,
     required this.isFeatured,
     required this.imageCount,
+    required this.videoCount,
   });
 
   @override
@@ -2374,6 +2899,21 @@ class _PreviewCard extends StatelessWidget {
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600)),
                       ),
+                      if (videoCount > 0) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.play_circle_outline_rounded,
+                                size: 13, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Text('$videoCount video',
+                                style: const TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),

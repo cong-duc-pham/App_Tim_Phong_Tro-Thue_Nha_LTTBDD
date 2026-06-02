@@ -231,7 +231,7 @@ namespace Backend_API.Controllers.MVC
         }
 
         [HttpGet("listings/{id:long}")]
-        public async Task<IActionResult> ListingDetail(long id)
+        public async Task<IActionResult> ListingDetail(long id, [FromQuery] string? from)
         {
             var listing = await _context.Listings
                 .Include(x => x.Status)
@@ -241,8 +241,14 @@ namespace Backend_API.Controllers.MVC
                 .Include(x => x.District)
                 .Include(x => x.Ward)
                 .Include(x => x.ListingImages)
+                .Include(x => x.ListingVideos)
                 .Include(x => x.ListingAmenities)
                     .ThenInclude(x => x.Amenity)
+                .Include(x => x.ListingPostPackages)
+                    .ThenInclude(x => x.Package)
+                .Include(x => x.ListingPostPackages)
+                    .ThenInclude(x => x.Payment)
+                        .ThenInclude(x => x!.Status)
                 .FirstOrDefaultAsync(x => x.ListingId == id);
 
             if (listing == null)
@@ -276,6 +282,7 @@ namespace Backend_API.Controllers.MVC
 
             var model = new AdminListingDetailViewModel
             {
+                IsManagementContext = string.Equals(from, "management", StringComparison.OrdinalIgnoreCase),
                 ListingId = listing.ListingId,
                 Title = listing.Title,
                 Description = listing.Description,
@@ -309,10 +316,47 @@ namespace Backend_API.Controllers.MVC
                 LandlordPhone = listing.Landlord.Phone,
                 LandlordFirebaseUid = listing.Landlord.FirebaseUid,
                 ImageUrls = imageUrls.Distinct().ToList(),
+                Videos = listing.ListingVideos
+                    .OrderBy(x => x.CreatedAt)
+                    .Select(x => new AdminListingVideoViewModel
+                    {
+                        VideoId = x.VideoId,
+                        Url = ToAdminImageUrl(x.CloudinaryUrl) ?? x.CloudinaryUrl,
+                        ThumbnailUrl = string.IsNullOrWhiteSpace(x.ThumbnailUrl)
+                            ? null
+                            : ToAdminImageUrl(x.ThumbnailUrl),
+                        DurationSec = x.DurationSec,
+                        FileSizeKb = x.FileSizeKb,
+                        CreatedAt = x.CreatedAt
+                    })
+                    .ToList(),
                 Amenities = listing.ListingAmenities
                     .Select(x => x.Amenity.Name)
                     .Where(x => !string.IsNullOrWhiteSpace(x))
                     .OrderBy(x => x)
+                    .ToList(),
+                Packages = listing.ListingPostPackages
+                    .OrderByDescending(x => x.IsActive == true)
+                    .ThenByDescending(x => x.EndDate)
+                    .Select(x => new AdminListingPackageViewModel
+                    {
+                        PackageName = x.Package.PackageName,
+                        PackageType = x.Package.PackageType,
+                        Price = x.Package.Price,
+                        Priority = x.Package.Priority,
+                        MaxImages = x.Package.MaxImages,
+                        MaxVideos = x.Package.MaxVideos,
+                        AllowBanner = x.Package.AllowBanner,
+                        BadgeType = x.Package.BadgeType,
+                        HasAnalytics = x.Package.HasAnalytics,
+                        IsHighlighted = x.Package.IsHighlighted,
+                        IsActive = x.IsActive == true && x.EndDate >= DateTime.UtcNow,
+                        StartDate = x.StartDate,
+                        EndDate = x.EndDate,
+                        PaymentId = x.PaymentId,
+                        PaymentStatus = x.Payment?.Status?.StatusName,
+                        PaidAt = x.Payment?.PaidAt
+                    })
                     .ToList()
             };
 

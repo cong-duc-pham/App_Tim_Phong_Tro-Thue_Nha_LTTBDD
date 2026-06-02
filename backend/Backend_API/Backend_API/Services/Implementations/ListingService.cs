@@ -26,6 +26,8 @@ namespace Backend_API.Services.Implementations
         public async Task<ListingResponseDto> CreateListingAsync(long landlordId, ListingCreateDto dto)
         {
             // Tạo Listing mới
+            await PromoteUserToLandlordIfNeeded(landlordId);
+
             var hasCoverImage = !string.IsNullOrWhiteSpace(dto.Image0);
 
             var listing = new Listing
@@ -116,6 +118,26 @@ namespace Backend_API.Services.Implementations
         // ─────────────────────────────────────────────
         // UPDATE
         // ─────────────────────────────────────────────
+        private async Task PromoteUserToLandlordIfNeeded(long userId)
+        {
+            var user = await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.UserId == userId);
+            if (user == null) return;
+
+            var currentRole = user.Role?.RoleName?.Trim().ToLower();
+            if (currentRole == "admin" || currentRole == "landlord") return;
+
+            var landlordRoleId = await _context.Roles
+                .Where(r => r.RoleName.ToLower() == "landlord")
+                .Select(r => r.RoleId)
+                .FirstOrDefaultAsync();
+            if (landlordRoleId == 0) return;
+
+            user.RoleId = landlordRoleId;
+            user.UpdatedAt = DateTime.UtcNow;
+        }
+
         public async Task<ListingResponseDto> UpdateListingAsync(long listingId, ListingUpdateDto dto)
         {
             var listing = await _context.Listings.FindAsync(listingId)
@@ -439,6 +461,14 @@ namespace Backend_API.Services.Implementations
                 PackageInfo = activePackage == null ? null : new PackageInfoDto
                 {
                     PackageName = activePackage.Package.PackageName,
+                    PackageType = activePackage.Package.PackageType,
+                    Priority = activePackage.Package.Priority,
+                    MaxImages = activePackage.Package.MaxImages,
+                    MaxVideos = activePackage.Package.MaxVideos,
+                    AllowBanner = activePackage.Package.AllowBanner,
+                    BadgeType = activePackage.Package.BadgeType,
+                    HasAnalytics = activePackage.Package.HasAnalytics,
+                    IsHighlighted = activePackage.Package.IsHighlighted,
                     StartDate   = activePackage.StartDate,
                     EndDate     = activePackage.EndDate,
                     IsActive    = activePackage.IsActive == true

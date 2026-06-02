@@ -1,47 +1,82 @@
 // lib/models/post_package.dart
 
 class PostPackage {
-  final int id;
-  final String name;
-  final String code;
-  final double price;
+  final int packageId;
+  final String packageName;
+  final String packageType;
   final int durationDays;
-  final String description;
+  final double price;
   final int priority;
+  final int maxImages;
+  final int maxVideos;
+  final bool allowBanner;
+  final String? badgeType;
+  final bool hasAnalytics;
+  final bool isHighlighted;
+  final String? description;
+  final bool isActive;
 
-  PostPackage({
-    required this.id,
-    required this.name,
-    required this.code,
-    required this.price,
+  const PostPackage({
+    required this.packageId,
+    required this.packageName,
+    required this.packageType,
     required this.durationDays,
-    required this.description,
+    required this.price,
     required this.priority,
+    required this.maxImages,
+    required this.maxVideos,
+    required this.allowBanner,
+    required this.badgeType,
+    required this.hasAnalytics,
+    required this.isHighlighted,
+    required this.description,
+    required this.isActive,
   });
 
-  factory PostPackage.fromJson(Map<String, dynamic> json) {
-    return PostPackage(
-      id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? '') ?? 0,
-      name: json['name'] ?? json['Name'] ?? '',
-      code: json['code'] ?? json['Code'] ?? '',
-      price: (json['price'] ?? json['Price'] ?? 0.0) is int
-          ? (json['price'] ?? json['Price'] ?? 0).toDouble()
-          : (json['price'] ?? json['Price'] ?? 0.0).toDouble(),
-      durationDays: json['durationDays'] ?? json['DurationDays'] ?? 0,
-      description: json['description'] ?? json['Description'] ?? '',
-      priority: json['priority'] ?? json['Priority'] ?? 0,
-    );
-  }
+  bool get isFree => price <= 0 || packageType == 'free';
+  bool get isFeatured => packageType == 'featured' || isHighlighted;
+  bool get isVip => packageType == 'vip';
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'code': code,
-      'price': price,
-      'durationDays': durationDays,
-      'description': description,
-      'priority': priority,
-    };
+  factory PostPackage.fromJson(Map<String, dynamic> json) {
+    T? read<T>(String camel, String pascal) {
+      final value = json[camel] ?? json[pascal];
+      return value is T ? value : null;
+    }
+
+    int integer(String camel, String pascal) {
+      final value = json[camel] ?? json[pascal];
+      if (value is num) return value.toInt();
+      return int.tryParse(value?.toString() ?? '') ?? 0;
+    }
+
+    double number(String camel, String pascal) {
+      final value = json[camel] ?? json[pascal];
+      if (value is num) return value.toDouble();
+      return double.tryParse(value?.toString() ?? '') ?? 0;
+    }
+
+    bool boolean(String camel, String pascal) {
+      final value = json[camel] ?? json[pascal];
+      if (value is bool) return value;
+      if (value is num) return value != 0;
+      return value?.toString().toLowerCase() == 'true';
+    }
+
+    return PostPackage(
+      packageId: integer('packageId', 'PackageId'),
+      packageName: read<String>('packageName', 'PackageName') ?? 'Gói đăng tin',
+      packageType: read<String>('packageType', 'PackageType') ?? 'free',
+      durationDays: integer('durationDays', 'DurationDays'),
+      price: number('price', 'Price'),
+      priority: integer('priority', 'Priority'),
+      maxImages: integer('maxImages', 'MaxImages'),
+      maxVideos: integer('maxVideos', 'MaxVideos'),
+      allowBanner: boolean('allowBanner', 'AllowBanner'),
+      badgeType: read<String>('badgeType', 'BadgeType'),
+      hasAnalytics: boolean('hasAnalytics', 'HasAnalytics'),
+      isHighlighted: boolean('isHighlighted', 'IsHighlighted'),
+      description: read<String>('description', 'Description'),
+      isActive: boolean('isActive', 'IsActive'),
+    );
   }
 }
