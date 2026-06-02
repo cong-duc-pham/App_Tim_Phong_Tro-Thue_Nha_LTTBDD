@@ -210,6 +210,34 @@ class AuthRepository {
     }
   }
 
+  /// Cập nhật thông tin cá nhân trên backend.
+  Future<void> updateProfile({
+    required String fullName,
+    required String phone,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AppConstants.keyUserToken);
+    if (token == null || token.isEmpty) {
+      throw Exception('Bạn cần đăng nhập để thực hiện cập nhật.');
+    }
+
+    try {
+      await _apiService.dio.put(
+        '/auth/profile',
+        data: {
+          'fullName': fullName.trim(),
+          'phone': phone.trim(),
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      
+      // Cập nhật lại SharedPreferences nội bộ
+      await prefs.setString('user_full_name', fullName.trim());
+    } on DioException catch (e) {
+      throw Exception(readBackendMessage(e));
+    }
+  }
+
   /// Đăng xuất.
   Future<void> signOut() async {
     await GoogleSignIn.instance.signOut();

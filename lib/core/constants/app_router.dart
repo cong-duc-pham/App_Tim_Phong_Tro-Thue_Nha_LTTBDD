@@ -8,6 +8,8 @@ import '../../screens/onboarding/preference_screen.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/notifications/notifications_screen.dart';
 import '../../screens/listing/listing_create_screen.dart';
+import '../../screens/listing/listing_detail_screen.dart';
+import '../../screens/listing/my_listings_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/profile/favorites_screen.dart';
 import '../../screens/profile/about_app_screen.dart';
@@ -57,9 +59,9 @@ final appRouter = GoRouter(
         GoRoute(
             path: '/favorites', builder: (_, __) => const FavoritesScreen()),
         GoRoute(path: '/chat', builder: (_, __) => const ConversationsScreen()),
+        GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
       ],
     ),
-    GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
     GoRoute(
         path: '/notifications',
         builder: (_, __) => const NotificationsScreen()),
@@ -90,6 +92,17 @@ final appRouter = GoRouter(
         final conv = state.extra as Conversation;
         return ChatScreen(conversation: conv);
       },
+    ),
+    GoRoute(
+      path: '/listing/:id',
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return ListingDetailScreen(id: id);
+      },
+    ),
+    GoRoute(
+      path: '/my-listings',
+      builder: (_, __) => const MyListingsScreen(),
     ),
   ],
 );

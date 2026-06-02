@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../repositories/auth_repository.dart';
 
 // ─── Model tạm (thay bằng Bloc/Repository sau) ────────────────────────────────
 
@@ -255,7 +256,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 label: 'Phòng đã lưu',
                 badge:
                     _user.favoritesCount > 0 ? '${_user.favoritesCount}' : null,
-                onTap: () {},
+                onTap: () => context.push(AppConstants.routeFavorites),
               ),
               _MenuItem(
                 icon: Icons.rate_review_outlined,
@@ -274,7 +275,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   label: 'Tin đăng của tôi',
                   badge:
                       _user.listingsCount > 0 ? '${_user.listingsCount}' : null,
-                  onTap: () {},
+                  onTap: () => context.push(AppConstants.routeMyListings),
                 ),
                 _MenuItem(
                   icon: Icons.receipt_long_outlined,
@@ -803,7 +804,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _EditProfileSheet(user: _user),
+      builder: (_) => _EditProfileSheet(
+        user: _user,
+        onSaved: _loadCurrentUser,
+      ),
     );
   }
 
@@ -826,7 +830,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 class _EditProfileSheet extends StatefulWidget {
   final _UserInfo user;
-  const _EditProfileSheet({required this.user});
+  final VoidCallback onSaved;
+  const _EditProfileSheet({
+    required this.user,
+    required this.onSaved,
+  });
 
   @override
   State<_EditProfileSheet> createState() => _EditProfileSheetState();
@@ -835,6 +843,7 @@ class _EditProfileSheet extends StatefulWidget {
 class _EditProfileSheetState extends State<_EditProfileSheet> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _phoneCtrl;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -914,20 +923,71 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: gọi API cập nhật
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Đã cập nhật thông tin'),
-                            backgroundColor: AppColors.success,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                          ),
-                        );
-                      },
-                      child: const Text('Lưu thay đổi'),
+                      onPressed: _isSaving
+                          ? null
+                          : () async {
+                              final name = _nameCtrl.text.trim();
+                              final phone = _phoneCtrl.text.trim();
+                              if (name.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Họ và tên không được để trống'),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              setState(() => _isSaving = true);
+                              try {
+                                await AuthRepository().updateProfile(
+                                  fullName: name,
+                                  phone: phone,
+                                );
+                                if (!mounted) return;
+                                widget.onSaved();
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text(
+                                        'Đã cập nhật thông tin thành công'),
+                                    backgroundColor: AppColors.success,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
+                                  ),
+                                );
+                              } catch (e) {
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(e
+                                        .toString()
+                                        .replaceAll('Exception: ', '')),
+                                    backgroundColor: AppColors.error,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
+                                  ),
+                                );
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isSaving = false);
+                                }
+                              }
+                            },
+                      child: _isSaving
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text('Lưu thay đổi'),
                     ),
                   ),
                 ],
