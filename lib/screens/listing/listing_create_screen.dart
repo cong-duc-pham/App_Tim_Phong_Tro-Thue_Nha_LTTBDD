@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import 'dart:async';
@@ -551,9 +551,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
       'internetPrice': _parseDecimal(_internetCtrl.text),
       'parkingPrice': _parseDecimal(_parkingCtrl.text),
       'allowPet': _allowPet,
-      'availableFrom': _availableFrom == null
-          ? null
-          : _availableFrom!.toIso8601String().split('T').first,
+      'availableFrom': _availableFrom?.toIso8601String().split('T').first,
       'amenityIds': <int>[],
       'image0': _maxSelectableImages > 0 ? _slots[0].networkUrl : null,
       'image1': _maxSelectableImages > 1 ? _slots[1].networkUrl : null,
@@ -626,7 +624,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
   Future<void> _openLocationPicker() async {
     final initialPoint = _selectedLatitude != null && _selectedLongitude != null
         ? LatLng(_selectedLatitude!, _selectedLongitude!)
-        : LatLng(AppConstants.defaultLat, AppConstants.defaultLng);
+        : const LatLng(AppConstants.defaultLat, AppConstants.defaultLng);
 
     final picked = await Navigator.of(context).push<LatLng>(
       MaterialPageRoute(
@@ -1905,7 +1903,7 @@ class _SectionCard extends StatelessWidget {
                       color: AppColors.textPrimary)),
             ]),
           ),
-          Divider(height: 1, color: AppColors.border),
+          const Divider(height: 1, color: AppColors.border),
           Padding(padding: const EdgeInsets.all(14), child: child),
         ],
       ),
@@ -2112,7 +2110,7 @@ class _DropdownField extends StatelessWidget {
                 color: AppColors.textSecondary)),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           onChanged: enabled ? onChanged : null,
           hint: Text('Chọn $label',
               style: const TextStyle(
@@ -2366,7 +2364,7 @@ class _MapPickerPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final point = _hasLocation
         ? LatLng(latitude!, longitude!)
-        : LatLng(AppConstants.defaultLat, AppConstants.defaultLng);
+        : const LatLng(AppConstants.defaultLat, AppConstants.defaultLng);
 
     return GestureDetector(
       onTap: onTap,
@@ -2774,7 +2772,7 @@ class _PreviewCard extends StatelessWidget {
                       fontWeight: FontWeight.w700, fontSize: 14)),
             ]),
           ),
-          Divider(height: 1, color: AppColors.border),
+          const Divider(height: 1, color: AppColors.border),
           Padding(
             padding: const EdgeInsets.all(14),
             child: Row(

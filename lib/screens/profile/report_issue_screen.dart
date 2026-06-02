@@ -190,7 +190,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionTitle('Loại sự cố'),
+        const _SectionTitle('Loại sự cố'),
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -238,7 +238,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionTitle('Nội dung báo cáo'),
+        const _SectionTitle('Nội dung báo cáo'),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -300,7 +300,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
       child: SwitchListTile(
         value: _includeDeviceInfo,
         onChanged: (value) => setState(() => _includeDeviceInfo = value),
-        activeColor: AppColors.primary,
+        activeThumbColor: AppColors.primary,
         title: const Text(
           'Gửi kèm thông tin thiết bị',
           style: TextStyle(

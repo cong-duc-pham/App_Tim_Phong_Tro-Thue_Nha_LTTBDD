@@ -2,7 +2,6 @@
 
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../core/constants/app_constants.dart';
 import 'base_repository.dart';
 import '../models/user.dart';
 

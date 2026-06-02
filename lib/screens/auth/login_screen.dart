@@ -139,9 +139,9 @@ class _LoginScreenState extends State<LoginScreen>
           child: const Icon(Icons.home_rounded, color: Colors.white, size: 28),
         ),
         const SizedBox(height: AppConstants.spacingXl),
-        Text('Chào mừng trở lại! 👋', style: AppTextStyles.h1),
+        const Text('Chào mừng trở lại! 👋', style: AppTextStyles.h1),
         const SizedBox(height: AppConstants.spacingXs),
-        Text(
+        const Text(
           'Đăng nhập để tiếp tục tìm kiếm phòng trọ',
           style: AppTextStyles.bodyMedium,
         ),
@@ -260,14 +260,14 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildDivider() {
-    return Row(
+    return const Row(
       children: [
-        const Expanded(child: Divider(color: AppColors.border)),
+        Expanded(child: Divider(color: AppColors.border)),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacingMd),
+          padding: EdgeInsets.symmetric(horizontal: AppConstants.spacingMd),
           child: Text('hoặc', style: AppTextStyles.bodySmall),
         ),
-        const Expanded(child: Divider(color: AppColors.border)),
+        Expanded(child: Divider(color: AppColors.border)),
       ],
     );
   }
@@ -307,7 +307,7 @@ class _LoginScreenState extends State<LoginScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text('Chưa có tài khoản? ', style: AppTextStyles.bodyMedium),
+        const Text('Chưa có tài khoản? ', style: AppTextStyles.bodyMedium),
         GestureDetector(
           onTap: () => context.go(AppConstants.routeRegister),
           child: Text(
