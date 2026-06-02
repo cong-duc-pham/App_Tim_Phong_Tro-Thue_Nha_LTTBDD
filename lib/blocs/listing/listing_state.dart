@@ -29,6 +29,9 @@ class ListingDetailLoaded extends ListingDetailState {
   // true khi đang gọi API toggle, tránh người dùng nhấn nhiều lần
   final bool isFavoriteLoading;
   final String? favoriteError;
+  final bool isReviewSubmitting;
+  final String? reviewSubmitError;
+  final bool reviewSubmitSuccess;
 
   const ListingDetailLoaded({
     required this.listing,
@@ -38,6 +41,9 @@ class ListingDetailLoaded extends ListingDetailState {
     required this.reviewCount,
     this.isFavoriteLoading = false,
     this.favoriteError,
+    this.isReviewSubmitting = false,
+    this.reviewSubmitError,
+    this.reviewSubmitSuccess = false,
   });
 
   ListingDetailLoaded copyWith({
@@ -48,6 +54,9 @@ class ListingDetailLoaded extends ListingDetailState {
     int? reviewCount,
     bool? isFavoriteLoading,
     String? favoriteError,
+    bool? isReviewSubmitting,
+    String? reviewSubmitError,
+    bool? reviewSubmitSuccess,
   }) {
     return ListingDetailLoaded(
       listing: listing ?? this.listing,
@@ -57,6 +66,9 @@ class ListingDetailLoaded extends ListingDetailState {
       reviewCount: reviewCount ?? this.reviewCount,
       isFavoriteLoading: isFavoriteLoading ?? this.isFavoriteLoading,
       favoriteError: favoriteError,
+      isReviewSubmitting: isReviewSubmitting ?? this.isReviewSubmitting,
+      reviewSubmitError: reviewSubmitError,
+      reviewSubmitSuccess: reviewSubmitSuccess ?? false,
     );
   }
 
@@ -69,6 +81,9 @@ class ListingDetailLoaded extends ListingDetailState {
         reviewCount,
         isFavoriteLoading,
         favoriteError,
+        isReviewSubmitting,
+        reviewSubmitError,
+        reviewSubmitSuccess,
       ];
 }
 

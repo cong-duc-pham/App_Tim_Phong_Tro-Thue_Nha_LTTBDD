@@ -8,10 +8,14 @@ namespace Backend_API.Services.Implementations
     public class ReviewService : IReviewService
     {
         private readonly PhongTroDbContext _context;
+        private readonly INotificationService _notificationService;
 
-        public ReviewService(PhongTroDbContext context)
+        public ReviewService(
+            PhongTroDbContext context,
+            INotificationService notificationService)
         {
             _context = context;
+            _notificationService = notificationService;
         }
 
         public async Task<ReviewResponseDto> CreateReviewAsync(long reviewerId, long listingId, ReviewCreateDto dto)
@@ -64,8 +68,12 @@ namespace Backend_API.Services.Implementations
             }
 
             // Load lại để trả về DTO đầy đủ
-            return await BuildResponseDto(review.ReviewId)
-                   ?? throw new Exception("Tạo đánh giá thất bại.");
+            var result = await BuildResponseDto(review.ReviewId)
+                         ?? throw new Exception("Tạo đánh giá thất bại.");
+
+            await NotifyLandlordReviewCreatedAsync(listing, result);
+
+            return result;
         }
 
         public async Task<List<ReviewResponseDto>> GetReviewsByListingAsync(long listingId)
@@ -111,6 +119,38 @@ namespace Backend_API.Services.Implementations
                 .FirstOrDefaultAsync(r => r.ReviewId == reviewId);
 
             return review == null ? null : MapToDto(review);
+        }
+
+        private async Task NotifyLandlordReviewCreatedAsync(Listing listing, ReviewResponseDto review)
+        {
+            try
+            {
+                var reviewerName = string.IsNullOrWhiteSpace(review.ReviewerName)
+                    ? "Người thuê"
+                    : review.ReviewerName.Trim();
+                var comment = review.Comment?.Trim();
+                var body = string.IsNullOrWhiteSpace(comment)
+                    ? $"{reviewerName} vừa đánh giá {review.Rating}/5 sao cho tin \"{listing.Title}\"."
+                    : $"{reviewerName} vừa đánh giá {review.Rating}/5 sao: {TrimForNotification(comment)}";
+
+                await _notificationService.CreateAndSendAsync(
+                    listing.LandlordId,
+                    "Tin đăng có đánh giá mới",
+                    body,
+                    "listing_reviewed",
+                    listing.ListingId,
+                    "listing");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Review] Could not notify landlord for review {review.ReviewId}: {ex.Message}");
+            }
+        }
+
+        private static string TrimForNotification(string value)
+        {
+            const int maxLength = 120;
+            return value.Length <= maxLength ? value : value[..maxLength].TrimEnd() + "...";
         }
 
         private static ReviewResponseDto MapToDto(Review r) => new()

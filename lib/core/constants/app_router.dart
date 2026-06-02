@@ -88,9 +88,7 @@ final appRouter = GoRouter(
         path: '/search-history',
         builder: (_, __) => const SearchHistoryScreen()),
     GoRoute(path: '/my-reviews', builder: (_, __) => const MyReviewsScreen()),
-    GoRoute(
-        path: '/my-listings',
-        builder: (_, __) => const MyListingsScreen()),
+    GoRoute(path: '/my-listings', builder: (_, __) => const MyListingsScreen()),
     GoRoute(
       path: '/listing-analytics/:id',
       builder: (context, state) {
@@ -119,7 +117,11 @@ final appRouter = GoRouter(
       path: '/listing/:id',
       builder: (context, state) {
         final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-        return ListingDetailScreen(listingId: id);
+        final section = state.uri.queryParameters['section'];
+        return ListingDetailScreen(
+          listingId: id,
+          scrollToReviews: section == 'reviews',
+        );
       },
     ),
   ],
