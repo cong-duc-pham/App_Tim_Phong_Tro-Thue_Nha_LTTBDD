@@ -23,6 +23,7 @@ class ListingDetailBloc extends Bloc<ListingDetailEvent, ListingDetailState> {
         super(const ListingDetailInitial()) {
     on<LoadListingDetail>(_onLoad);
     on<ToggleListingFavorite>(_onToggleFavorite);
+    on<SubmitListingReview>(_onSubmitReview);
   }
 
   Future<void> _onLoad(
@@ -67,7 +68,9 @@ class ListingDetailBloc extends Bloc<ListingDetailEvent, ListingDetailState> {
     } catch (e) {
       final msg = e.toString();
       emit(ListingDetailError(
-        msg.startsWith('Exception: ') ? msg.substring('Exception: '.length) : msg,
+        msg.startsWith('Exception: ')
+            ? msg.substring('Exception: '.length)
+            : msg,
       ));
     }
   }
@@ -85,7 +88,8 @@ class ListingDetailBloc extends Bloc<ListingDetailEvent, ListingDetailState> {
 
     try {
       final newState = await _favoriteRepo.toggleFavorite(event.listingId);
-      emit(current.copyWith(isFavorite: newState, isFavoriteLoading: false, favoriteError: null));
+      emit(current.copyWith(
+          isFavorite: newState, isFavoriteLoading: false, favoriteError: null));
     } catch (e) {
       // API lỗi thì roll back lại trạng thái cũ và gán thông điệp lỗi
       final errorMsg = e.toString().replaceAll('Exception: ', '');
@@ -93,6 +97,39 @@ class ListingDetailBloc extends Bloc<ListingDetailEvent, ListingDetailState> {
         isFavorite: wasLiked,
         isFavoriteLoading: false,
         favoriteError: errorMsg,
+      ));
+    }
+  }
+
+  Future<void> _onSubmitReview(
+    SubmitListingReview event,
+    Emitter<ListingDetailState> emit,
+  ) async {
+    final current = state;
+    if (current is! ListingDetailLoaded || current.isReviewSubmitting) return;
+
+    emit(current.copyWith(isReviewSubmitting: true));
+
+    try {
+      await _reviewRepo.createReview(
+        listingId: event.listingId,
+        rating: event.rating,
+        comment: event.comment,
+      );
+      final reviewData = await _reviewRepo.getReviews(event.listingId);
+
+      emit(current.copyWith(
+        reviews: reviewData.reviews,
+        averageRating: reviewData.averageRating,
+        reviewCount: reviewData.count,
+        isReviewSubmitting: false,
+        reviewSubmitSuccess: true,
+      ));
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(current.copyWith(
+        isReviewSubmitting: false,
+        reviewSubmitError: errorMsg,
       ));
     }
   }
