@@ -176,6 +176,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
             createdLabel: _formatDate(invoice.createdAt),
             isPaying: _payingInvoiceCode == invoice.invoiceCode,
             onPay: () => _payInvoice(invoice),
+            onViewBill: () => context.push('/invoices/detail', extra: invoice),
             onOpenListing: invoice.listingId > 0
                 ? () => context.push('/listing/${invoice.listingId}')
                 : null,
@@ -268,6 +269,7 @@ class _InvoiceCard extends StatelessWidget {
     required this.createdLabel,
     required this.isPaying,
     required this.onPay,
+    required this.onViewBill,
     this.onOpenListing,
   });
 
@@ -276,6 +278,7 @@ class _InvoiceCard extends StatelessWidget {
   final String createdLabel;
   final bool isPaying;
   final VoidCallback onPay;
+  final VoidCallback onViewBill;
   final VoidCallback? onOpenListing;
 
   @override
@@ -381,6 +384,15 @@ class _InvoiceCard extends StatelessWidget {
                   ),
                 ),
             ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onViewBill,
+              icon: const Icon(Icons.description_outlined, size: 18),
+              label: const Text('Xem bill'),
+            ),
           ),
         ],
       ),
