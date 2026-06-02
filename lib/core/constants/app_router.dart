@@ -9,7 +9,6 @@ import '../../screens/home/home_screen.dart';
 import '../../screens/notifications/notifications_screen.dart';
 import '../../screens/listing/listing_create_screen.dart';
 import '../../screens/listing/listing_detail_screen.dart';
-import '../../screens/listing/my_listings_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/profile/favorites_screen.dart';
 import '../../screens/profile/about_app_screen.dart';
@@ -28,7 +27,6 @@ import '../../models/conversation.dart';
 import '../../models/listing.dart';
 import '../../screens/chat/conversations_screen.dart';
 import '../../screens/chat/chat_screen.dart';
-import '../../screens/listing/listing_detail_screen.dart';
 import '../../widgets/main_bottom_nav.dart';
 
 final appRouter = GoRouter(

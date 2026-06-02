@@ -92,8 +92,6 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     _allConversations = [
       Conversation(
         convId: 101,
-        landlordId: 10,
-        tenantId: 1,
         listingId: 50001,
         otherUserId: 10,
         otherUserName: 'Nguyễn Văn A (Chủ nhà)',
@@ -106,8 +104,6 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
       ),
       Conversation(
         convId: 102,
-        landlordId: 12,
-        tenantId: 1,
         listingId: 50002,
         otherUserId: 12,
         otherUserName: 'Trần Thị B (Chủ nhà)',
