@@ -23,6 +23,9 @@ namespace Backend_API.Controllers.MVC
         private const string ReportStatusResolved = "resolved";
         private const string ReportStatusDismissed = "dismissed";
         private const string PaymentStatusSuccess = "success";
+        private const string RoleAdmin = "admin";
+        private const string RoleTenant = "tenant";
+        private const string RoleLandlord = "landlord";
 
         private readonly PhongTroDbContext _context;
         private readonly INotificationService _notificationService;
@@ -61,6 +64,20 @@ namespace Backend_API.Controllers.MVC
                 .ToList();
 
             var statByDate = dailyStats.ToDictionary(x => x.StatDate);
+            var revenueByDate = await _context.Payments
+                .Include(x => x.Status)
+                .Where(x =>
+                    x.Status.StatusName == PaymentStatusSuccess &&
+                    x.PaidAt != null &&
+                    x.PaidAt >= startDate &&
+                    x.PaidAt < today.AddDays(1))
+                .GroupBy(x => DateOnly.FromDateTime(x.PaidAt!.Value))
+                .Select(x => new
+                {
+                    Date = x.Key,
+                    Revenue = x.Sum(p => p.Amount)
+                })
+                .ToDictionaryAsync(x => x.Date, x => x.Revenue);
 
             var model = new AdminDashboardViewModel
             {
@@ -84,7 +101,7 @@ namespace Backend_API.Controllers.MVC
                 Revenue30Days = labels.Select(day =>
                 {
                     var key = DateOnly.FromDateTime(day);
-                    return statByDate.TryGetValue(key, out var stat) ? (stat.TotalRevenue ?? 0m) : 0m;
+                    return revenueByDate.TryGetValue(key, out var revenue) ? revenue : 0m;
                 }).ToList()
             };
 
@@ -96,17 +113,24 @@ namespace Backend_API.Controllers.MVC
         public async Task<IActionResult> Users()
         {
             await TryAutoSyncFirebaseUsersAsync();
+            await SyncUserRolesByListingsAsync();
 
-            var users = await _context.VwUserFirebaseInfos
+            var users = await _context.Users
+                .Include(x => x.Role)
+                .Where(x => x.Role.RoleName.ToLower() != RoleAdmin)
                 .OrderByDescending(x => x.UserId)
                 .Select(x => new AdminUserItemViewModel
                 {
                     UserId = x.UserId,
                     FullName = x.FullName,
                     Email = x.Email,
-                    RoleName = x.RoleName,
+                    RoleName = x.Role.RoleName,
                     FirebaseUid = x.FirebaseUid,
-                    AuthMethod = x.AuthMethod,
+                    AuthMethod = x.FirebaseUid != null && x.FirebaseUid != "" && x.PasswordHash != null && x.PasswordHash != ""
+                        ? "hybrid"
+                        : x.FirebaseUid != null && x.FirebaseUid != ""
+                            ? "firebase_only"
+                            : "password_only",
                     IsActive = x.IsActive == true
                 })
                 .ToListAsync();
@@ -474,6 +498,117 @@ namespace Backend_API.Controllers.MVC
             return View(new AdminReportsViewModel { Reports = reports });
         }
 
+        [HttpGet("revenue")]
+        public async Task<IActionResult> Revenue([FromQuery] DateOnly? from, [FromQuery] DateOnly? to)
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var fromDate = from ?? today.AddDays(-29);
+            var toDate = to ?? today;
+
+            if (fromDate > toDate)
+            {
+                (fromDate, toDate) = (toDate, fromDate);
+            }
+
+            var fromDateTime = fromDate.ToDateTime(TimeOnly.MinValue);
+            var toDateTimeExclusive = toDate.AddDays(1).ToDateTime(TimeOnly.MinValue);
+
+            var invoices = await _context.Invoices
+                .Include(x => x.Status)
+                .Include(x => x.Landlord)
+                .Include(x => x.Listing)
+                .Include(x => x.Payments)
+                    .ThenInclude(x => x.Method)
+                .Where(x => x.CreatedAt != null && x.CreatedAt >= fromDateTime && x.CreatedAt < toDateTimeExclusive)
+                .OrderByDescending(x => x.CreatedAt)
+                .Take(500)
+                .ToListAsync();
+
+            var successInvoices = invoices
+                .Where(x => string.Equals(x.Status.StatusName, PaymentStatusSuccess, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            var pendingInvoices = invoices
+                .Where(x => string.Equals(x.Status.StatusName, "pending", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            var labels = Enumerable.Range(0, toDate.DayNumber - fromDate.DayNumber + 1)
+                .Select(i => fromDate.AddDays(i))
+                .ToList();
+
+            var revenueByDate = successInvoices
+                .Where(x => x.UpdatedAt != null)
+                .GroupBy(x => DateOnly.FromDateTime(x.UpdatedAt!.Value))
+                .ToDictionary(x => x.Key, x => x.Sum(i => i.TotalAmount));
+
+            var model = new AdminRevenueViewModel
+            {
+                FromDate = fromDate,
+                ToDate = toDate,
+                TotalRevenue = successInvoices.Sum(x => x.TotalAmount),
+                PendingRevenue = pendingInvoices.Sum(x => x.TotalAmount),
+                PaidInvoiceCount = successInvoices.Count,
+                PendingInvoiceCount = pendingInvoices.Count,
+                AveragePaidInvoice = successInvoices.Count == 0 ? 0 : successInvoices.Average(x => x.TotalAmount),
+                ChartLabels = labels.Select(x => x.ToString("dd/MM")).ToList(),
+                ChartRevenue = labels
+                    .Select(day => revenueByDate.TryGetValue(day, out var amount) ? amount : 0m)
+                    .ToList(),
+                Invoices = invoices.Select(x =>
+                {
+                    var latestPayment = x.Payments
+                        .OrderByDescending(p => p.PaidAt ?? p.CreatedAt)
+                        .FirstOrDefault();
+
+                    return new AdminRevenueInvoiceItemViewModel
+                    {
+                        InvoiceId = x.InvoiceId,
+                        InvoiceCode = x.InvoiceCode,
+                        InvoiceType = x.InvoiceType,
+                        TotalAmount = x.TotalAmount,
+                        StatusName = x.Status.StatusName,
+                        DueDate = x.DueDate,
+                        CreatedAt = x.CreatedAt,
+                        PaidAt = latestPayment?.PaidAt,
+                        LandlordName = x.Landlord.FullName,
+                        LandlordEmail = x.Landlord.Email,
+                        ListingId = x.ListingId,
+                        ListingTitle = x.Listing?.Title,
+                        PaymentMethod = latestPayment?.Method.MethodName
+                    };
+                }).ToList()
+            };
+
+            ViewData["Title"] = "Quản lý doanh thu";
+            return View(model);
+        }
+
+        [HttpGet("revenue/invoices/{id:long}")]
+        public async Task<IActionResult> RevenueInvoiceDetail(long id)
+        {
+            var model = await BuildRevenueInvoiceDetailAsync(id);
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            ViewData["Title"] = "Chi tiết bill";
+            return View(model);
+        }
+
+        [HttpGet("revenue/invoices/{id:long}/export")]
+        public async Task<IActionResult> ExportRevenueInvoiceBill(long id)
+        {
+            var model = await BuildRevenueInvoiceDetailAsync(id);
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            var content = BuildInvoiceBillText(model);
+            var fileName = $"{SanitizeFileName(model.InvoiceCode)}_bill.txt";
+            return File(System.Text.Encoding.UTF8.GetBytes(content), "text/plain; charset=utf-8", fileName);
+        }
+
         [HttpPost("reports/{id:long}/resolve")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResolveReport(long id)
@@ -637,6 +772,86 @@ namespace Backend_API.Controllers.MVC
             }
         }
 
+        private async Task<AdminRevenueInvoiceDetailViewModel?> BuildRevenueInvoiceDetailAsync(long invoiceId)
+        {
+            var invoice = await _context.Invoices
+                .Include(x => x.Status)
+                .Include(x => x.Landlord)
+                .Include(x => x.Listing)
+                .Include(x => x.Payments)
+                    .ThenInclude(x => x.Method)
+                .FirstOrDefaultAsync(x => x.InvoiceId == invoiceId);
+
+            if (invoice == null)
+            {
+                return null;
+            }
+
+            var latestPayment = invoice.Payments
+                .OrderByDescending(x => x.PaidAt ?? x.CreatedAt)
+                .FirstOrDefault();
+
+            return new AdminRevenueInvoiceDetailViewModel
+            {
+                InvoiceId = invoice.InvoiceId,
+                InvoiceCode = invoice.InvoiceCode,
+                InvoiceType = invoice.InvoiceType,
+                TotalAmount = invoice.TotalAmount,
+                StatusName = invoice.Status.StatusName,
+                DueDate = invoice.DueDate,
+                CreatedAt = invoice.CreatedAt,
+                UpdatedAt = invoice.UpdatedAt,
+                PaidAt = latestPayment?.PaidAt,
+                LandlordName = invoice.Landlord.FullName,
+                LandlordEmail = invoice.Landlord.Email,
+                ListingId = invoice.ListingId,
+                ListingTitle = invoice.Listing?.Title,
+                PaymentMethod = latestPayment?.Method.MethodName,
+                Note = invoice.Note
+            };
+        }
+
+        private static string BuildInvoiceBillText(AdminRevenueInvoiceDetailViewModel model)
+        {
+            var lines = new List<string>
+            {
+                "SWINGS HOUSE - BILL THANH TOAN",
+                "--------------------------------",
+                $"Ma hoa don: {model.InvoiceCode}",
+                $"Loai hoa don: {model.InvoiceType}",
+                $"Trang thai: {model.StatusName}",
+                $"So tien: {model.TotalAmount:N0} d",
+                $"Nguoi thanh toan: {model.LandlordName}",
+                $"Email: {model.LandlordEmail ?? "-"}",
+                $"Ngay tao: {model.CreatedAt?.ToLocalTime():dd/MM/yyyy HH:mm}",
+                $"Han thanh toan: {model.DueDate:dd/MM/yyyy}",
+                $"Ngay thanh toan: {(model.PaidAt.HasValue ? model.PaidAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "-")}",
+                $"Phuong thuc: {model.PaymentMethod ?? "-"}"
+            };
+
+            if (model.ListingId.HasValue)
+            {
+                lines.Add($"Tin dang: #{model.ListingId} - {model.ListingTitle ?? "-"}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.Note))
+            {
+                lines.Add($"Ghi chu: {model.Note.Trim()}");
+            }
+
+            lines.Add("--------------------------------");
+            lines.Add("Cam on ban da su dung SWINGS HOUSE.");
+
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        private static string SanitizeFileName(string value)
+        {
+            var invalidChars = Path.GetInvalidFileNameChars();
+            var sanitized = new string(value.Select(ch => invalidChars.Contains(ch) ? '_' : ch).ToArray());
+            return string.IsNullOrWhiteSpace(sanitized) ? "invoice" : sanitized;
+        }
+
         private static string? ToAdminImageUrl(string? imageUrl)
         {
             if (string.IsNullOrWhiteSpace(imageUrl))
@@ -694,6 +909,54 @@ namespace Backend_API.Controllers.MVC
             }
 
             return status.StatusId;
+        }
+
+        private async Task SyncUserRolesByListingsAsync()
+        {
+            var roleIds = await _context.Roles
+                .Where(x =>
+                    x.RoleName.ToLower() == RoleTenant ||
+                    x.RoleName.ToLower() == RoleLandlord)
+                .ToDictionaryAsync(x => x.RoleName.ToLower(), x => x.RoleId);
+
+            if (!roleIds.TryGetValue(RoleTenant, out var tenantRoleId) ||
+                !roleIds.TryGetValue(RoleLandlord, out var landlordRoleId))
+            {
+                return;
+            }
+
+            var usersWithListings = (await _context.Listings
+                    .Select(x => x.LandlordId)
+                    .Distinct()
+                    .ToListAsync())
+                .ToHashSet();
+
+            var users = await _context.Users
+                .Include(x => x.Role)
+                .Where(x => x.Role.RoleName.ToLower() != RoleAdmin)
+                .ToListAsync();
+
+            var changed = false;
+            foreach (var user in users)
+            {
+                var targetRoleId = usersWithListings.Contains(user.UserId)
+                    ? landlordRoleId
+                    : tenantRoleId;
+
+                if (user.RoleId == targetRoleId)
+                {
+                    continue;
+                }
+
+                user.RoleId = targetRoleId;
+                user.UpdatedAt = DateTime.UtcNow;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                await _context.SaveChangesAsync();
+            }
         }
 
         private long? GetCurrentAdminIdOrNull()

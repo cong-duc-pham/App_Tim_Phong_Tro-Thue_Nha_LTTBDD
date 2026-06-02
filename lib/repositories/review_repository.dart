@@ -41,8 +41,11 @@ class ReviewItem {
       reviewerName: read<String>('reviewerName', 'ReviewerName') ?? 'Ẩn danh',
       reviewerAvatar: read<String>('reviewerAvatar', 'ReviewerAvatar'),
       rating: ratingRaw is num ? ratingRaw.toDouble() : 0.0,
-      content: read<String>('content', 'Content') ?? '',
-      replyContent: read<String>('replyContent', 'ReplyContent'),
+      content: read<String>('content', 'Content') ??
+          read<String>('comment', 'Comment') ??
+          '',
+      replyContent: read<String>('replyContent', 'ReplyContent') ??
+          read<String>('landlordReply', 'LandlordReply'),
       createdAt: createdRaw != null
           ? DateTime.tryParse(createdRaw.toString()) ?? DateTime.now()
           : DateTime.now(),
@@ -108,10 +111,10 @@ class ReviewRepository extends BaseRepository {
   }
 
   /// Tạo đánh giá mới cho một phòng trọ.
-  Future<Review> createReview({
+  Future<ReviewItem> createReview({
     required int listingId,
-    required double rating,
-    required String content,
+    required int rating,
+    required String comment,
   }) async {
     try {
       final options = await getOptionsWithToken();
@@ -119,7 +122,7 @@ class ReviewRepository extends BaseRepository {
         '/listings/$listingId/reviews',
         data: {
           'rating': rating,
-          'content': content,
+          'comment': comment,
         },
         options: options,
       );
@@ -130,7 +133,7 @@ class ReviewRepository extends BaseRepository {
         throw Exception('Không thể tạo đánh giá.');
       }
 
-      return Review.fromJson(Map<String, dynamic>.from(data));
+      return ReviewItem.fromJson(Map<String, dynamic>.from(data));
     } on DioException catch (e) {
       throw Exception(_readBackendMessage(e));
     }
@@ -146,7 +149,7 @@ class ReviewRepository extends BaseRepository {
       await dio.post<Map<String, dynamic>>(
         '/reviews/$reviewId/reply',
         data: {
-          'replyContent': replyContent,
+          'reply': replyContent,
         },
         options: options,
       );

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
@@ -41,6 +42,7 @@ class _UserInfo {
 }
 
 // Dữ liệu mẫu — thay bằng API call thật
+// ignore: unused_element
 final _mockUser = _UserInfo(
   fullName: 'Phạm Công Đức',
   email: 'duc.pham@example.com',
@@ -66,6 +68,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late _UserInfo _user;
   bool _isLoggedIn = false;
   bool _isLoading = true;
+  double? _appRating;
+  String _appRatingComment = '';
+  DateTime? _appRatingSubmittedAt;
 
   @override
   void initState() {
@@ -75,6 +80,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadCurrentUser() async {
     final prefs = await SharedPreferences.getInstance();
+    _loadAppRatingFromPrefs(prefs);
     final savedToken = prefs.getString(AppConstants.keyUserToken);
     final savedUserId = prefs.getString(AppConstants.keyUserId);
     if (savedToken != null &&
@@ -235,6 +241,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
+  void _loadAppRatingFromPrefs(SharedPreferences prefs) {
+    _appRating = prefs.getDouble('app_rating_score');
+    _appRatingComment = prefs.getString('app_rating_comment') ?? '';
+    final submittedRaw = prefs.getString('app_rating_submitted_at');
+    _appRatingSubmittedAt =
+        submittedRaw == null ? null : DateTime.tryParse(submittedRaw);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return _buildLoading();
@@ -315,7 +329,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _MenuItem(
                   icon: Icons.receipt_long_outlined,
                   label: 'Hóa đơn & Thanh toán',
-                  onTap: () {},
+                  onTap: () => context.push(AppConstants.routeInvoices),
                 ),
               ],
             ],
@@ -337,7 +351,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _MenuItem(
                 icon: Icons.star_border_rounded,
                 label: 'Đánh giá ứng dụng',
-                onTap: () {},
+                trailing: _appRating == null
+                    ? null
+                    : Text(
+                        '${_appRating!.toStringAsFixed(0)}/5',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.warningText,
+                        ),
+                      ),
+                onTap: () => _showAppRatingSheet(),
               ),
               _MenuItem(
                 icon: Icons.info_outline_rounded,
@@ -846,6 +870,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _showAppRatingSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _AppRatingSheet(
+        initialRating: _appRating ?? 5,
+        initialComment: _appRatingComment,
+        submittedAt: _appRatingSubmittedAt,
+        onSubmit: (rating, comment) async {
+          final prefs = await SharedPreferences.getInstance();
+          final submittedAt = DateTime.now();
+          await prefs.setDouble('app_rating_score', rating);
+          await prefs.setString('app_rating_comment', comment);
+          await prefs.setString(
+            'app_rating_submitted_at',
+            submittedAt.toIso8601String(),
+          );
+
+          if (!mounted) return;
+          setState(() {
+            _appRating = rating;
+            _appRatingComment = comment;
+            _appRatingSubmittedAt = submittedAt;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Cảm ơn bạn đã đánh giá ứng dụng.'),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   String _formatJoinDate(DateTime date) {
@@ -862,6 +926,227 @@ class _ProfileScreenState extends State<ProfileScreen> {
 }
 
 // ─── Edit Profile Bottom Sheet ───────────────────────────────────────────────
+
+class _AppRatingSheet extends StatefulWidget {
+  final double initialRating;
+  final String initialComment;
+  final DateTime? submittedAt;
+  final Future<void> Function(double rating, String comment) onSubmit;
+
+  const _AppRatingSheet({
+    required this.initialRating,
+    required this.initialComment,
+    required this.submittedAt,
+    required this.onSubmit,
+  });
+
+  @override
+  State<_AppRatingSheet> createState() => _AppRatingSheetState();
+}
+
+class _AppRatingSheetState extends State<_AppRatingSheet> {
+  late double _rating;
+  late final TextEditingController _commentCtrl;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _rating = widget.initialRating;
+    _commentCtrl = TextEditingController(text: widget.initialComment);
+  }
+
+  @override
+  void dispose() {
+    _commentCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_isSubmitting) return;
+    HapticFeedback.lightImpact();
+    setState(() => _isSubmitting = true);
+
+    await widget.onSubmit(_rating, _commentCtrl.text.trim());
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+    Navigator.pop(context);
+  }
+
+  String _formatSubmittedAt(DateTime time) {
+    final local = time.toLocal();
+    return '${local.day}/${local.month}/${local.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXxl)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Row(
+                children: [
+                  const Text(
+                    'Đánh giá ứng dụng',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: const Icon(Icons.close, color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 20, color: AppColors.borderLight),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Column(
+                      children: [
+                        RatingBar.builder(
+                          initialRating: _rating,
+                          minRating: 1,
+                          maxRating: 5,
+                          allowHalfRating: false,
+                          itemCount: 5,
+                          itemSize: 36,
+                          unratedColor: AppColors.border,
+                          itemBuilder: (context, index) => const Icon(
+                            Icons.star_rounded,
+                            color: AppColors.warning,
+                          ),
+                          onRatingUpdate: (rating) {
+                            setState(() => _rating = rating);
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${_rating.toStringAsFixed(0)}/5',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        if (widget.submittedAt != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Đã đánh giá ngày ${_formatSubmittedAt(widget.submittedAt!)}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Góp ý',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _commentCtrl,
+                    minLines: 4,
+                    maxLines: 6,
+                    maxLength: 500,
+                    decoration: InputDecoration(
+                      hintText:
+                          'Bạn thích điều gì, hoặc muốn ứng dụng cải thiện điểm nào?',
+                      hintStyle: AppTextStyles.inputHint,
+                      filled: true,
+                      fillColor: AppColors.bgPage,
+                      counterStyle: const TextStyle(
+                        fontSize: 10,
+                        color: AppColors.textMuted,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppConstants.radiusMd),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppConstants.radiusMd),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppConstants.radiusMd),
+                        borderSide: const BorderSide(
+                          color: AppColors.primary,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _isSubmitting ? null : _submit,
+                      icon: _isSubmitting
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.star_rounded, size: 18),
+                      label: Text(
+                        widget.submittedAt == null
+                            ? 'Gửi đánh giá'
+                            : 'Cập nhật đánh giá',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _EditProfileSheet extends StatefulWidget {
   final _UserInfo user;
