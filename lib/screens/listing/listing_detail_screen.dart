@@ -285,7 +285,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             _buildAppBar(context, state),
             SliverToBoxAdapter(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _buildMainInfoSection(listing),
                   _buildQuickStatsSection(listing, state),
@@ -749,37 +749,40 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
   // Thông tin bổ sung phòng (Tầng, Số người ở tối đa, thú cưng...)
   Widget _buildRoomInfoSection(Listing listing) {
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      color: Colors.white,
-      padding: const EdgeInsets.all(AppConstants.paddingH),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Thông tin phòng', style: AppTextStyles.h3),
-          const SizedBox(height: 14),
-          _buildInfoRow(
-              Icons.layers_rounded,
-              'Tầng số',
-              listing.floor != null
-                  ? '${listing.floor}/${listing.totalFloors ?? "?"}'
-                  : 'Chưa cập nhật'),
-          _buildInfoRow(
-              Icons.people_alt_rounded,
-              'Số người ở tối đa',
-              listing.maxOccupants != null
-                  ? '${listing.maxOccupants} người'
-                  : 'Không giới hạn'),
-          _buildInfoRow(Icons.pets_rounded, 'Cho phép nuôi thú cưng',
-              listing.allowPet ? 'Có' : 'Không'),
-          _buildInfoRow(
-            Icons.calendar_month_rounded,
-            'Sẵn sàng từ ngày',
-            listing.availableFrom != null
-                ? '${listing.availableFrom!.day}/${listing.availableFrom!.month}/${listing.availableFrom!.year}'
-                : 'Ở ngay',
-          ),
-        ],
+    return SizedBox(
+      width: double.infinity,
+      child: Container(
+        margin: const EdgeInsets.only(top: 8),
+        color: Colors.white,
+        padding: const EdgeInsets.all(AppConstants.paddingH),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Thông tin phòng', style: AppTextStyles.h3),
+            const SizedBox(height: 14),
+            _buildInfoRow(
+                Icons.layers_rounded,
+                'Tầng số',
+                listing.floor != null
+                    ? '${listing.floor}/${listing.totalFloors ?? "?"}'
+                    : 'Chưa cập nhật'),
+            _buildInfoRow(
+                Icons.people_alt_rounded,
+                'Số người ở tối đa',
+                listing.maxOccupants != null
+                    ? '${listing.maxOccupants} người'
+                    : 'Không giới hạn'),
+            _buildInfoRow(Icons.pets_rounded, 'Cho phép nuôi thú cưng',
+                listing.allowPet ? 'Có' : 'Không'),
+            _buildInfoRow(
+              Icons.calendar_month_rounded,
+              'Sẵn sàng từ ngày',
+              listing.availableFrom != null
+                  ? '${listing.availableFrom!.day}/${listing.availableFrom!.month}/${listing.availableFrom!.year}'
+                  : 'Ở ngay',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -811,46 +814,49 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   Widget _buildAmenitiesSection(Listing listing) {
     if (listing.amenityNames.isEmpty) return const SizedBox.shrink();
 
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      color: Colors.white,
-      padding: const EdgeInsets.all(AppConstants.paddingH),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Tiện ích phòng trọ', style: AppTextStyles.h3),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: listing.amenityNames.map((name) {
-              return Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.bgPage,
-                  borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                  border: Border.all(color: AppColors.borderLight),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _getAmenityIcon(name),
-                    const SizedBox(width: 6),
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary,
+    return SizedBox(
+      width: double.infinity,
+      child: Container(
+        margin: const EdgeInsets.only(top: 8),
+        color: Colors.white,
+        padding: const EdgeInsets.all(AppConstants.paddingH),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Tiện ích phòng trọ', style: AppTextStyles.h3),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: listing.amenityNames.map((name) {
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgPage,
+                    borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                    border: Border.all(color: AppColors.borderLight),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _getAmenityIcon(name),
+                      const SizedBox(width: 6),
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ],
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
       ),
     );
   }
