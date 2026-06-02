@@ -198,14 +198,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         children: [
           _buildHeaderIcon(Icons.lock_reset_rounded),
           const SizedBox(height: 28),
-          Text('Quên mật khẩu?', style: AppTextStyles.h1),
+          const Text('Quên mật khẩu?', style: AppTextStyles.h1),
           const SizedBox(height: 8),
           Text(
             'Nhập email đã đăng ký bằng mật khẩu. Swings House sẽ gửi mã OTP để bạn đặt lại mật khẩu.',
             style: AppTextStyles.bodyMedium.copyWith(height: 1.45),
           ),
           const SizedBox(height: 36),
-          Text('Email tài khoản', style: AppTextStyles.inputLabel),
+          const Text('Email tài khoản', style: AppTextStyles.inputLabel),
           const SizedBox(height: 8),
           _buildTextField(
             controller: _emailCtrl,
@@ -240,7 +240,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         children: [
           _buildHeaderIcon(Icons.mark_email_read_rounded),
           const SizedBox(height: 28),
-          Text('Nhập mã OTP', style: AppTextStyles.h1),
+          const Text('Nhập mã OTP', style: AppTextStyles.h1),
           const SizedBox(height: 8),
           RichText(
             text: TextSpan(
@@ -262,7 +262,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
             ),
           ),
           const SizedBox(height: 28),
-          Text('Mã OTP', style: AppTextStyles.inputLabel),
+          const Text('Mã OTP', style: AppTextStyles.inputLabel),
           const SizedBox(height: 8),
           _buildTextField(
             controller: _otpCtrl,
@@ -280,7 +280,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
             },
           ),
           const SizedBox(height: 18),
-          Text('Mật khẩu mới', style: AppTextStyles.inputLabel),
+          const Text('Mật khẩu mới', style: AppTextStyles.inputLabel),
           const SizedBox(height: 8),
           _buildTextField(
             controller: _newPasswordCtrl,
@@ -306,7 +306,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
             },
           ),
           const SizedBox(height: 18),
-          Text('Nhập lại mật khẩu', style: AppTextStyles.inputLabel),
+          const Text('Nhập lại mật khẩu', style: AppTextStyles.inputLabel),
           const SizedBox(height: 8),
           _buildTextField(
             controller: _confirmPasswordCtrl,

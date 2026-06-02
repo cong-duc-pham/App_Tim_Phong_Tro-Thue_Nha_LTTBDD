@@ -2,7 +2,6 @@
 
 import 'package:dio/dio.dart';
 import 'base_repository.dart';
-import '../models/payment.dart';
 
 class PaymentRepository extends BaseRepository {
   PaymentRepository({super.apiService});

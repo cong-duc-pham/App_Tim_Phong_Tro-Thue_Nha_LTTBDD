@@ -121,8 +121,8 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Yêu cầu xác minh đã gửi! Đã tự động mô phỏng xác minh Email thành công.'),
+        const SnackBar(
+          content: Text('Yêu cầu xác minh đã gửi! Đã tự động mô phỏng xác minh Email thành công.'),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ),
@@ -504,7 +504,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
           if (onTap == null)
             Row(
               children: [
-                Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16),
+                const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16),
                 const SizedBox(width: 4),
                 Text(
                   actionText,
@@ -545,9 +545,9 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
         border: Border.all(color: AppColors.borderLight),
       ),
-      child: Row(
+      child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 18),
           SizedBox(width: 10),
           Expanded(

@@ -23,8 +23,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Message> _messages = [];
   final TextEditingController _textCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
-  bool _isTyping = false;
-  bool _isSending = false;
+  final bool _isTyping = false;
+  final bool _isSending = false;
   String? _errorMessage;
   bool _showListingHeader = true;
   int _currentUserId = 999; // Lấy từ SharedPreferences hoặc fallback 999

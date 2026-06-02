@@ -172,9 +172,9 @@ class _RegisterScreenState extends State<RegisterScreen>
           ),
         ),
         const SizedBox(height: AppConstants.spacingXl),
-        Text('Tạo tài khoản mới 🏠', style: AppTextStyles.h1),
+        const Text('Tạo tài khoản mới 🏠', style: AppTextStyles.h1),
         const SizedBox(height: AppConstants.spacingXs),
-        Text(
+        const Text(
           'Đăng ký để bắt đầu tìm kiếm phòng trọ phù hợp',
           style: AppTextStyles.bodyMedium,
         ),
@@ -409,14 +409,14 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Widget _buildDivider() {
-    return Row(
+    return const Row(
       children: [
-        const Expanded(child: Divider(color: AppColors.border)),
+        Expanded(child: Divider(color: AppColors.border)),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacingMd),
+          padding: EdgeInsets.symmetric(horizontal: AppConstants.spacingMd),
           child: Text('hoặc', style: AppTextStyles.bodySmall),
         ),
-        const Expanded(child: Divider(color: AppColors.border)),
+        Expanded(child: Divider(color: AppColors.border)),
       ],
     );
   }
@@ -425,7 +425,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text('Đã có tài khoản? ', style: AppTextStyles.bodyMedium),
+        const Text('Đã có tài khoản? ', style: AppTextStyles.bodyMedium),
         GestureDetector(
           onTap: () => context.go(AppConstants.routeLogin),
           child: Text(
