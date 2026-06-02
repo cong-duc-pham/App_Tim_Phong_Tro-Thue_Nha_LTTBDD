@@ -23,7 +23,7 @@
     <div class="card-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div>
             <div class="fw-semibold">Danh sách Users</div>
-            <div class="small text-muted">Bấm đồng bộ để lấy user từ Firebase Auth về SQL.</div>
+            <div class="small text-muted">Role được tự xác định theo tin đăng: chưa đăng tin là tenant, đã đăng tin là landlord.</div>
         </div>
         <form method="post" action="/admin/users/sync-firebase" class="m-0">
             @Html.AntiForgeryToken()
@@ -58,7 +58,9 @@
                             <tr>
                                 <td>@user.FullName</td>
                                 <td>@(string.IsNullOrWhiteSpace(user.Email) ? "-" : user.Email)</td>
-                                <td>@user.RoleName</td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">@user.RoleName</span>
+                                </td>
                                 <td>
                                     @if (string.IsNullOrWhiteSpace(user.FirebaseUid))
                                     {
