@@ -42,6 +42,24 @@ class ListingRepository {
         .toList();
   }
 
+  Future<Listing?> getListing(int listingId) async {
+    try {
+      final response = await _apiService.dio.get<Map<String, dynamic>>(
+        '/listings/$listingId',
+      );
+
+      final body = response.data ?? {};
+      final data = body['data'] ?? body['Data'];
+      if (data is! Map) {
+        return null;
+      }
+
+      return Listing.fromJson(Map<String, dynamic>.from(data));
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
   // Lấy chi tiết một tin đăng theo ID — public, không cần auth
   Future<Listing> getListingById(int id) async {
     try {
@@ -61,7 +79,6 @@ class ListingRepository {
     }
   }
 
-  // Tăng lượt xem — fire-and-forget, không throw nếu lỗi
   Future<List<Listing>> getMyListings() async {
     try {
       final response = await _authorizedRequest<Map<String, dynamic>>(
@@ -84,6 +101,7 @@ class ListingRepository {
     }
   }
 
+  // Tăng lượt xem — fire-and-forget, không throw nếu lỗi
   Future<void> incrementView(int id) async {
     try {
       await _apiService.dio.post<void>('/listings/$id/view');
@@ -91,7 +109,6 @@ class ListingRepository {
       // Bỏ qua lỗi — không ảnh hưởng trải nghiệm người dùng
     }
   }
-
   Future<Listing> createListing(Map<String, dynamic> payload) async {
     try {
       final response = await _authorizedRequest<Map<String, dynamic>>(

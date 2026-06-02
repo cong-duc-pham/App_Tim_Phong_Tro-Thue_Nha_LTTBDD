@@ -1,11 +1,8 @@
 // lib/repositories/review_repository.dart
 
 import 'package:dio/dio.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-import '../core/constants/app_constants.dart';
-import '../services/api_service.dart';
+import 'base_repository.dart';
+import '../models/review.dart';
 
 // model dùng riêng cho màn hình detail, không dùng chung với Review model của my_reviews
 class ReviewItem {
@@ -58,22 +55,41 @@ class ReviewItem {
   }
 }
 
-class ReviewRepository {
-  ReviewRepository({ApiService? apiService})
-      : _apiService = apiService ?? ApiService();
+class ReviewRepository extends BaseRepository {
+  ReviewRepository({super.apiService});
 
-  final ApiService _apiService;
-
-  // lấy reviews của một tin đăng, không cần auth
-  Future<({List<ReviewItem> reviews, double averageRating, int count})>
-      getReviews(int listingId) async {
+  /// Lấy danh sách đánh giá của một phòng trọ dạng đơn giản.
+  Future<List<Review>> getListingReviews(int listingId) async {
     try {
-      final response = await _apiService.dio.get<Map<String, dynamic>>(
+      final response = await dio.get<Map<String, dynamic>>(
         '/listings/$listingId/reviews',
       );
 
       final body = response.data ?? {};
       final data = body['data'] ?? body['Data'];
+      if (data is! List) {
+        return const [];
+      }
+
+      return data
+          .whereType<Map>()
+          .map((item) => Review.fromJson(Map<String, dynamic>.from(item)))
+          .toList();
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
+  // lấy reviews của một tin đăng kèm thống kê sao, không cần auth (dành cho chi tiết tin)
+  Future<({List<ReviewItem> reviews, double averageRating, int count})> getReviews(int listingId) async {
+    try {
+      final response = await dio.get<Map<String, dynamic>>(
+        '/listings/$listingId/reviews',
+      );
+
+      final body = response.data ?? {};
+      final data = body['data'] ?? body['Data'];
+      
       final avgRaw = body['averageRating'] ?? body['AverageRating'] ?? 0;
       final countRaw = body['count'] ?? body['Count'] ?? 0;
 
@@ -94,27 +110,27 @@ class ReviewRepository {
     }
   }
 
+  /// Tạo đánh giá mới cho một phòng trọ.
   Future<ReviewItem> createReview({
     required int listingId,
     required int rating,
     required String comment,
   }) async {
     try {
-      final response = await _authorizedRequest<Map<String, dynamic>>(
-        (accessToken) => _apiService.dio.post<Map<String, dynamic>>(
-          '/listings/$listingId/reviews',
-          data: {
-            'rating': rating,
-            'comment': comment,
-          },
-          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
-        ),
+      final options = await getOptionsWithToken();
+      final response = await dio.post<Map<String, dynamic>>(
+        '/listings/$listingId/reviews',
+        data: {
+          'rating': rating,
+          'comment': comment,
+        },
+        options: options,
       );
 
       final body = response.data ?? {};
       final data = body['data'] ?? body['Data'];
       if (data is! Map) {
-        throw Exception('Backend không trả về đánh giá vừa tạo.');
+        throw Exception('Không thể tạo đánh giá.');
       }
 
       return ReviewItem.fromJson(Map<String, dynamic>.from(data));
@@ -123,112 +139,22 @@ class ReviewRepository {
     }
   }
 
-  Future<Response<T>> _authorizedRequest<T>(
-    Future<Response<T>> Function(String accessToken) request,
-  ) async {
-    final firstToken = await _getBackendAccessToken();
-
+  /// Phản hồi đánh giá (dành cho chủ trọ).
+  Future<void> replyReview({
+    required int reviewId,
+    required String replyContent,
+  }) async {
     try {
-      return await request(firstToken);
-    } on DioException catch (e) {
-      if (e.response?.statusCode != 401) rethrow;
-
-      final refreshedToken = await _refreshBackendAccessToken();
-      if (refreshedToken == null) {
-        throw Exception('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-      }
-
-      return request(refreshedToken);
-    }
-  }
-
-  Future<String> _getBackendAccessToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedToken = prefs.getString(AppConstants.keyUserToken);
-    if (savedToken != null && savedToken.isNotEmpty) {
-      return savedToken;
-    }
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      throw Exception('Bạn cần đăng nhập để gửi đánh giá.');
-    }
-
-    final firebaseToken = await user.getIdToken(true);
-    if (firebaseToken == null || firebaseToken.isEmpty) {
-      throw Exception('Không lấy được Firebase token.');
-    }
-
-    late final Response<Map<String, dynamic>> response;
-    try {
-      response = await _apiService.dio.post<Map<String, dynamic>>(
-        '/auth/firebase-login',
-        data: {'firebaseToken': firebaseToken},
+      final options = await getOptionsWithToken();
+      await dio.post<Map<String, dynamic>>(
+        '/reviews/$reviewId/reply',
+        data: {
+          'reply': replyContent,
+        },
+        options: options,
       );
     } on DioException catch (e) {
       throw Exception(_readBackendMessage(e));
-    }
-
-    final body = response.data ?? {};
-    final data = body['data'] ?? body['Data'];
-    if (data is! Map) {
-      throw Exception('Backend không trả về access token.');
-    }
-
-    final token = data['accessToken'] ?? data['AccessToken'];
-    if (token is! String || token.isEmpty) {
-      throw Exception('Access token không hợp lệ.');
-    }
-
-    await prefs.setString(AppConstants.keyUserToken, token);
-    return token;
-  }
-
-  Future<String?> _refreshBackendAccessToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final refreshToken = prefs.getString('refresh_token');
-    if (refreshToken == null || refreshToken.isEmpty) {
-      await prefs.remove(AppConstants.keyUserToken);
-      return null;
-    }
-
-    try {
-      final response = await _apiService.dio.post<Map<String, dynamic>>(
-        '/auth/refresh-token',
-        data: {'refreshToken': refreshToken},
-      );
-
-      final body = response.data ?? {};
-      final data = body['data'] ?? body['Data'];
-      if (data is! Map) return null;
-
-      final accessToken = data['accessToken'] ?? data['AccessToken'];
-      final newRefreshToken = data['refreshToken'] ?? data['RefreshToken'];
-      final userId = data['userId'] ?? data['UserId'];
-      final fullName = data['fullName'] ?? data['FullName'];
-      final role = data['role'] ?? data['Role'];
-
-      if (accessToken is! String || accessToken.isEmpty) return null;
-
-      await prefs.setString(AppConstants.keyUserToken, accessToken);
-      if (newRefreshToken is String && newRefreshToken.isNotEmpty) {
-        await prefs.setString('refresh_token', newRefreshToken);
-      }
-      if (userId != null) {
-        await prefs.setString(AppConstants.keyUserId, userId.toString());
-      }
-      if (fullName != null) {
-        await prefs.setString('user_full_name', fullName.toString());
-      }
-      if (role != null) {
-        await prefs.setString(AppConstants.keyUserRole, role.toString());
-      }
-
-      return accessToken;
-    } on DioException {
-      await prefs.remove(AppConstants.keyUserToken);
-      await prefs.remove('refresh_token');
-      return null;
     }
   }
 
@@ -238,7 +164,9 @@ class ReviewRepository {
       final message = data['message'] ?? data['Message'];
       if (message != null) return message.toString();
     }
-    if (data is String && data.trim().isNotEmpty) return data;
-    return e.message ?? 'Không kết nối được backend.';
+    if (data is String && data.trim().isNotEmpty) {
+      return data;
+    }
+    return e.message ?? 'Lỗi kết nối máy chủ.';
   }
 }

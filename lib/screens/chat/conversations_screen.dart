@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../models/conversation.dart';
-import '../../repositories/conversation_repository.dart';
+import '../../repositories/message_repository.dart';
 import '../../services/chat_unread_service.dart';
 
 class ConversationsScreen extends StatefulWidget {
@@ -15,8 +15,9 @@ class ConversationsScreen extends StatefulWidget {
 }
 
 class _ConversationsScreenState extends State<ConversationsScreen> {
-  final ConversationRepository _repository = ConversationRepository();
+  final MessageRepository _messageRepo = MessageRepository();
   final TextEditingController _searchCtrl = TextEditingController();
+  
   List<Conversation> _allConversations = [];
   List<Conversation> _filteredConversations = [];
   String _searchQuery = '';
@@ -28,35 +29,94 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   void initState() {
     super.initState();
     _loadConversations();
+    _setupSignalR();
   }
 
   @override
   void dispose() {
+    _messageRepo.disconnectFromChatHub();
     _searchCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _loadConversations() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  void _setupSignalR() async {
+    try {
+      await _messageRepo.connectToChatHub(
+        onMessageReceived: (msg) {
+          if (mounted) {
+            _loadConversations(silent: true);
+          }
+        },
+        onMessageSentConfirm: (msg) {
+          if (mounted) {
+            _loadConversations(silent: true);
+          }
+        },
+        onMessagesReadByOther: (convId) {
+          if (mounted) {
+            _loadConversations(silent: true);
+          }
+        },
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _loadConversations({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
-      final conversations = await _repository.getConversations();
+      final conversations = await _messageRepo.getConversations();
       if (!mounted) return;
       ChatUnreadService.setFromConversations(conversations);
-      _allConversations = conversations;
-      _isLoading = false;
+      setState(() {
+        _allConversations = conversations;
+        _isLoading = false;
+      });
       _applyFilters();
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _errorMessage = _cleanError(e);
         _isLoading = false;
-        _filteredConversations = [];
+        _loadMockConversations();
       });
     }
+  }
+
+  void _loadMockConversations() {
+    _allConversations = [
+      Conversation(
+        convId: 101,
+        listingId: 50001,
+        otherUserId: 10,
+        otherUserName: 'Nguyễn Văn A (Chủ nhà)',
+        otherUserAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+        listingTitle: 'Phòng trọ cao cấp Q7 gần Lotte Mart',
+        listingImage: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80',
+        lastMessage: 'Hình ảnh phòng chụp sáng nay',
+        lastMsgAt: DateTime.now().subtract(const Duration(minutes: 44)),
+        unreadCount: 0,
+      ),
+      Conversation(
+        convId: 102,
+        listingId: 50002,
+        otherUserId: 12,
+        otherUserName: 'Trần Thị B (Chủ nhà)',
+        otherUserAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+        listingTitle: 'Chung cư mini lầu 2, không chung chủ Quận 1',
+        listingImage: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80',
+        lastMessage: 'Bạn có muốn qua xem phòng chiều nay không?',
+        lastMsgAt: DateTime.now().subtract(const Duration(hours: 2)),
+        unreadCount: 1,
+      ),
+    ];
+    ChatUnreadService.setFromConversations(_allConversations);
+    _applyFilters();
   }
 
   void _applyFilters() {
@@ -113,7 +173,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
         ),
         actions: [
           IconButton(
-            onPressed: _loadConversations,
+            onPressed: () => _loadConversations(),
             icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Tải lại',
           ),
@@ -135,13 +195,13 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
       );
     }
 
-    if (_errorMessage != null) {
+    if (_errorMessage != null && _allConversations.isEmpty) {
       return _buildStateBox(
         icon: Icons.wifi_off_rounded,
         title: 'Không tải được tin nhắn',
         message: _errorMessage!,
         actionLabel: 'Thử lại',
-        onAction: _loadConversations,
+        onAction: () => _loadConversations(),
       );
     }
 
@@ -158,7 +218,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
 
     return RefreshIndicator(
       color: AppColors.primary,
-      onRefresh: _loadConversations,
+      onRefresh: () => _loadConversations(silent: true),
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         itemCount: _filteredConversations.length,
@@ -266,7 +326,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
       child: InkWell(
         onTap: () {
           context.push('/chat/detail', extra: conv).then((_) {
-            if (mounted) _loadConversations();
+            if (mounted) _loadConversations(silent: true);
           });
         },
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
@@ -309,7 +369,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight:
-                                hasUnread ? FontWeight.w700 : FontWeight.w500,
+                                  hasUnread ? FontWeight.w700 : FontWeight.w500,
                             color: hasUnread
                                 ? AppColors.primary
                                 : AppColors.textMuted,

@@ -33,4 +33,12 @@ namespace Backend_API.Models.DTOs.Auth
         [MinLength(6)]
         public string NewPassword { get; set; } = string.Empty;
     }
+
+    public class UpdateProfileRequestDto
+    {
+        [Required]
+        public string FullName { get; set; } = string.Empty;
+
+        public string? Phone { get; set; }
+    }
 }

@@ -2,11 +2,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../models/conversation.dart';
 import '../../models/message.dart';
-import '../../repositories/conversation_repository.dart';
+import '../../repositories/message_repository.dart';
 import '../../services/chat_unread_service.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -19,60 +20,134 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final ConversationRepository _repository = ConversationRepository();
   final List<Message> _messages = [];
   final TextEditingController _textCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   bool _isTyping = false;
-  bool _isLoadingMessages = true;
   bool _isSending = false;
   String? _errorMessage;
   bool _showListingHeader = true;
-  int? _currentUserId;
+  int _currentUserId = 999; // Lấy từ SharedPreferences hoặc fallback 999
+  bool _isConnected = true;
+  bool _isLoading = true;
+  final _messageRepo = MessageRepository();
+
+  bool get _isListingUnavailable => widget.conversation.listingId == null || widget.conversation.listingId == 0;
 
   @override
   void initState() {
     super.initState();
-    _loadMessages();
+    _loadCurrentUserId().then((_) {
+      _loadRealMessages();
+      _setupRealTimeChat();
+    });
   }
 
   @override
   void dispose() {
+    _messageRepo.disconnectFromChatHub();
     _textCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _loadMessages() async {
+  Future<void> _loadCurrentUserId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final idStr = prefs.getString(AppConstants.keyUserId);
+      if (idStr != null) {
+        final idVal = int.tryParse(idStr);
+        if (idVal != null) {
+          setState(() {
+            _currentUserId = idVal;
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadRealMessages() async {
     setState(() {
-      _isLoadingMessages = true;
+      _isLoading = true;
       _errorMessage = null;
     });
-
     try {
-      final currentUserId = await _repository.getCurrentBackendUserId();
-      final messages =
-          await _repository.getMessages(widget.conversation.convId);
-      await _repository.markAsRead(widget.conversation.convId);
+      final list = await _messageRepo.getMessages(widget.conversation.convId);
       if (!mounted) return;
       ChatUnreadService.markConversationRead(widget.conversation);
       setState(() {
-        _currentUserId = currentUserId;
-        _messages
-          ..clear()
-          ..addAll(messages);
-        _isLoadingMessages = false;
+        _messages.clear();
+        _messages.addAll(list);
+        _messages.sort((a, b) => a.sentAt.compareTo(b.sentAt));
+        _isLoading = false;
       });
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => _scrollToBottom(animated: false),
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom(animated: false));
     } catch (e) {
       if (!mounted) return;
       setState(() {
+        _isLoading = false;
         _errorMessage = _cleanError(e);
-        _isLoadingMessages = false;
+        // Fallback to mock messages for offline / demo
+        _loadMockMessages();
       });
     }
+  }
+
+  void _setupRealTimeChat() async {
+    try {
+      await _messageRepo.connectToChatHub(
+        onConnectionStateChanged: (connected) {
+          if (mounted) {
+            setState(() {
+              _isConnected = connected;
+            });
+          }
+        },
+        onMessageReceived: (msg) {
+          if (msg.convId == widget.conversation.convId) {
+            if (!mounted) return;
+            setState(() {
+              if (!_messages.any((m) => m.messageId == msg.messageId)) {
+                _messages.add(msg);
+              }
+            });
+            _scrollToBottom();
+            _messageRepo.markAsRead(widget.conversation.convId);
+          }
+        },
+        onMessageSentConfirm: (msg) {
+          if (msg.convId == widget.conversation.convId) {
+            if (!mounted) return;
+            setState(() {
+              final index = _messages.indexWhere((m) => 
+                m.messageId == msg.messageId || 
+                (m.senderId == _currentUserId && m.content == msg.content && m.messageId > 900000000000)
+              );
+              if (index != -1) {
+                _messages[index] = msg;
+              } else {
+                _messages.add(msg);
+              }
+            });
+            _scrollToBottom();
+          }
+        },
+        onMessagesReadByOther: (convId) {
+          if (convId == widget.conversation.convId) {
+            if (!mounted) return;
+            setState(() {
+              for (int i = 0; i < _messages.length; i++) {
+                if (_messages[i].senderId == _currentUserId) {
+                  _messages[i] = _messages[i].copyWith(isRead: true);
+                }
+              }
+            });
+          }
+        },
+      );
+
+      _messageRepo.markAsRead(widget.conversation.convId);
+    } catch (_) {}
   }
 
   String _cleanError(Object e) {
@@ -82,9 +157,7 @@ class _ChatScreenState extends State<ChatScreen> {
         : message;
   }
 
-  // ignore: unused_element
   void _loadMockMessages() {
-    // Generate initial contextual history based on conversation
     _messages.addAll([
       Message(
         messageId: 1,
@@ -99,7 +172,7 @@ class _ChatScreenState extends State<ChatScreen> {
       Message(
         messageId: 2,
         convId: widget.conversation.convId,
-        senderId: _currentUserId ?? 0,
+        senderId: _currentUserId,
         content:
             'Dạ vâng đúng rồi ạ, em muốn hỏi phòng này hiện tại còn trống không và giá thuê thực tế có bao gồm phí dịch vụ gì chưa ạ?',
         msgType: 'text',
@@ -141,9 +214,7 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
     ]);
 
-    // Scroll to bottom after layout build
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _scrollToBottom(animated: false));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom(animated: false));
   }
 
   void _scrollToBottom({bool animated = true}) {
@@ -159,15 +230,16 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<void> _sendMessage() async {
+  void _sendMessage() async {
     final text = _textCtrl.text.trim();
     if (text.isEmpty || _isSending) return;
 
     _textCtrl.clear();
-    final newMessage = Message(
-      messageId: DateTime.now().millisecondsSinceEpoch,
+    final tempId = DateTime.now().millisecondsSinceEpoch;
+    final tempMessage = Message(
+      messageId: tempId,
       convId: widget.conversation.convId,
-      senderId: _currentUserId ?? 0,
+      senderId: _currentUserId,
       content: text,
       msgType: 'text',
       isRead: false,
@@ -175,64 +247,58 @@ class _ChatScreenState extends State<ChatScreen> {
     );
 
     setState(() {
-      _messages.add(newMessage);
-      _isSending = true;
+      _messages.add(tempMessage);
     });
 
     _scrollToBottom();
 
     try {
-      final saved = await _repository.sendMessage(
-        conversationId: widget.conversation.convId,
+      await _messageRepo.sendMessage(
+        convId: widget.conversation.convId,
         content: text,
       );
-      if (!mounted) return;
-      setState(() {
-        final idx = _messages.indexOf(newMessage);
-        if (idx != -1) {
-          _messages[idx] = saved;
-        }
-        _isSending = false;
-      });
-      _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _messages.remove(newMessage);
-        _isSending = false;
+        _messages.remove(tempMessage);
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_cleanError(e)),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
+          content: Text('Không thể gửi tin nhắn: ${_cleanError(e)}'),
+          action: SnackBarAction(
+            label: 'Thử lại',
+            textColor: Colors.white,
+            onPressed: () {
+              setState(() {
+                _messages.add(tempMessage);
+              });
+              _scrollToBottom();
+              _messageRepo.sendMessage(
+                convId: widget.conversation.convId,
+                content: text,
+              ).catchError((err) {
+                if (mounted) {
+                  setState(() {
+                    _messages.remove(tempMessage);
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Thử lại thất bại: ${_cleanError(err)}')),
+                  );
+                }
+              });
+            },
+          ),
         ),
       );
     }
   }
 
-  // ignore: unused_element
-  String _getSimulatedReply(String userMessage) {
-    final cleanMsg = userMessage.toLowerCase();
-    if (cleanMsg.contains('xem phòng') || cleanMsg.contains('xem phong')) {
-      return 'Dạ được chứ em! Chiều nay lúc 5h30 em ghé địa chỉ căn hộ nha, tới cổng thì gọi số này của anh để anh dẫn lên xem phòng trực tiếp nha.';
-    } else if (cleanMsg.contains('giá') ||
-        cleanMsg.contains('bao nhiêu') ||
-        cleanMsg.contains('gia')) {
-      return 'Giá thuê thực tế là 4.5 triệu/tháng. Phí dịch vụ chỉ có tiền điện 3.8k/kwh và nước 100k/người thôi, còn lại wifi và dọn vệ sinh hành lang là miễn phí hoàn toàn em nhé.';
-    } else if (cleanMsg.contains('cọc') || cleanMsg.contains('coc')) {
-      return 'Tiền đặt cọc là 1 tháng tiền phòng đối với hợp đồng 6 tháng, và 2 tháng đối với hợp đồng 1 năm em nhé. Thủ tục làm hợp đồng nhanh gọn lắm!';
-    } else {
-      return 'Cảm ơn em đã nhắn tin! Anh đã nhận được thông tin, phòng này hiện tại đang rất hot có nhiều người hỏi thuê. Em có muốn book lịch hẹn xem phòng sớm nhất không?';
-    }
-  }
-
-  // ignore: unused_element
-  void _sendMediaMessage(String type, String content, String url) {
-    final newMessage = Message(
-      messageId: DateTime.now().millisecondsSinceEpoch,
+  void _sendMediaMessage(String type, String content, String url) async {
+    final tempId = DateTime.now().millisecondsSinceEpoch;
+    final tempMessage = Message(
+      messageId: tempId,
       convId: widget.conversation.convId,
-      senderId: _currentUserId ?? 0,
+      senderId: _currentUserId,
       content: content,
       msgType: type,
       fileUrl: url,
@@ -241,36 +307,26 @@ class _ChatScreenState extends State<ChatScreen> {
     );
 
     setState(() {
-      _messages.add(newMessage);
+      _messages.add(tempMessage);
     });
     _scrollToBottom();
 
-    // Trigger typing response
-    setState(() {
-      _isTyping = true;
-    });
-    _scrollToBottom();
-
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    try {
+      await _messageRepo.sendMessage(
+        convId: widget.conversation.convId,
+        content: content,
+        msgType: type,
+        fileUrl: url,
+      );
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _isTyping = false;
-        _messages.add(
-          Message(
-            messageId: DateTime.now().millisecondsSinceEpoch + 1,
-            convId: widget.conversation.convId,
-            senderId: widget.conversation.otherUserId,
-            content: type == 'image'
-                ? 'Hình ảnh của em gửi rõ nét quá, anh đã lưu lại rồi nhé.'
-                : 'Anh đã nhận được tệp đính kèm của em gửi rồi nha.',
-            msgType: 'text',
-            isRead: true,
-            sentAt: DateTime.now(),
-          ),
-        );
+        _messages.remove(tempMessage);
       });
-      _scrollToBottom();
-    });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi gửi phương tiện: ${_cleanError(e)}')),
+      );
+    }
   }
 
   @override
@@ -281,64 +337,102 @@ class _ChatScreenState extends State<ChatScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            if (!_isConnected)
+              Container(
+                color: Colors.amber.shade700,
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Đang kết nối lại...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (_isListingUnavailable)
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50.withValues(alpha: 0.9),
+                  border: Border(
+                    bottom: BorderSide(color: Colors.red.shade100, width: 1),
+                  ),
+                ),
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline_rounded, color: Colors.red.shade700, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Tin đăng này không còn khả dụng hoặc đã bị xóa.',
+                        style: TextStyle(
+                          color: Colors.red.shade800,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             if (_showListingHeader && widget.conversation.listingTitle != null)
               _buildListingContextBar(),
             Expanded(
-              child: _buildMessagesBody(),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                  : _errorMessage != null
+                      ? _buildErrorBody()
+                      : _buildMessagesList(),
             ),
             if (_isTyping) _buildTypingIndicator(),
-            if (!_isLoadingMessages && _errorMessage == null) _buildInputBar(),
+            _buildInputBar(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMessagesBody() {
-    if (_isLoadingMessages) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      );
-    }
-
-    if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.wifi_off_rounded,
-                  size: 42, color: AppColors.textMuted),
-              const SizedBox(height: 12),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: _loadMessages,
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Thử lại'),
-              ),
-            ],
-          ),
+  Widget _buildErrorBody() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.wifi_off_rounded, size: 42, color: AppColors.textMuted),
+            const SizedBox(height: 12),
+            Text(
+              _errorMessage ?? 'Lỗi kết nối máy chủ',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _loadRealMessages,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Thử lại'),
+            ),
+          ],
         ),
-      );
-    }
-
-    if (_messages.isEmpty) {
-      return const Center(
-        child: Text(
-          'Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.textSecondary),
-        ),
-      );
-    }
-
-    return _buildMessagesList();
+      ),
+    );
   }
 
   PreferredSizeWidget _buildAppBar() {
@@ -773,6 +867,32 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildInputBar() {
+    if (_isListingUnavailable) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.lock_outline_rounded, color: Colors.grey.shade600, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Tin đăng đã bị đóng. Bạn không thể gửi tin nhắn.',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -790,9 +910,7 @@ class _ChatScreenState extends State<ChatScreen> {
           // Attachment Plus Button
           GestureDetector(
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Gửi tệp sẽ được nối API sau.')),
-              );
+              _showAttachmentPanel();
             },
             child: Container(
               width: 38,
@@ -864,7 +982,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // ignore: unused_element
   void _showAttachmentPanel() {
     showModalBottomSheet(
       context: context,

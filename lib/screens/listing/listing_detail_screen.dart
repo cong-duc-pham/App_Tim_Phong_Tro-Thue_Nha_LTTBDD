@@ -318,7 +318,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       leading: Padding(
         padding: const EdgeInsets.only(left: 8.0),
         child: CircleAvatar(
-          backgroundColor: Colors.black.withValues(alpha: 0.4),
+          backgroundColor: Colors.black.withOpacity(0.4),
           child: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded,
                 color: Colors.white, size: 18),
@@ -328,7 +328,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       ),
       actions: [
         CircleAvatar(
-          backgroundColor: Colors.black.withValues(alpha: 0.4),
+          backgroundColor: Colors.black.withOpacity(0.4),
           child: IconButton(
             icon:
                 const Icon(Icons.share_rounded, color: Colors.white, size: 18),
@@ -344,7 +344,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         ),
         const SizedBox(width: 8),
         CircleAvatar(
-          backgroundColor: Colors.black.withValues(alpha: 0.4),
+          backgroundColor: Colors.black.withOpacity(0.4),
           child: IconButton(
             icon: state.isFavorite
                 ? const Icon(Icons.favorite_rounded,
@@ -1424,7 +1424,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Colors.black.withOpacity(0.05),
               blurRadius: 16,
               offset: const Offset(0, -4),
             ),

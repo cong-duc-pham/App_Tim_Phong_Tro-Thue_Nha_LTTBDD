@@ -1,3 +1,5 @@
+// lib/models/post_package.dart
+
 class PostPackage {
   final int packageId;
   final String packageName;

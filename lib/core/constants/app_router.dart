@@ -8,6 +8,7 @@ import '../../screens/onboarding/preference_screen.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/notifications/notifications_screen.dart';
 import '../../screens/listing/listing_create_screen.dart';
+import '../../screens/listing/listing_detail_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/profile/favorites_screen.dart';
 import '../../screens/profile/about_app_screen.dart';
@@ -29,7 +30,6 @@ import '../../models/listing.dart';
 import '../../models/payment.dart';
 import '../../screens/chat/conversations_screen.dart';
 import '../../screens/chat/chat_screen.dart';
-import '../../screens/listing/listing_detail_screen.dart';
 import '../../widgets/main_bottom_nav.dart';
 
 final appRouter = GoRouter(
@@ -64,6 +64,7 @@ final appRouter = GoRouter(
         GoRoute(
             path: '/favorites', builder: (_, __) => const FavoritesScreen()),
         GoRoute(path: '/chat', builder: (_, __) => const ConversationsScreen()),
+        GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
         GoRoute(
           path: '/packages',
           builder: (context, state) {
@@ -75,7 +76,6 @@ final appRouter = GoRouter(
         ),
       ],
     ),
-    GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
     GoRoute(
         path: '/notifications',
         builder: (_, __) => const NotificationsScreen()),
