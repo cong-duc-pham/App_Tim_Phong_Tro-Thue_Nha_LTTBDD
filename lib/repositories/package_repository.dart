@@ -75,6 +75,28 @@ class PackageRepository {
     }
   }
 
+  Future<List<Invoice>> getMyInvoices() async {
+    try {
+      final response = await _authorizedRequest<Map<String, dynamic>>(
+        (accessToken) => _apiService.dio.get<Map<String, dynamic>>(
+          '/packages/my-invoices',
+          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+        ),
+      );
+
+      final data =
+          (response.data ?? {})['data'] ?? (response.data ?? {})['Data'];
+      if (data is! List) return const [];
+
+      return data
+          .whereType<Map>()
+          .map((item) => Invoice.fromJson(Map<String, dynamic>.from(item)))
+          .toList();
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
   Future<Response<T>> _authorizedRequest<T>(
     Future<Response<T>> Function(String accessToken) request,
   ) async {
