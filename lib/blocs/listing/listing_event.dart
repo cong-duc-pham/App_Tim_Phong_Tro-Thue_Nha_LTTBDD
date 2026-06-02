@@ -24,3 +24,18 @@ class ToggleListingFavorite extends ListingDetailEvent {
   @override
   List<Object?> get props => [listingId];
 }
+
+class SubmitListingReview extends ListingDetailEvent {
+  final int listingId;
+  final int rating;
+  final String comment;
+
+  const SubmitListingReview({
+    required this.listingId,
+    required this.rating,
+    required this.comment,
+  });
+
+  @override
+  List<Object?> get props => [listingId, rating, comment];
+}
