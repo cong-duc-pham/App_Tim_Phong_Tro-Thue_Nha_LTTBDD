@@ -72,13 +72,13 @@ class AppConstants {
   static const String routePackages = '/packages';
   static const String routeInvoices = '/invoices';
   static const String routeFavorites = '/favorites';
+  static const String routeMyListings = '/my-listings';
   static const String routeNotifications = '/notifications';
   static const String routeAbout = '/about';
   static const String routeReportIssue = '/report-issue';
   static const String routeSupportCenter = '/support-center';
   static const String routeSearchHistory = '/search-history';
   static const String routeMyReviews = '/my-reviews';
-  static const String routeMyListings = '/my-listings';
   static const String routeListingAnalytics = '/listing-analytics';
   static const String routeVerifyAccount = '/verify-account';
   static const String routeChangePassword = '/change-password';

@@ -433,5 +433,19 @@ namespace Backend_API.Services.Implementations
             user.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
         }
+
+        public async Task UpdateProfileAsync(long userId, UpdateProfileRequestDto dto)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                throw new Exception("Không tìm thấy người dùng.");
+            }
+
+            user.FullName = dto.FullName.Trim();
+            user.Phone = dto.Phone?.Trim();
+            user.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
     }
 }
