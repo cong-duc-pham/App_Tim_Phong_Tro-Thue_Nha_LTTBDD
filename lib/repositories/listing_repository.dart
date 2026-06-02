@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -40,6 +40,24 @@ class ListingRepository {
         .whereType<Map>()
         .map((item) => Listing.fromJson(Map<String, dynamic>.from(item)))
         .toList();
+  }
+
+  Future<Listing?> getListing(int listingId) async {
+    try {
+      final response = await _apiService.dio.get<Map<String, dynamic>>(
+        '/listings/$listingId',
+      );
+
+      final body = response.data ?? {};
+      final data = body['data'] ?? body['Data'];
+      if (data is! Map) {
+        return null;
+      }
+
+      return Listing.fromJson(Map<String, dynamic>.from(data));
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
   }
 
   Future<Listing> createListing(Map<String, dynamic> payload) async {

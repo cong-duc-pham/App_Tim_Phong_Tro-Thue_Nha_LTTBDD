@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../models/conversation.dart';
+import '../../repositories/message_repository.dart';
 
 class ConversationsScreen extends StatefulWidget {
   const ConversationsScreen({super.key});
@@ -14,15 +15,75 @@ class ConversationsScreen extends StatefulWidget {
 }
 
 class _ConversationsScreenState extends State<ConversationsScreen> {
-  late List<Conversation> _allConversations;
-  late List<Conversation> _filteredConversations;
+  List<Conversation> _allConversations = [];
+  List<Conversation> _filteredConversations = [];
   String _searchQuery = '';
   String _selectedTab = 'all'; // 'all', 'unread', 'landlord'
+
+  bool _isLoading = true;
+  String? _errorMessage;
+  final _messageRepo = MessageRepository();
 
   @override
   void initState() {
     super.initState();
-    _loadMockConversations();
+    _fetchRealConversations();
+    _setupSignalR();
+  }
+
+  @override
+  void dispose() {
+    _messageRepo.disconnectFromChatHub();
+    super.dispose();
+  }
+
+  void _setupSignalR() async {
+    try {
+      await _messageRepo.connectToChatHub(
+        onMessageReceived: (msg) {
+          if (mounted) {
+            _fetchRealConversations(silent: true);
+          }
+        },
+        onMessageSentConfirm: (msg) {
+          if (mounted) {
+            _fetchRealConversations(silent: true);
+          }
+        },
+        onMessagesReadByOther: (convId) {
+          if (mounted) {
+            _fetchRealConversations(silent: true);
+          }
+        },
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _fetchRealConversations({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
+
+    try {
+      final list = await _messageRepo.getConversations();
+      if (!mounted) return;
+      setState(() {
+        _allConversations = list;
+        _isLoading = false;
+      });
+      _applyFilters();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+        _isLoading = false;
+        // Fallback to mock data for demo / offline
+        _loadMockConversations();
+      });
+    }
   }
 
   void _loadMockConversations() {
@@ -151,11 +212,10 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
         actions: [
           IconButton(
             onPressed: () {
-              // Reset list simulation
-              _loadMockConversations();
+              _fetchRealConversations();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Đã cập nhật danh sách cuộc hội thoại!'),
+                  content: Text('Đang tải lại danh sách cuộc hội thoại...'),
                   duration: Duration(seconds: 1),
                 ),
               );
@@ -168,10 +228,21 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
       body: Column(
         children: [
           _buildSearchAndFilters(),
+          if (_errorMessage != null && _allConversations.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Lỗi kết nối API: $_errorMessage',
+                style: const TextStyle(color: AppColors.error, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ),
           Expanded(
-            child: _filteredConversations.isEmpty
-                ? _buildEmptyState()
-                : _buildConversationsList(),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                : _filteredConversations.isEmpty
+                    ? _buildEmptyState()
+                    : _buildConversationsList(),
           ),
         ],
       ),
