@@ -1,0 +1,211 @@
+@model Backend_API.Models.ViewModels.Admin.AdminRevenueViewModel
+@{
+    ViewData["Title"] = "Quản lý doanh thu";
+
+    string StatusBadge(string status)
+    {
+        var normalized = status?.ToLowerInvariant() ?? "";
+        return normalized switch
+        {
+            "success" => "text-bg-success",
+            "pending" => "text-bg-warning",
+            "failed" => "text-bg-danger",
+            "refunded" => "text-bg-secondary",
+            _ => "text-bg-light"
+        };
+    }
+
+    string StatusText(string status)
+    {
+        var normalized = status?.ToLowerInvariant() ?? "";
+        return normalized switch
+        {
+            "success" => "Đã thanh toán",
+            "pending" => "Chờ thanh toán",
+            "failed" => "Thất bại",
+            "refunded" => "Hoàn tiền",
+            _ => status ?? "-"
+        };
+    }
+}
+
+<form method="get" action="/admin/revenue" class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label fw-semibold">Từ ngày</label>
+                <input type="date" name="from" value="@Model.FromDate.ToString("yyyy-MM-dd")" class="form-control" />
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label fw-semibold">Đến ngày</label>
+                <input type="date" name="to" value="@Model.ToDate.ToString("yyyy-MM-dd")" class="form-control" />
+            </div>
+            <div class="col-12 col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-fill">
+                    <i class="bi bi-funnel me-1"></i>Lọc doanh thu
+                </button>
+                <a href="/admin/revenue" class="btn btn-outline-secondary">30 ngày</a>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="text-muted small">Tổng doanh thu đã thanh toán</div>
+                <div class="h4 mb-0 text-success">@Model.TotalRevenue.ToString("N0") đ</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="text-muted small">Doanh thu đang chờ</div>
+                <div class="h4 mb-0 text-warning">@Model.PendingRevenue.ToString("N0") đ</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="text-muted small">Hóa đơn đã thanh toán</div>
+                <div class="h4 mb-0">@Model.PaidInvoiceCount</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="text-muted small">Giá trị TB / hóa đơn</div>
+                <div class="h4 mb-0">@Model.AveragePaidInvoice.ToString("N0") đ</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white fw-semibold d-flex align-items-center justify-content-between">
+        <span>Biểu đồ doanh thu</span>
+        <span class="text-muted small">@Model.FromDate.ToString("dd/MM/yyyy") - @Model.ToDate.ToString("dd/MM/yyyy")</span>
+    </div>
+    <div class="card-body">
+        <canvas id="adminRevenueChart" height="95"></canvas>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white fw-semibold d-flex align-items-center justify-content-between">
+        <span>Danh sách hóa đơn</span>
+        <span class="badge text-bg-light">@Model.Invoices.Count hóa đơn</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Mã hóa đơn</th>
+                        <th>Người thanh toán</th>
+                        <th>Tin đăng</th>
+                        <th class="text-end">Số tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Phương thức</th>
+                        <th>Ngày tạo</th>
+                        <th>Ngày thanh toán</th>
+                        <th class="text-end">Bill</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Invoices.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-5">Chưa có hóa đơn trong khoảng thời gian này.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.Invoices)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@item.InvoiceCode</div>
+                                    <small class="text-muted">@item.InvoiceType</small>
+                                </td>
+                                <td>
+                                    <div>@item.LandlordName</div>
+                                    <small class="text-muted">@(item.LandlordEmail ?? "-")</small>
+                                </td>
+                                <td>
+                                    @if (item.ListingId.HasValue)
+                                    {
+                                        <a href="/admin/listings/@item.ListingId?from=management" class="text-decoration-none fw-semibold">
+                                            #@item.ListingId
+                                        </a>
+                                        <div class="small text-muted text-truncate" style="max-width: 240px;">@(item.ListingTitle ?? "-")</div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td class="text-end fw-semibold">@item.TotalAmount.ToString("N0") đ</td>
+                                <td><span class="badge @StatusBadge(item.StatusName)">@StatusText(item.StatusName)</span></td>
+                                <td>@(item.PaymentMethod ?? "-")</td>
+                                <td>@(item.CreatedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                                <td>@(item.PaidAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/admin/revenue/invoices/@item.InvoiceId" class="btn btn-outline-primary">
+                                            <i class="bi bi-eye me-1"></i>Đọc
+                                        </a>
+                                        <a href="/admin/revenue/invoices/@item.InvoiceId/export" class="btn btn-outline-success">
+                                            <i class="bi bi-download me-1"></i>Xuất
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const revenueLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartLabels));
+        const revenueValues = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartRevenue));
+
+        new Chart(document.getElementById("adminRevenueChart"), {
+            type: "bar",
+            data: {
+                labels: revenueLabels,
+                datasets: [{
+                    label: "Doanh thu",
+                    data: revenueValues,
+                    backgroundColor: "#198754",
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => new Intl.NumberFormat("vi-VN").format(ctx.raw) + " đ"
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: {
+                            callback: value => new Intl.NumberFormat("vi-VN").format(value) + " đ"
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+}

@@ -164,3 +164,40 @@ public class AdminStorageViewModel
     public long? UserId { get; set; }
     public List<AdminStorageFileItemViewModel> Files { get; set; } = new();
 }
+
+public class AdminRevenueViewModel
+{
+    public DateOnly FromDate { get; set; }
+    public DateOnly ToDate { get; set; }
+    public decimal TotalRevenue { get; set; }
+    public decimal PendingRevenue { get; set; }
+    public int PaidInvoiceCount { get; set; }
+    public int PendingInvoiceCount { get; set; }
+    public decimal AveragePaidInvoice { get; set; }
+    public List<string> ChartLabels { get; set; } = new();
+    public List<decimal> ChartRevenue { get; set; } = new();
+    public List<AdminRevenueInvoiceItemViewModel> Invoices { get; set; } = new();
+}
+
+public class AdminRevenueInvoiceItemViewModel
+{
+    public long InvoiceId { get; set; }
+    public string InvoiceCode { get; set; } = string.Empty;
+    public string InvoiceType { get; set; } = string.Empty;
+    public decimal TotalAmount { get; set; }
+    public string StatusName { get; set; } = string.Empty;
+    public DateOnly DueDate { get; set; }
+    public DateTime? CreatedAt { get; set; }
+    public DateTime? PaidAt { get; set; }
+    public string LandlordName { get; set; } = string.Empty;
+    public string? LandlordEmail { get; set; }
+    public long? ListingId { get; set; }
+    public string? ListingTitle { get; set; }
+    public string? PaymentMethod { get; set; }
+}
+
+public class AdminRevenueInvoiceDetailViewModel : AdminRevenueInvoiceItemViewModel
+{
+    public string? Note { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+}
