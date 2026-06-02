@@ -21,6 +21,7 @@ import '../../screens/profile/change_password_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
 import '../../screens/auth/forgot_password_screen.dart';
+import '../../screens/payment/invoice_screen.dart';
 import '../../screens/payment/package_screen.dart';
 import '../../models/conversation.dart';
 import '../../models/listing.dart';
@@ -89,6 +90,7 @@ final appRouter = GoRouter(
         builder: (_, __) => const SearchHistoryScreen()),
     GoRoute(path: '/my-reviews', builder: (_, __) => const MyReviewsScreen()),
     GoRoute(path: '/my-listings', builder: (_, __) => const MyListingsScreen()),
+    GoRoute(path: '/invoices', builder: (_, __) => const InvoiceScreen()),
     GoRoute(
       path: '/listing-analytics/:id',
       builder: (context, state) {

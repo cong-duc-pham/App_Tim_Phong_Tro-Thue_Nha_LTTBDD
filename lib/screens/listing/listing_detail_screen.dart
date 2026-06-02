@@ -135,15 +135,29 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   // Mở ứng dụng bản đồ bên ngoài
   Future<void> _openMap(Listing listing) async {
     if (!listing.hasLocation) return;
-    final url =
-        'https://www.google.com/maps/search/?api=1&query=${listing.latitude},${listing.longitude}';
-    final uri = Uri.parse(url);
+    final uri = Uri.https(
+      'www.google.com',
+      '/maps/search/',
+      {
+        'api': '1',
+        'query': '${listing.latitude},${listing.longitude}',
+      },
+    );
+
     try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        throw 'Không thể mở bản đồ';
-      }
+      final openedExternal = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (openedExternal) return;
+
+      final openedDefault = await launchUrl(
+        uri,
+        mode: LaunchMode.platformDefault,
+      );
+      if (openedDefault) return;
+
+      throw 'Không tìm thấy ứng dụng hoặc trình duyệt để mở bản đồ';
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -634,6 +648,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   // Giá dịch vụ (Điện, Nước, Internet, Gửi xe)
   Widget _buildUtilitiesSection(Listing listing) {
     return Container(
+      width: double.infinity,
       margin: const EdgeInsets.only(top: 8),
       color: Colors.white,
       padding: const EdgeInsets.all(AppConstants.paddingH),
