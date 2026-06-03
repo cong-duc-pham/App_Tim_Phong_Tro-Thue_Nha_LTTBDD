@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/theme/profile_theme.dart';
 import '../../models/review.dart';
 
 class MyReviewsScreen extends StatefulWidget {
@@ -27,7 +29,8 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
   // Giả lập tải danh sách đánh giá từ API/Database cục bộ
   Future<void> _loadReviews() async {
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 600)); // Hiệu ứng loading nhẹ
+    await Future.delayed(
+        const Duration(milliseconds: 600)); // Hiệu ứng loading nhẹ
     setState(() {
       _reviews = [
         Review(
@@ -38,8 +41,10 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
           listingPrice: 4500000,
           rating: 5.0,
           createdAt: DateTime(2026, 5, 20),
-          content: 'Phòng trọ sạch sẽ, rộng rãi, chủ nhà cực kỳ thân thiện và hỗ trợ nhiệt tình. Có chỗ để xe an toàn và giờ giấc tự do.',
-          replyContent: 'Cảm ơn bạn đã lựa chọn phòng trọ của mình nhé! Chúc bạn có thời gian học tập và sinh sống thật vui vẻ tại đây.',
+          content:
+              'Phòng trọ sạch sẽ, rộng rãi, chủ nhà cực kỳ thân thiện và hỗ trợ nhiệt tình. Có chỗ để xe an toàn và giờ giấc tự do.',
+          replyContent:
+              'Cảm ơn bạn đã lựa chọn phòng trọ của mình nhé! Chúc bạn có thời gian học tập và sinh sống thật vui vẻ tại đây.',
           repliedAt: DateTime(2026, 5, 21),
         ),
         Review(
@@ -50,8 +55,10 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
           listingPrice: 2800000,
           rating: 4.0,
           createdAt: DateTime(2026, 5, 10),
-          content: 'Giá cả hợp lý cho sinh viên, gần trường học nên đi bộ rất tiện. Phòng hơi nóng vào buổi trưa nhưng có điều hòa hỗ trợ.',
-          replyContent: 'Chào bạn, cảm ơn phản hồi của bạn. Mình sẽ nghiên cứu nâng cấp thêm lớp chống nóng mái tôn để các bạn ở dễ chịu hơn.',
+          content:
+              'Giá cả hợp lý cho sinh viên, gần trường học nên đi bộ rất tiện. Phòng hơi nóng vào buổi trưa nhưng có điều hòa hỗ trợ.',
+          replyContent:
+              'Chào bạn, cảm ơn phản hồi của bạn. Mình sẽ nghiên cứu nâng cấp thêm lớp chống nóng mái tôn để các bạn ở dễ chịu hơn.',
           repliedAt: DateTime(2026, 5, 11),
         ),
       ];
@@ -84,8 +91,10 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppConstants.radiusLg),
         ),
-        title: const Text('Xóa đánh giá này?', style: TextStyle(fontWeight: FontWeight.w700)),
-        content: const Text('Đánh giá này sẽ bị gỡ vĩnh viễn khỏi phòng trọ. Bạn có chắc chắn muốn thực hiện hành động này?'),
+        title: const Text('Xóa đánh giá này?',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        content: const Text(
+            'Đánh giá này sẽ bị gỡ vĩnh viễn khỏi phòng trọ. Bạn có chắc chắn muốn thực hiện hành động này?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -120,7 +129,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       body: Column(
         children: [
           _buildHeader(),
@@ -166,9 +175,9 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Đánh giá của tôi',
-                    style: TextStyle(
+                  Text(
+                    'profile_my_reviews'.tr,
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -180,9 +189,10 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
             const SizedBox(height: 22),
             Container(
               height: 20,
-              decoration: const BoxDecoration(
-                color: AppColors.bgPage,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: BoxDecoration(
+                color: context.profileBg,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
               ),
             ),
           ],
@@ -201,9 +211,9 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.profileCard,
             borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-            border: Border.all(color: AppColors.borderLight),
+            border: Border.all(color: context.profileBorder),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.03),
@@ -219,7 +229,8 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
               InkWell(
                 onTap: () {
                   // Chuyển hướng người dùng về Trang chủ để lọc đúng phòng trọ này
-                  context.go('/home?q=${Uri.encodeComponent(review.listingTitle)}');
+                  context.go(
+                      '/home?q=${Uri.encodeComponent(review.listingTitle)}');
                 },
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(AppConstants.radiusLg),
@@ -234,7 +245,8 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                         height: 50,
                         decoration: BoxDecoration(
                           color: AppColors.primaryLight.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                          borderRadius:
+                              BorderRadius.circular(AppConstants.radiusMd),
                         ),
                         alignment: Alignment.center,
                         child: const Icon(
@@ -252,10 +264,10 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                               review.listingTitle,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
+                                color: context.profileText,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -263,9 +275,9 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                               review.listingAddress,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: AppColors.textSecondary,
+                                color: context.profileTextSecondary,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -289,8 +301,8 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                   ),
                 ),
               ),
-              const Divider(height: 1, color: AppColors.borderLight),
-              
+              Divider(height: 1, color: context.profileBorder),
+
               // 2. Nội dung sao đánh giá, ngày tháng và văn bản đánh giá
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
@@ -324,10 +336,10 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                     const SizedBox(height: 10),
                     Text(
                       review.content,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         height: 1.4,
-                        color: AppColors.textPrimary,
+                        color: context.profileText,
                       ),
                     ),
 
@@ -337,9 +349,10 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                         margin: const EdgeInsets.only(top: 14),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppColors.bgPage,
-                          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-                          border: Border.all(color: AppColors.borderLight),
+                          color: context.profileSubtleCard,
+                          borderRadius:
+                              BorderRadius.circular(AppConstants.radiusMd),
+                          border: Border.all(color: context.profileBorder),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -374,10 +387,10 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                             const SizedBox(height: 6),
                             Text(
                               review.replyContent!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 height: 1.35,
-                                color: AppColors.textSecondary,
+                                color: context.profileTextSecondary,
                               ),
                             ),
                           ],
@@ -388,8 +401,8 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                 ),
               ),
 
-              const Divider(height: 1, color: AppColors.borderLight),
-              
+              Divider(height: 1, color: context.profileBorder),
+
               // 4. Các nút hành động dưới chân thẻ bài đánh giá
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -459,15 +472,17 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'Không có đánh giá',
-            style: AppTextStyles.h3,
+            style: AppTextStyles.h3.copyWith(color: context.profileText),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Bạn chưa gửi bất kỳ lượt đánh giá chất lượng phòng trọ nào.',
             textAlign: TextAlign.center,
-            style: AppTextStyles.bodyMedium,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: context.profileTextSecondary,
+            ),
           ),
           const SizedBox(height: 32),
           // Nút quay lại trang chủ tìm phòng

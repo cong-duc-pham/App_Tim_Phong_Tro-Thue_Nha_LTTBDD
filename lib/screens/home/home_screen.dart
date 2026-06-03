@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../core/settings/app_settings_controller.dart';
 import '../../models/listing.dart';
 import '../../repositories/favorite_repository.dart';
 import '../../repositories/listing_repository.dart';
@@ -269,6 +270,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadListingsFromSql();
     _loadFavoriteIds();
     _loadUnreadNotificationCount();
+    notificationsEnabledNotifier.addListener(_handleNotificationSettingChanged);
     // Tự động kích hoạt tìm kiếm nếu có từ khóa truyền từ ngoài vào (qua deep link / router)
     if (widget.initialSearchQuery != null &&
         widget.initialSearchQuery!.trim().isNotEmpty) {
@@ -554,9 +556,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    notificationsEnabledNotifier
+        .removeListener(_handleNotificationSettingChanged);
     _searchCtrl.dispose();
     _searchFocus.dispose();
     super.dispose();
+  }
+
+  void _handleNotificationSettingChanged() {
+    if (!mounted) return;
+    if (!notificationsEnabledNotifier.value) {
+      setState(() => _unreadNotificationCount = 0);
+      return;
+    }
+    _loadUnreadNotificationCount();
   }
 
   Future<void> _toggleSave(String id) async {

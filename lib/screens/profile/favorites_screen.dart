@@ -5,11 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/theme/profile_theme.dart';
 import '../../models/listing.dart';
 import '../../repositories/favorite_repository.dart';
 import '../../services/api_service.dart';
 
-// ─── Model ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Model â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class FavoriteListing {
   final String id;
@@ -43,77 +45,77 @@ class FavoriteListing {
   });
 }
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Mock data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /*
 final _mockFavorites = [
   FavoriteListing(
     id: '1',
-    title: 'Phòng đẹp full nội thất Bình Thạnh',
-    address: 'Bình Thạnh, TP.HCM',
+    title: 'PhÃ²ng Ä‘áº¹p full ná»™i tháº¥t BÃ¬nh Tháº¡nh',
+    address: 'BÃ¬nh Tháº¡nh, TP.HCM',
     price: 3500000,
     area: 25,
-    type: 'Phòng trọ SV',
+    type: 'PhÃ²ng trá» SV',
     isVerified: true,
-    tags: ['Wifi', 'Điều hòa', 'Ban công'],
+    tags: ['Wifi', 'Äiá»u hÃ²a', 'Ban cÃ´ng'],
     bgColor: AppColors.illus1,
-    emoji: '🛋️',
+    emoji: 'ðŸ›‹ï¸',
     savedAt: DateTime(2026, 5, 10),
   ),
   FavoriteListing(
     id: '2',
-    title: 'Studio cao cấp Quận 1 view đẹp',
-    address: 'Quận 1, TP.HCM',
+    title: 'Studio cao cáº¥p Quáº­n 1 view Ä‘áº¹p',
+    address: 'Quáº­n 1, TP.HCM',
     price: 5200000,
     area: 30,
-    type: 'Căn hộ DV',
+    type: 'CÄƒn há»™ DV',
     isNew: true,
-    tags: ['Thang máy', 'Bảo vệ'],
+    tags: ['Thang mÃ¡y', 'Báº£o vá»‡'],
     bgColor: AppColors.illus2,
-    emoji: '🏢',
+    emoji: 'ðŸ¢',
     savedAt: DateTime(2026, 5, 8),
   ),
   FavoriteListing(
     id: '3',
-    title: 'Phòng gần ĐH Bách Khoa yên tĩnh',
-    address: 'Quận 10, TP.HCM',
+    title: 'PhÃ²ng gáº§n ÄH BÃ¡ch Khoa yÃªn tÄ©nh',
+    address: 'Quáº­n 10, TP.HCM',
     price: 2800000,
     area: 20,
-    type: 'Phòng trọ SV',
-    tags: ['Wifi', 'Máy giặt'],
+    type: 'PhÃ²ng trá» SV',
+    tags: ['Wifi', 'MÃ¡y giáº·t'],
     bgColor: AppColors.illus3,
-    emoji: '🏠',
+    emoji: 'ðŸ ',
     savedAt: DateTime(2026, 5, 5),
   ),
   FavoriteListing(
     id: '4',
-    title: 'Nhà nguyên căn Gò Vấp 3 phòng ngủ',
-    address: 'Gò Vấp, TP.HCM',
+    title: 'NhÃ  nguyÃªn cÄƒn GÃ² Váº¥p 3 phÃ²ng ngá»§',
+    address: 'GÃ² Váº¥p, TP.HCM',
     price: 12000000,
     area: 70,
-    type: 'Nhà nguyên căn',
+    type: 'NhÃ  nguyÃªn cÄƒn',
     isVerified: true,
-    tags: ['Sân vườn', 'Wifi', 'Máy giặt'],
+    tags: ['SÃ¢n vÆ°á»n', 'Wifi', 'MÃ¡y giáº·t'],
     bgColor: AppColors.illus4,
-    emoji: '🏡',
+    emoji: 'ðŸ¡',
     savedAt: DateTime(2026, 5, 1),
   ),
   FavoriteListing(
     id: '5',
-    title: 'Căn hộ dịch vụ Tân Bình đầy đủ tiện nghi',
-    address: 'Tân Bình, TP.HCM',
+    title: 'CÄƒn há»™ dá»‹ch vá»¥ TÃ¢n BÃ¬nh Ä‘áº§y Ä‘á»§ tiá»‡n nghi',
+    address: 'TÃ¢n BÃ¬nh, TP.HCM',
     price: 6500000,
     area: 35,
-    type: 'Căn hộ DV',
+    type: 'CÄƒn há»™ DV',
     isVerified: true,
-    tags: ['Điều hòa', 'Thang máy'],
+    tags: ['Äiá»u hÃ²a', 'Thang mÃ¡y'],
     bgColor: AppColors.illus2,
-    emoji: '🏢',
+    emoji: 'ðŸ¢',
     savedAt: DateTime(2026, 4, 28),
   ),
 ];
 
-// ─── Sort options ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Sort options â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 */
 enum _SortOption { newest, priceAsc, priceDesc, areaAsc }
@@ -121,25 +123,29 @@ enum _SortOption { newest, priceAsc, priceDesc, areaAsc }
 extension _SortOptionExt on _SortOption {
   String get label {
     switch (this) {
-      case _SortOption.newest:    return 'Mới lưu nhất';
-      case _SortOption.priceAsc:  return 'Giá tăng dần';
-      case _SortOption.priceDesc: return 'Giá giảm dần';
-      case _SortOption.areaAsc:   return 'Diện tích';
+      case _SortOption.newest:
+        return 'favorites_sort_newest'.tr;
+      case _SortOption.priceAsc:
+        return 'favorites_sort_price_asc'.tr;
+      case _SortOption.priceDesc:
+        return 'favorites_sort_price_desc'.tr;
+      case _SortOption.areaAsc:
+        return 'favorites_sort_area'.tr;
     }
   }
 }
 
-// ─── Vietnamese diacritic normalization ─────────────────────────────────────
+// â”€â”€â”€ Vietnamese diacritic normalization â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 String _removeDiacritics(String s) {
   const map = {
-    'àáâãăắặằẳẵấầẩẫậ': 'a',
-    'èéêẹẻẽếềểễệ': 'e',
-    'ìíîïỉịĩ': 'i',
-    'òóôõọỏốồổỗộớờởỡợ': 'o',
-    'ùúûụủứừửữựũ': 'u',
-    'ýỳỷỹỵ': 'y',
-    'đ': 'd',
+    'Ã Ã¡Ã¢Ã£Äƒáº¯áº·áº±áº³áºµáº¥áº§áº©áº«áº­': 'a',
+    'Ã¨Ã©Ãªáº¹áº»áº½áº¿á»á»ƒá»…á»‡': 'e',
+    'Ã¬Ã­Ã®Ã¯á»‰á»‹Ä©': 'i',
+    'Ã²Ã³Ã´Ãµá»á»á»‘á»“á»•á»—á»™á»›á»á»Ÿá»¡á»£': 'o',
+    'Ã¹ÃºÃ»á»¥á»§á»©á»«á»­á»¯á»±Å©': 'u',
+    'Ã½á»³á»·á»¹á»µ': 'y',
+    'Ä‘': 'd',
   };
   String result = s.toLowerCase();
   map.forEach((chars, replacement) {
@@ -150,7 +156,7 @@ String _removeDiacritics(String s) {
   return result;
 }
 
-// ─── FavoritesScreen ──────────────────────────────────────────────────────────
+// â”€â”€â”€ FavoritesScreen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -213,11 +219,13 @@ class _FavoritesScreenState extends State<FavoritesScreen>
   FavoriteListing _toFavoriteListing(Listing listing) {
     return FavoriteListing(
       id: listing.listingId.toString(),
-      title: listing.title.isNotEmpty ? listing.title : 'Tin đăng chưa có tiêu đề',
+      title: listing.title.isNotEmpty
+          ? listing.title
+          : 'Tin Ä‘Äƒng chÆ°a cÃ³ tiÃªu Ä‘á»',
       address: listing.displayAddress,
       price: listing.price,
       area: listing.area,
-      type: listing.typeName.isNotEmpty ? listing.typeName : 'Phòng trọ',
+      type: listing.typeName.isNotEmpty ? listing.typeName : 'PhÃ²ng trá»',
       isVerified: listing.isVerified,
       isNew: _isNewListing(listing.createdAt),
       tags: listing.amenityNames.take(4).toList(),
@@ -248,10 +256,10 @@ class _FavoritesScreenState extends State<FavoritesScreen>
 
   String _emojiForType(String type) {
     final normalized = _removeDiacritics(type);
-    if (normalized.contains('can ho')) return '🏢';
-    if (normalized.contains('nha')) return '🏠';
-    if (normalized.contains('ghep')) return '👥';
-    return '🛋️';
+    if (normalized.contains('can ho')) return 'ðŸ¢';
+    if (normalized.contains('nha')) return 'ðŸ ';
+    if (normalized.contains('ghep')) return 'ðŸ‘¥';
+    return 'ðŸ›‹ï¸';
   }
 
   String? _resolveImageUrl(String? url) {
@@ -259,7 +267,8 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     if (raw == null || raw.isEmpty) return null;
     if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
 
-    final origin = ApiService.defaultBaseUrl.replaceFirst(RegExp(r'/api/?$'), '');
+    final origin =
+        ApiService.defaultBaseUrl.replaceFirst(RegExp(r'/api/?$'), '');
     final path = raw.startsWith('/') ? raw : '/$raw';
     return '$origin$path';
   }
@@ -275,11 +284,13 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     var list = List<FavoriteListing>.from(_favorites);
     if (_searchQuery.isNotEmpty) {
       final q = _removeDiacritics(_searchQuery);
-      list = list.where((e) =>
-        _removeDiacritics(e.title).contains(q) ||
-        _removeDiacritics(e.address).contains(q) ||
-        _removeDiacritics(e.type).contains(q) ||
-        e.tags.any((t) => _removeDiacritics(t).contains(q))).toList();
+      list = list
+          .where((e) =>
+              _removeDiacritics(e.title).contains(q) ||
+              _removeDiacritics(e.address).contains(q) ||
+              _removeDiacritics(e.type).contains(q) ||
+              e.tags.any((t) => _removeDiacritics(t).contains(q)))
+          .toList();
     }
     switch (_sort) {
       case _SortOption.newest:
@@ -301,7 +312,8 @@ class _FavoritesScreenState extends State<FavoritesScreen>
   Future<void> _removeFavorite(String id) async {
     setState(() => _removingIds.add(id));
     try {
-      final isStillFavorite = await _favoriteRepository.toggleFavorite(int.parse(id));
+      final isStillFavorite =
+          await _favoriteRepository.toggleFavorite(int.parse(id));
       if (!mounted) return;
       if (isStillFavorite) {
         await _loadFavorites();
@@ -327,20 +339,21 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         _removingIds.remove(id);
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Row(children: [
-          Icon(Icons.favorite_border_rounded, color: Colors.white, size: 16),
-          SizedBox(width: 8),
-          Text('Đã bỏ lưu phòng này'),
+        content: Row(children: [
+          const Icon(Icons.favorite_border_rounded,
+              color: Colors.white, size: 16),
+          const SizedBox(width: 8),
+          Text('favorites_removed'.tr),
         ]),
         backgroundColor: AppColors.textDark,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppConstants.radiusMd)),
         action: SnackBarAction(
-          label: 'Hoàn tác',
+          label: 'HoÃ n tÃ¡c',
           textColor: AppColors.primaryLight,
           onPressed: () {
-            // TODO: hoàn tác
+            // TODO: hoÃ n tÃ¡c
           },
         ),
       ));
@@ -363,15 +376,15 @@ class _FavoritesScreenState extends State<FavoritesScreen>
       final m = price / 1000000;
       return '${m % 1 == 0 ? m.toInt() : m.toStringAsFixed(1)}tr';
     }
-    return '${price.toInt()}đ';
+    return '${price.toInt()}Ä‘';
   }
 
   String _formatSavedDate(DateTime date) {
     final now = DateTime.now();
     final diff = now.difference(date).inDays;
-    if (diff == 0) return 'Hôm nay';
-    if (diff == 1) return 'Hôm qua';
-    if (diff < 7) return '$diff ngày trước';
+    if (diff == 0) return 'HÃ´m nay';
+    if (diff == 1) return 'HÃ´m qua';
+    if (diff < 7) return '$diff ngÃ y trÆ°á»›c';
     return '${date.day}/${date.month}/${date.year}';
   }
 
@@ -379,7 +392,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
   Widget build(BuildContext context) {
     final list = _filtered;
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       body: Column(children: [
         _buildHeader(list.length),
         Expanded(
@@ -390,21 +403,21 @@ class _FavoritesScreenState extends State<FavoritesScreen>
               : _errorMessage != null
                   ? _buildErrorState()
                   : _favorites.isEmpty
-              ? _buildEmptyState()
-              : Column(children: [
-                  _buildSearchAndSort(),
-                  Expanded(
-                    child: list.isEmpty
-                        ? _buildNoResult()
-                        : _buildList(list),
-                  ),
-                ]),
+                      ? _buildEmptyState()
+                      : Column(children: [
+                          _buildSearchAndSort(),
+                          Expanded(
+                            child: list.isEmpty
+                                ? _buildNoResult()
+                                : _buildList(list),
+                          ),
+                        ]),
         ),
       ]),
     );
   }
 
-  // ── Header ────────────────────────────────────────────────────────────────
+  // â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildHeader(int count) {
     return Container(
@@ -418,7 +431,8 @@ class _FavoritesScreenState extends State<FavoritesScreen>
               GestureDetector(
                 onTap: () => context.go('/home'),
                 child: Container(
-                  width: 36, height: 36,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.white.withValues(alpha: 0.18),
@@ -429,8 +443,8 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                 ),
               ),
               const SizedBox(width: 12),
-              const Text('Phòng đã lưu',
-                  style: TextStyle(
+              Text('favorites_title'.tr,
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
@@ -438,10 +452,12 @@ class _FavoritesScreenState extends State<FavoritesScreen>
               const Spacer(),
               if (_favorites.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                    borderRadius:
+                        BorderRadius.circular(AppConstants.radiusFull),
                   ),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     const Icon(Icons.favorite_rounded,
@@ -460,9 +476,10 @@ class _FavoritesScreenState extends State<FavoritesScreen>
           const SizedBox(height: 20),
           Container(
             height: 20,
-            decoration: const BoxDecoration(
-              color: AppColors.bgPage,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            decoration: BoxDecoration(
+              color: context.profileBg,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
             ),
           ),
         ]),
@@ -470,7 +487,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     );
   }
 
-  // ── Search & Sort bar ─────────────────────────────────────────────────────
+  // â”€â”€ Search & Sort bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildSearchAndSort() {
     return Padding(
@@ -480,22 +497,23 @@ class _FavoritesScreenState extends State<FavoritesScreen>
           child: Container(
             height: 42,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.profileInputFill,
               borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: context.profileBorder),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(children: [
-              const Icon(Icons.search_rounded,
-                  size: 18, color: AppColors.textMuted),
+              Icon(Icons.search_rounded,
+                  size: 18, color: context.profileTextMuted),
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
                   onChanged: (v) => setState(() => _searchQuery = v.trim()),
-                  style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                  decoration: const InputDecoration(
-                    hintText: 'Tìm trong danh sách...',
-                    hintStyle: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                  style: TextStyle(fontSize: 13, color: context.profileText),
+                  decoration: InputDecoration(
+                    hintText: 'favorites_search_hint'.tr,
+                    hintStyle: TextStyle(
+                        fontSize: 13, color: context.profileTextMuted),
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
@@ -504,7 +522,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                     focusedErrorBorder: InputBorder.none,
                     filled: false,
                     isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
                   ),
                 ),
               ),
@@ -518,12 +536,13 @@ class _FavoritesScreenState extends State<FavoritesScreen>
             height: 42,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.profileInputFill,
               borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: context.profileBorder),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.sort_rounded, size: 16, color: AppColors.primary),
+              const Icon(Icons.sort_rounded,
+                  size: 16, color: AppColors.primary),
               const SizedBox(width: 6),
               Text(_sort.label,
                   style: const TextStyle(
@@ -538,7 +557,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     );
   }
 
-  // ── List ──────────────────────────────────────────────────────────────────
+  // â”€â”€ List â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildList(List<FavoriteListing> list) {
     return ListView.builder(
@@ -567,7 +586,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     );
   }
 
-  // ── Empty states ──────────────────────────────────────────────────────────
+  // â”€â”€ Empty states â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildErrorState() {
     return Center(
@@ -589,22 +608,22 @@ class _FavoritesScreenState extends State<FavoritesScreen>
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Không tải được danh sách yêu thích',
+          Text(
+            'KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch yÃªu thÃ­ch',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: context.profileText,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            _errorMessage ?? 'Vui lòng thử lại.',
+            _errorMessage ?? 'Vui lÃ²ng thá»­ láº¡i.',
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
-              color: AppColors.textMuted,
+              color: context.profileTextMuted,
               height: 1.5,
             ),
           ),
@@ -614,7 +633,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
             child: ElevatedButton.icon(
               onPressed: _loadFavorites,
               icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Thử lại'),
+              label: Text('favorites_retry'.tr),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -640,30 +659,31 @@ class _FavoritesScreenState extends State<FavoritesScreen>
             builder: (_, __) => Transform.translate(
               offset: Offset(0, -6 * _emptyAnim.value),
               child: Container(
-                width: 100, height: 100,
+                width: 100,
+                height: 100,
                 decoration: BoxDecoration(
                   color: AppColors.errorBg,
                   borderRadius: BorderRadius.circular(AppConstants.radiusXxl),
                 ),
                 alignment: Alignment.center,
-                child: const Text('💔', style: TextStyle(fontSize: 44)),
+                child: const Text('ðŸ’”', style: TextStyle(fontSize: 44)),
               ),
             ),
           ),
           const SizedBox(height: 24),
-          const Text('Chưa có phòng yêu thích',
+          Text('favorites_empty_title'.tr,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: context.profileText,
               )),
           const SizedBox(height: 8),
-          const Text(
-            'Nhấn ❤️ trên các phòng bạn thích\nđể lưu vào đây nhé!',
+          Text(
+            'favorites_empty_desc'.tr,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
-              color: AppColors.textMuted,
+              color: context.profileTextMuted,
               height: 1.6,
             ),
           ),
@@ -673,7 +693,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
             child: ElevatedButton.icon(
               onPressed: () => context.go('/home'),
               icon: const Icon(Icons.search_rounded, size: 18),
-              label: const Text('Tìm phòng ngay'),
+              label: Text('favorites_find_now'.tr),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -693,30 +713,31 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     return Center(
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
-          width: 72, height: 72,
+          width: 72,
+          height: 72,
           decoration: BoxDecoration(
             color: AppColors.primaryLight,
             borderRadius: BorderRadius.circular(AppConstants.radiusXl),
           ),
           alignment: Alignment.center,
-          child: const Text('🔍', style: TextStyle(fontSize: 32)),
+          child: const Text('ðŸ”', style: TextStyle(fontSize: 32)),
         ),
         const SizedBox(height: 16),
-        const Text('Không tìm thấy',
+        Text('favorites_no_result'.tr,
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: context.profileText,
             )),
         const SizedBox(height: 6),
-        const Text('Thử từ khóa khác nhé',
-            style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
+        Text('favorites_try_other'.tr,
+            style: TextStyle(fontSize: 13, color: context.profileTextMuted)),
       ]),
     );
   }
 }
 
-// ─── Favorite Card ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Favorite Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _FavoriteCard extends StatelessWidget {
   final FavoriteListing item;
@@ -740,9 +761,9 @@ class _FavoriteCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.profileCard,
           borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-          border: Border.all(color: AppColors.borderLight),
+          border: Border.all(color: context.profileBorder),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -781,7 +802,8 @@ class _FavoriteCard extends StatelessWidget {
             ),
             // Type badge
             Positioned(
-              top: 10, left: 12,
+              top: 10,
+              left: 12,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -799,16 +821,18 @@ class _FavoriteCard extends StatelessWidget {
             // NEW badge
             if (item.isNew)
               Positioned(
-                top: 10, left: item.type.isNotEmpty ? null : 12,
+                top: 10,
+                left: item.type.isNotEmpty ? null : 12,
                 right: 48,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.tagNew,
                     borderRadius: BorderRadius.circular(AppConstants.radiusSm),
                   ),
-                  child: const Text('MỚI',
-                      style: TextStyle(
+                  child: Text('favorites_new_badge'.tr,
+                      style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
@@ -817,11 +841,13 @@ class _FavoriteCard extends StatelessWidget {
               ),
             // Remove button
             Positioned(
-              top: 10, right: 12,
+              top: 10,
+              right: 12,
               child: GestureDetector(
                 onTap: onRemove,
                 child: Container(
-                  width: 32, height: 32,
+                  width: 32,
+                  height: 32,
                   decoration: const BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
@@ -834,7 +860,8 @@ class _FavoriteCard extends StatelessWidget {
             ),
             // Saved date bottom-left
             Positioned(
-              bottom: 10, left: 12,
+              bottom: 10,
+              left: 12,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -845,7 +872,7 @@ class _FavoriteCard extends StatelessWidget {
                   const Icon(Icons.bookmark_rounded,
                       size: 11, color: Colors.white),
                   const SizedBox(width: 4),
-                  Text('Lưu $savedLabel',
+                  Text('${'favorites_saved_time'.tr} $savedLabel',
                       style: const TextStyle(
                         fontSize: 10,
                         color: Colors.white,
@@ -855,32 +882,33 @@ class _FavoriteCard extends StatelessWidget {
               ),
             ),
           ]),
-  
+
           // Info section
           Padding(
             padding: const EdgeInsets.all(14),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(item.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: context.profileText,
                     height: 1.3,
                   )),
               const SizedBox(height: 6),
               Row(children: [
-                const Icon(Icons.location_on_rounded,
-                    size: 13, color: AppColors.textMuted),
+                Icon(Icons.location_on_rounded,
+                    size: 13, color: context.profileTextMuted),
                 const SizedBox(width: 3),
                 Expanded(
                   child: Text(item.address,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: context.profileTextSecondary,
                       )),
                 ),
               ]),
@@ -889,40 +917,50 @@ class _FavoriteCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Price + area
-                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    RichText(
-                      text: TextSpan(children: [
-                        TextSpan(text: priceLabel, style: AppTextStyles.cardPrice),
-                        const TextSpan(text: '/tháng', style: AppTextStyles.cardPriceSub),
+                  Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        RichText(
+                          text: TextSpan(children: [
+                            TextSpan(
+                                text: priceLabel,
+                                style: AppTextStyles.cardPrice),
+                            TextSpan(
+                                text: '/thÃ¡ng',
+                                style: AppTextStyles.cardPriceSub.copyWith(
+                                  color: context.profileTextMuted,
+                                )),
+                          ]),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(children: [
+                          Icon(Icons.straighten_rounded,
+                              size: 12, color: context.profileTextMuted),
+                          const SizedBox(width: 3),
+                          Text('${item.area.toInt()} mÂ²',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: context.profileTextMuted,
+                              )),
+                        ]),
                       ]),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(children: [
-                      const Icon(Icons.straighten_rounded,
-                          size: 12, color: AppColors.textMuted),
-                      const SizedBox(width: 3),
-                      Text('${item.area.toInt()} m²',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textMuted,
-                          )),
-                    ]),
-                  ]),
                   // Verified + Contact
                   Row(children: [
                     if (item.isVerified) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppColors.primaryLight,
-                          borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                          borderRadius:
+                              BorderRadius.circular(AppConstants.radiusSm),
                         ),
-                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.verified_rounded,
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          const Icon(Icons.verified_rounded,
                               size: 12, color: AppColors.primary),
-                          SizedBox(width: 3),
-                          Text('Xác thực',
-                              style: TextStyle(
+                          const SizedBox(width: 3),
+                          Text('favorites_verified'.tr,
+                              style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.primary,
@@ -934,16 +972,19 @@ class _FavoriteCard extends StatelessWidget {
                     GestureDetector(
                       onTap: () {},
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 7),
                         decoration: BoxDecoration(
                           color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                          borderRadius:
+                              BorderRadius.circular(AppConstants.radiusMd),
                         ),
-                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.phone_rounded, size: 13, color: Colors.white),
-                          SizedBox(width: 5),
-                          Text('Liên hệ',
-                              style: TextStyle(
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          const Icon(Icons.phone_rounded,
+                              size: 13, color: Colors.white),
+                          const SizedBox(width: 5),
+                          Text('favorites_contact'.tr,
+                              style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
@@ -957,25 +998,30 @@ class _FavoriteCard extends StatelessWidget {
               // Tags
               if (item.tags.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                const Divider(height: 1, color: AppColors.borderLight),
+                Divider(height: 1, color: context.profileBorder),
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: item.tags.map((t) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.infoBg,
-                      borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                      border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
-                    ),
-                    child: Text(t,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.info,
-                        )),
-                  )).toList(),
+                  children: item.tags
+                      .map((t) => Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.infoBg,
+                              borderRadius:
+                                  BorderRadius.circular(AppConstants.radiusSm),
+                              border: Border.all(
+                                  color: AppColors.info.withValues(alpha: 0.2)),
+                            ),
+                            child: Text(t,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.info,
+                                )),
+                          ))
+                      .toList(),
                 ),
               ],
             ]),
@@ -986,7 +1032,7 @@ class _FavoriteCard extends StatelessWidget {
   }
 }
 
-// ─── Sort Sheet ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Sort Sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _SortSheet extends StatelessWidget {
   final _SortOption current;
@@ -997,30 +1043,32 @@ class _SortSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXxl)),
+      decoration: BoxDecoration(
+        color: context.profileCard,
+        borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radiusXxl)),
       ),
       child: SafeArea(
         top: false,
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(
             margin: const EdgeInsets.only(top: 12, bottom: 4),
-            width: 40, height: 4,
+            width: 40,
+            height: 4,
             decoration: BoxDecoration(
-              color: AppColors.border,
+              color: context.profileBorder,
               borderRadius: BorderRadius.circular(AppConstants.radiusFull),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 12, 20, 4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Sắp xếp theo',
+              child: Text('favorites_sort_by'.tr,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: context.profileText,
                   )),
             ),
           ),
@@ -1032,14 +1080,18 @@ class _SortSheet extends StatelessWidget {
                 Navigator.pop(context);
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 child: Row(children: [
                   Expanded(
                     child: Text(opt.label,
                         style: TextStyle(
                           fontSize: 14,
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-                          color: selected ? AppColors.primary : AppColors.textPrimary,
+                          fontWeight:
+                              selected ? FontWeight.w700 : FontWeight.w400,
+                          color: selected
+                              ? AppColors.primary
+                              : context.profileText,
                         )),
                   ),
                   if (selected)

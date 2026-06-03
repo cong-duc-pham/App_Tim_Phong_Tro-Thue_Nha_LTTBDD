@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/theme/profile_theme.dart';
 import '../../models/listing.dart';
 import '../../repositories/listing_repository.dart';
 
@@ -32,11 +34,11 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        title: const Text('Tin đăng của tôi'),
+        title: Text('profile_my_listings'.tr),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
           onPressed: () => context.pop(),
@@ -115,7 +117,8 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
 
   Future<Listing> _loadListing() async {
     final myListings = await _repository.getMyListings();
-    final matches = myListings.where((item) => item.listingId == widget.listingId);
+    final matches =
+        myListings.where((item) => item.listingId == widget.listingId);
     if (matches.isNotEmpty) return matches.first;
     if (widget.initialListing != null) return widget.initialListing!;
     throw Exception('Không tìm thấy tin đăng thuộc tài khoản của bạn.');
@@ -129,11 +132,11 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        title: const Text('Thống kê tin đăng'),
+        title: Text('Thống kê tin đăng'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
           onPressed: () => context.pop(),
@@ -200,9 +203,9 @@ class _MyListingCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.profileCard,
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.profileBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -225,10 +228,10 @@ class _MyListingCard extends StatelessWidget {
                       listing.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
+                        color: context.profileText,
                       ),
                     ),
                     const SizedBox(height: 5),
@@ -236,9 +239,9 @@ class _MyListingCard extends StatelessWidget {
                       listing.displayAddress,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: context.profileTextSecondary,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -326,9 +329,9 @@ class _AnalyticsHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.profileCard,
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.profileBorder),
       ),
       child: Row(
         children: [
@@ -342,10 +345,10 @@ class _AnalyticsHeader extends StatelessWidget {
                   listing.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
+                    color: context.profileText,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -362,8 +365,8 @@ class _AnalyticsHeader extends StatelessWidget {
                   listing.displayAddress,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
+                  style: TextStyle(
+                    color: context.profileTextSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -443,14 +446,17 @@ class _EngagementCard extends StatelessWidget {
           _ProgressMetric(
             label: 'Tỷ lệ lưu tin',
             value: views == 0 ? 0 : saves / views,
-            valueLabel: views == 0 ? '0%' : '${((saves / views) * 100).toStringAsFixed(1)}%',
+            valueLabel: views == 0
+                ? '0%'
+                : '${((saves / views) * 100).toStringAsFixed(1)}%',
           ),
           const SizedBox(height: 14),
           _ProgressMetric(
             label: 'Tỷ lệ đánh giá',
             value: views == 0 ? 0 : reviews / views,
-            valueLabel:
-                views == 0 ? '0%' : '${((reviews / views) * 100).toStringAsFixed(1)}%',
+            valueLabel: views == 0
+                ? '0%'
+                : '${((reviews / views) * 100).toStringAsFixed(1)}%',
           ),
           const SizedBox(height: 14),
           _ProgressMetric(
@@ -472,7 +478,8 @@ class _ListingHealthCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageScore = (listing.allImages.length / 6).clamp(0.0, 1.0);
-    final contactScore = listing.landlordPhone?.trim().isNotEmpty == true ? 1.0 : 0.0;
+    final contactScore =
+        listing.landlordPhone?.trim().isNotEmpty == true ? 1.0 : 0.0;
     final locationScore = listing.hasLocation ? 1.0 : 0.0;
 
     return _Panel(
@@ -559,9 +566,9 @@ class _Panel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.profileCard,
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.profileBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -572,8 +579,8 @@ class _Panel extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: context.profileText,
                   fontWeight: FontWeight.w800,
                   fontSize: 14,
                 ),
@@ -606,9 +613,9 @@ class _MetricCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.profileCard,
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.profileBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -617,8 +624,8 @@ class _MetricCard extends StatelessWidget {
           Icon(icon, color: color, size: 22),
           Text(
             value,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
+            style: TextStyle(
+              color: context.profileText,
               fontSize: 22,
               fontWeight: FontWeight.w900,
             ),
@@ -627,7 +634,8 @@ class _MetricCard extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            style:
+                const TextStyle(color: AppColors.textSecondary, fontSize: 12),
           ),
         ],
       ),
@@ -824,7 +832,8 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.home_work_outlined, size: 46, color: AppColors.textMuted),
+            Icon(Icons.home_work_outlined,
+                size: 46, color: AppColors.textMuted),
             SizedBox(height: 12),
             Text(
               'Bạn chưa có tin đăng nào',

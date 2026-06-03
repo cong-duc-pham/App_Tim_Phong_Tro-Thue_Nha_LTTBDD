@@ -3,15 +3,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../core/auth/logout_helper.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/settings/app_settings_controller.dart';
 import '../../services/search_history_service.dart';
-import '../../main.dart'; // import themeNotifier
 import '../../core/localization/app_localizations.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -26,7 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   ThemeMode _themeMode = ThemeMode.light;
   bool _notificationsEnabled = true;
   String _language = 'vi';
-  
+
   // Trạng thái dọn dẹp dữ liệu
   double _cacheSize = 0;
   bool _isLoading = true;
@@ -41,7 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadSettings() async {
     setState(() => _isLoading = true);
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Đọc ThemeMode
     final themeStr = prefs.getString(AppConstants.keyThemeMode) ?? 'light';
     ThemeMode savedTheme = ThemeMode.light;
@@ -52,7 +52,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     // Đọc Thông báo
-    final notifsEnabled = prefs.getBool(AppConstants.keyNotificationsEnabled) ?? true;
+    final notifsEnabled =
+        prefs.getBool(AppConstants.keyNotificationsEnabled) ?? true;
 
     // Đọc Ngôn ngữ
     final lang = prefs.getString(AppConstants.keyAppLanguage) ?? 'vi';
@@ -99,16 +100,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Lưu cấu hình Theme và cập nhật thời gian thực
   Future<void> _changeTheme(ThemeMode mode) async {
-    final prefs = await SharedPreferences.getInstance();
-    String modeStr = 'light';
-    if (mode == ThemeMode.dark) {
-      modeStr = 'dark';
-    } else if (mode == ThemeMode.system) {
-      modeStr = 'system';
-    }
-
-    await prefs.setString(AppConstants.keyThemeMode, modeStr);
-    themeNotifier.value = mode;
+    await saveThemeMode(mode);
     setState(() {
       _themeMode = mode;
     });
@@ -118,8 +110,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Thay đổi cài đặt bật/tắt thông báo
   Future<void> _toggleNotifications(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(AppConstants.keyNotificationsEnabled, value);
+    await saveNotificationsEnabled(value);
     setState(() {
       _notificationsEnabled = value;
     });
@@ -128,17 +119,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Thay đổi ngôn ngữ
   Future<void> _changeLanguage(String langCode) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(AppConstants.keyAppLanguage, langCode);
-    
-    // Cập nhật ValueNotifier ngôn ngữ để reload toàn ứng dụng
-    languageNotifier.value = langCode;
-    
+    await saveAppLanguage(langCode);
+
     setState(() {
       _language = langCode;
     });
     HapticFeedback.mediumImpact();
-    
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -267,7 +254,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         title: Text(
           'deactivate_confirm_title'.tr,
-          style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.error),
+          style: const TextStyle(
+              fontWeight: FontWeight.w700, color: AppColors.error),
         ),
         content: Text(
           'deactivate_confirm_desc'.tr,
@@ -280,27 +268,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
-              
-              // Logout user locally
-              await FirebaseAuth.instance.signOut();
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.remove(AppConstants.keyUserToken);
-              await prefs.remove(AppConstants.keyUserId);
-              await prefs.remove(AppConstants.keyUserRole);
-              await prefs.remove('refresh_token');
-              await prefs.remove('user_email');
-              await prefs.remove('user_full_name');
+              final router = GoRouter.of(context);
 
               if (!mounted) return;
-              context.go(AppConstants.routeLogin);
-              
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('deactivate_success'.tr),
-                  backgroundColor: AppColors.error,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+              await LogoutHelper.signOutAndGoToLogin(router);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
@@ -335,7 +306,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildHeader(),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary))
                 : ListView(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
                     children: [
@@ -392,7 +364,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           icon: Icons.lock_open_rounded,
                           title: 'change_password'.tr,
                           subtitle: 'change_password_desc'.tr,
-                          onTap: () => context.push(AppConstants.routeChangePassword),
+                          onTap: () =>
+                              context.push(AppConstants.routeChangePassword),
                         ),
                         _buildDivider(),
                         _buildActionTile(
@@ -459,7 +432,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: Theme.of(context).brightness == Brightness.dark
                     ? const Color(0xFF0F172A)
                     : AppColors.bgPage,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
               ),
             ),
           ],
@@ -551,7 +525,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       trailing: DropdownButton<ThemeMode>(
         value: _themeMode,
         underline: const SizedBox.shrink(),
-        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+        icon: const Icon(Icons.keyboard_arrow_down_rounded,
+            color: AppColors.textMuted),
         dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
         style: TextStyle(
           fontSize: 13,
@@ -612,7 +587,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       trailing: DropdownButton<String>(
         value: _language,
         underline: const SizedBox.shrink(),
-        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+        icon: const Icon(Icons.keyboard_arrow_down_rounded,
+            color: AppColors.textMuted),
         dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
         style: TextStyle(
           fontSize: 13,
@@ -673,7 +649,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       trailing: Switch.adaptive(
         value: value,
-        activeColor: AppColors.primary,
+        activeThumbColor: AppColors.primary,
         onChanged: onChanged,
       ),
     );
@@ -717,11 +693,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         subtitle,
         style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
       ),
-      trailing: trailing ?? const Icon(
-        Icons.arrow_forward_ios_rounded,
-        size: 14,
-        color: AppColors.textMuted,
-      ),
+      trailing: trailing ??
+          const Icon(
+            Icons.arrow_forward_ios_rounded,
+            size: 14,
+            color: AppColors.textMuted,
+          ),
     );
   }
 }

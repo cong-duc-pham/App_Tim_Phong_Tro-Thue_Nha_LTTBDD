@@ -14,6 +14,8 @@ class ReviewItem {
   final String? replyContent; // phản hồi của chủ trọ nếu có
   final DateTime createdAt;
   final DateTime? repliedAt;
+  final int likeCount;
+  final bool isLiked;
 
   const ReviewItem({
     required this.reviewId,
@@ -24,6 +26,8 @@ class ReviewItem {
     this.replyContent,
     required this.createdAt,
     this.repliedAt,
+    this.likeCount = 0,
+    this.isLiked = false,
   });
 
   factory ReviewItem.fromJson(Map<String, dynamic> json) {
@@ -35,6 +39,8 @@ class ReviewItem {
     final createdRaw = json['createdAt'] ?? json['CreatedAt'];
     final repliedRaw = json['repliedAt'] ?? json['RepliedAt'];
     final ratingRaw = json['rating'] ?? json['Rating'];
+    final likeCountRaw = json['likeCount'] ?? json['LikeCount'];
+    final isLikedRaw = json['isLiked'] ?? json['IsLiked'];
 
     return ReviewItem(
       reviewId: (json['reviewId'] ?? json['ReviewId'] ?? 0) as int,
@@ -51,6 +57,12 @@ class ReviewItem {
           : DateTime.now(),
       repliedAt:
           repliedRaw != null ? DateTime.tryParse(repliedRaw.toString()) : null,
+      likeCount: likeCountRaw is num
+          ? likeCountRaw.toInt()
+          : int.tryParse(likeCountRaw?.toString() ?? '') ?? 0,
+      isLiked: isLikedRaw is bool
+          ? isLikedRaw
+          : isLikedRaw?.toString().toLowerCase() == 'true',
     );
   }
 }
@@ -81,15 +93,18 @@ class ReviewRepository extends BaseRepository {
   }
 
   // lấy reviews của một tin đăng kèm thống kê sao, không cần auth (dành cho chi tiết tin)
-  Future<({List<ReviewItem> reviews, double averageRating, int count})> getReviews(int listingId) async {
+  Future<({List<ReviewItem> reviews, double averageRating, int count})>
+      getReviews(int listingId) async {
     try {
+      final options = await getOptionsWithToken();
       final response = await dio.get<Map<String, dynamic>>(
         '/listings/$listingId/reviews',
+        options: options,
       );
 
       final body = response.data ?? {};
       final data = body['data'] ?? body['Data'];
-      
+
       final avgRaw = body['averageRating'] ?? body['AverageRating'] ?? 0;
       final countRaw = body['count'] ?? body['Count'] ?? 0;
 
@@ -153,6 +168,26 @@ class ReviewRepository extends BaseRepository {
         },
         options: options,
       );
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
+  Future<ReviewItem> toggleLike(int reviewId) async {
+    try {
+      final options = await getOptionsWithToken();
+      final response = await dio.post<Map<String, dynamic>>(
+        '/reviews/$reviewId/like',
+        options: options,
+      );
+
+      final body = response.data ?? {};
+      final data = body['data'] ?? body['Data'];
+      if (data is! Map) {
+        throw Exception('Không thể cập nhật lượt thích.');
+      }
+
+      return ReviewItem.fromJson(Map<String, dynamic>.from(data));
     } on DioException catch (e) {
       throw Exception(_readBackendMessage(e));
     }

@@ -71,6 +71,8 @@ public partial class PhongTroDbContext : DbContext
 
     public virtual DbSet<ReviewImage> ReviewImages { get; set; }
 
+    public virtual DbSet<ReviewLike> ReviewLikes { get; set; }
+
     public virtual DbSet<Role> Roles { get; set; }
 
     public virtual DbSet<RoomType> RoomTypes { get; set; }
@@ -1076,6 +1078,30 @@ public partial class PhongTroDbContext : DbContext
             entity.HasOne(d => d.Review).WithMany(p => p.ReviewImages)
                 .HasForeignKey(d => d.ReviewId)
                 .HasConstraintName("FK__ReviewIma__revie__5D95E53A");
+        });
+
+        modelBuilder.Entity<ReviewLike>(entity =>
+        {
+            entity.HasKey(e => e.ReviewLikeId).HasName("PK_ReviewLikes");
+
+            entity.HasIndex(e => new { e.ReviewId, e.UserId }, "UX_ReviewLikes_Review_User")
+                .IsUnique();
+
+            entity.Property(e => e.ReviewLikeId).HasColumnName("review_like_id");
+            entity.Property(e => e.ReviewId).HasColumnName("review_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnName("created_at");
+
+            entity.HasOne(d => d.Review).WithMany(p => p.ReviewLikes)
+                .HasForeignKey(d => d.ReviewId)
+                .HasConstraintName("FK_ReviewLikes_Reviews");
+
+            entity.HasOne(d => d.User).WithMany(p => p.ReviewLikes)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ReviewLikes_Users");
         });
 
         modelBuilder.Entity<Role>(entity =>
