@@ -318,6 +318,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 label: 'Lịch sử tìm kiếm',
                 onTap: () => context.push(AppConstants.routeSearchHistory),
               ),
+              _MenuItem(
+                icon: Icons.settings_outlined,
+                label: 'Cài đặt hệ thống',
+                onTap: () => context.push(AppConstants.routeSettings),
+              ),
               if (_user.role == 'landlord') ...[
                 _MenuItem(
                   icon: Icons.home_work_outlined,
