@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -45,6 +46,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   bool _isStartingChat = false;
   bool _didScrollToReviews = false;
   double _reviewRating = 5;
+  int? _currentUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUserId();
+  }
 
   @override
   void dispose() {
@@ -52,6 +60,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     _scrollCtrl.dispose();
     _reviewCommentCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCurrentUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(AppConstants.keyUserId);
+    if (!mounted) return;
+    setState(() => _currentUserId = int.tryParse(raw ?? ''));
   }
 
   void _scheduleScrollToReviews() {
@@ -218,6 +233,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                       current.favoriteError != null) ||
                   (current.reviewSubmitError != previous.reviewSubmitError &&
                       current.reviewSubmitError != null) ||
+                  (current.reviewActionError != previous.reviewActionError &&
+                      current.reviewActionError != null) ||
                   (current.reviewSubmitSuccess &&
                       current.reviewSubmitSuccess !=
                           previous.reviewSubmitSuccess)),
@@ -236,6 +253,16 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(state.reviewSubmitError!),
+                  backgroundColor: AppColors.error,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+            if (state is ListingDetailLoaded &&
+                state.reviewActionError != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.reviewActionError!),
                   backgroundColor: AppColors.error,
                   behavior: SnackBarBehavior.floating,
                 ),
@@ -335,8 +362,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 const Icon(Icons.share_rounded, color: Colors.white, size: 18),
             onPressed: () async {
               final formattedPrice = _formatPrice(listing.price);
-              final shareContent = '🏠 ${listing.title}\n💵 Giá: $formattedPrice/tháng\n📍 Địa chỉ: ${listing.displayAddress}\n👉 Xem chi tiết tại ứng dụng: swinghouse://listing/${listing.listingId}\nHoặc truy cập website: https://swinghouse.vn/listing/${listing.listingId}';
-              
+              final shareContent =
+                  '🏠 ${listing.title}\n💵 Giá: $formattedPrice/tháng\n📍 Địa chỉ: ${listing.displayAddress}\n👉 Xem chi tiết tại ứng dụng: swinghouse://listing/${listing.listingId}\nHoặc truy cập website: https://swinghouse.vn/listing/${listing.listingId}';
+
               try {
                 await Share.share(shareContent);
               } catch (e) {
@@ -1147,7 +1175,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               itemCount: state.reviews.length > 3 ? 3 : state.reviews.length,
               itemBuilder: (context, index) {
                 final rev = state.reviews[index];
-                return _buildReviewTile(rev);
+                return _buildReviewTile(blocContext, listing, state, rev);
               },
             ),
             if (state.reviews.length > 3) ...[
@@ -1311,7 +1339,140 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     );
   }
 
-  Widget _buildReviewTile(ReviewItem review) {
+  Future<void> _showReplyReviewSheet(
+    BuildContext blocContext,
+    Listing listing,
+    ReviewItem review,
+  ) async {
+    final controller = TextEditingController(text: review.replyContent ?? '');
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 18,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Trả lời bình luận',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                review.content,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.textMuted,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: controller,
+                minLines: 3,
+                maxLines: 5,
+                maxLength: 500,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText:
+                      'Nhập lời cảm ơn hoặc phản hồi của bạn cho người đánh giá...',
+                  filled: true,
+                  fillColor: AppColors.bgPage,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                    borderSide: const BorderSide(color: AppColors.borderLight),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                    borderSide: const BorderSide(color: AppColors.primary),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    final reply = controller.text.trim();
+                    if (reply.isEmpty) {
+                      ScaffoldMessenger.of(sheetContext).showSnackBar(
+                        const SnackBar(
+                          content: Text('Vui lòng nhập nội dung phản hồi.'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                      return;
+                    }
+                    blocContext.read<ListingDetailBloc>().add(
+                          ReplyListingReview(
+                            listingId: listing.listingId,
+                            reviewId: review.reviewId,
+                            reply: reply,
+                          ),
+                        );
+                    Navigator.of(sheetContext).pop();
+                  },
+                  icon: const Icon(Icons.reply_rounded, color: Colors.white),
+                  label: const Text(
+                    'Gửi phản hồi',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.radiusSm),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    // Controller nay chi song theo bottom sheet. Khong dispose ngay sau pop vi
+    // TextField co the van dang thao route/keyboard trong mot frame tiep theo.
+  }
+
+  Widget _buildReviewTile(
+    BuildContext blocContext,
+    Listing listing,
+    ListingDetailLoaded state,
+    ReviewItem review,
+  ) {
+    final isOwner = listing.landlordId != null &&
+        _currentUserId != null &&
+        listing.landlordId == _currentUserId;
+    final isLiking = state.likingReviewIds.contains(review.reviewId);
+    final isReplying = state.replyingReviewId == review.reviewId;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
@@ -1374,6 +1535,92 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               review.content,
               style: const TextStyle(
                   fontSize: 12.5, color: AppColors.textSecondary, height: 1.45),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 40.0),
+            child: Row(
+              children: [
+                if (!isOwner)
+                  TextButton.icon(
+                    onPressed: isLiking
+                        ? null
+                        : () => blocContext.read<ListingDetailBloc>().add(
+                              ToggleReviewLike(
+                                listingId: listing.listingId,
+                                reviewId: review.reviewId,
+                              ),
+                            ),
+                    icon: isLiking
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            review.isLiked
+                                ? Icons.thumb_up_alt_rounded
+                                : Icons.thumb_up_alt_outlined,
+                            size: 16,
+                            color: review.isLiked
+                                ? AppColors.primary
+                                : AppColors.textMuted,
+                          ),
+                    label: Text(
+                      review.likeCount > 0 ? '${review.likeCount}' : 'Thích',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: review.isLiked
+                            ? AppColors.primary
+                            : AppColors.textMuted,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: const Size(0, 32),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                if (isOwner)
+                  TextButton.icon(
+                    onPressed: isReplying
+                        ? null
+                        : () => _showReplyReviewSheet(
+                              blocContext,
+                              listing,
+                              review,
+                            ),
+                    icon: isReplying
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(
+                            Icons.reply_rounded,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                    label: Text(
+                      review.replyContent != null &&
+                              review.replyContent!.trim().isNotEmpty
+                          ? 'Sửa phản hồi'
+                          : 'Trả lời',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: const Size(0, 32),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+              ],
             ),
           ),
           if (review.replyContent != null &&

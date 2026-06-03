@@ -69,6 +69,8 @@ public partial class User
 
     public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
 
+    public virtual ICollection<ReviewLike> ReviewLikes { get; set; } = new List<ReviewLike>();
+
     public virtual Role Role { get; set; } = null!;
 
     public virtual ICollection<SearchHistory> SearchHistories { get; set; } = new List<SearchHistory>();

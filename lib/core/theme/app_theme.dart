@@ -20,6 +20,10 @@ class AppTheme {
         error: AppColors.error,
       ),
       scaffoldBackgroundColor: AppColors.bgPage,
+      textTheme: ThemeData.light().textTheme.apply(
+            bodyColor: AppColors.textPrimary,
+            displayColor: AppColors.textPrimary,
+          ),
 
       // ─── AppBar ──────────────────────────────────────────────────────────
       appBarTheme: const AppBarTheme(
@@ -80,7 +84,8 @@ class AppTheme {
         hintStyle: AppTextStyles.inputHint,
         labelStyle: AppTextStyles.inputLabel,
         errorStyle: AppTextStyles.inputError,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppConstants.radiusMd),
           borderSide: const BorderSide(color: AppColors.border),
@@ -155,6 +160,10 @@ class AppTheme {
         error: AppColors.error,
       ),
       scaffoldBackgroundColor: const Color(0xFF0F172A), // Slate 900
+      textTheme: ThemeData.dark().textTheme.apply(
+            bodyColor: Colors.white,
+            displayColor: Colors.white,
+          ),
 
       // ─── AppBar ──────────────────────────────────────────────────────────
       appBarTheme: const AppBarTheme(
@@ -214,7 +223,8 @@ class AppTheme {
         fillColor: const Color(0xFF1E293B),
         hintStyle: const TextStyle(fontSize: 14, color: Colors.white38),
         labelStyle: const TextStyle(fontSize: 14, color: Colors.white70),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppConstants.radiusMd),
           borderSide: const BorderSide(color: Colors.white10),
@@ -257,7 +267,8 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: const Color(0xFF1E293B),
         selectedColor: AppColors.primary,
-        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white),
+        labelStyle: const TextStyle(
+            fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppConstants.radiusFull),

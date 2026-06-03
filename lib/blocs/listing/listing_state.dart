@@ -32,6 +32,9 @@ class ListingDetailLoaded extends ListingDetailState {
   final bool isReviewSubmitting;
   final String? reviewSubmitError;
   final bool reviewSubmitSuccess;
+  final Set<int> likingReviewIds;
+  final int? replyingReviewId;
+  final String? reviewActionError;
 
   const ListingDetailLoaded({
     required this.listing,
@@ -44,6 +47,9 @@ class ListingDetailLoaded extends ListingDetailState {
     this.isReviewSubmitting = false,
     this.reviewSubmitError,
     this.reviewSubmitSuccess = false,
+    this.likingReviewIds = const {},
+    this.replyingReviewId,
+    this.reviewActionError,
   });
 
   ListingDetailLoaded copyWith({
@@ -57,6 +63,9 @@ class ListingDetailLoaded extends ListingDetailState {
     bool? isReviewSubmitting,
     String? reviewSubmitError,
     bool? reviewSubmitSuccess,
+    Set<int>? likingReviewIds,
+    int? replyingReviewId,
+    String? reviewActionError,
   }) {
     return ListingDetailLoaded(
       listing: listing ?? this.listing,
@@ -69,6 +78,9 @@ class ListingDetailLoaded extends ListingDetailState {
       isReviewSubmitting: isReviewSubmitting ?? this.isReviewSubmitting,
       reviewSubmitError: reviewSubmitError,
       reviewSubmitSuccess: reviewSubmitSuccess ?? false,
+      likingReviewIds: likingReviewIds ?? this.likingReviewIds,
+      replyingReviewId: replyingReviewId,
+      reviewActionError: reviewActionError,
     );
   }
 
@@ -84,6 +96,9 @@ class ListingDetailLoaded extends ListingDetailState {
         isReviewSubmitting,
         reviewSubmitError,
         reviewSubmitSuccess,
+        likingReviewIds,
+        replyingReviewId,
+        reviewActionError,
       ];
 }
 
