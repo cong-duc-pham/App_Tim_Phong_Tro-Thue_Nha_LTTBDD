@@ -36,6 +36,7 @@ class ListingItem {
   final String type; // 'phong-tro' | 'can-ho' | 'o-ghep' | 'nha-nguyen-can'
   final String? imageUrl;
   final String? provinceName;
+  final DateTime? createdAt;
 
   const ListingItem({
     required this.id,
@@ -56,6 +57,7 @@ class ListingItem {
     this.type = 'phong-tro',
     this.imageUrl,
     this.provinceName,
+    this.createdAt,
   });
 }
 
@@ -429,8 +431,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final badgeType = _packageString(packageInfo, 'badgeType', 'BadgeType');
     final isHighlighted =
         _packageBool(packageInfo, 'isHighlighted', 'IsHighlighted');
-    final allowBanner =
-        _packageBool(packageInfo, 'allowBanner', 'AllowBanner');
+    final allowBanner = _packageBool(packageInfo, 'allowBanner', 'AllowBanner');
     final hasPackage = packageInfo != null;
     final status = hasPackage ? 'hot' : 'available';
     final badgeLabel = isHighlighted || badgeType == 'featured'
@@ -463,6 +464,7 @@ class _HomeScreenState extends State<HomeScreen> {
       type: type,
       imageUrl: _resolveImageUrl(listing.image0),
       provinceName: listing.provinceName,
+      createdAt: createdAt,
     );
   }
 
@@ -734,24 +736,68 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<ListingItem> _applyFilter(List<ListingItem> src) {
-    if (!_filter.hasActive) return src;
-    return src.where((e) {
-      if (_filter.types.isNotEmpty && !_filter.types.contains(e.type)) {
-        return false;
-      }
-      final priceMillion = e.price / 1000000;
-      if (priceMillion < _filter.priceRange.start ||
-          priceMillion > _filter.priceRange.end) {
-        return false;
-      }
-      if (e.area > _filter.maxArea) return false;
-      if (_filter.amenities.isNotEmpty &&
-          !_filter.amenities.any((a) => e.tags.contains(a))) {
-        return false;
-      }
-      return true;
-    }).toList();
+    final filtered = _filter.hasActive
+        ? src.where((e) {
+            if (_filter.types.isNotEmpty && !_filter.types.contains(e.type)) {
+              return false;
+            }
+            final priceMillion = e.price / 1000000;
+            if (priceMillion < _filter.priceRange.start ||
+                priceMillion > _filter.priceRange.end) {
+              return false;
+            }
+            if (e.area > _filter.maxArea) return false;
+            if (_filter.amenities.isNotEmpty &&
+                !_filter.amenities.any((a) => e.tags.contains(a))) {
+              return false;
+            }
+            return true;
+          }).toList()
+        : List<ListingItem>.from(src);
+
+    return _applyQuickFilter(filtered);
   }
+
+  List<ListingItem> _applyQuickFilter(List<ListingItem> src) {
+    final list = List<ListingItem>.from(src);
+
+    switch (_activeFilter) {
+      case 1:
+        final budget = _preferredMaxBudget;
+        final budgetList = budget == null
+            ? list
+            : list.where((item) => item.price <= budget).toList();
+        budgetList.sort((a, b) => a.price.compareTo(b.price));
+        return budgetList;
+      case 2:
+        return list.where((item) => item.isNew).toList()
+          ..sort(_compareNewestFirst);
+      case 3:
+        return list.where((item) => item.allowPet).toList()
+          ..sort(_compareNewestFirst);
+      case 4:
+        return list
+            .where((item) =>
+                item.badgeLabel?.toUpperCase() == 'VIP' ||
+                item.badgeColor == AppColors.tagVip)
+            .toList()
+          ..sort(_compareNewestFirst);
+      case 0:
+      default:
+        return list..sort(_compareNewestFirst);
+    }
+  }
+
+  int _compareNewestFirst(ListingItem a, ListingItem b) {
+    final dateCompare = _listingDateValue(b).compareTo(_listingDateValue(a));
+    if (dateCompare != 0) return dateCompare;
+    return _listingIdValue(b).compareTo(_listingIdValue(a));
+  }
+
+  int _listingDateValue(ListingItem item) =>
+      item.createdAt?.millisecondsSinceEpoch ?? 0;
+
+  int _listingIdValue(ListingItem item) => int.tryParse(item.id) ?? 0;
 
   List<ListingItem> get _personalizedSuggestedListings {
     final list = List<ListingItem>.from(_suggestedListingsForUi);
@@ -764,6 +810,13 @@ class _HomeScreenState extends State<HomeScreen> {
       return a.price.compareTo(b.price);
     });
     return list;
+  }
+
+  List<ListingItem> get _mainFeedListingsForUi {
+    if (_activeFilter != 0) return _listingsForUi;
+    return _hasSavedPreferences
+        ? _personalizedSuggestedListings
+        : _listingsForUi;
   }
 
   bool get _hasSavedPreferences =>
@@ -835,11 +888,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (_, i) {
-                      final list = _applyFilter(_personalizedSuggestedListings);
+                      final list = _applyFilter(_mainFeedListingsForUi);
                       return _buildFullCard(list[i]);
                     },
-                    childCount:
-                        _applyFilter(_personalizedSuggestedListings).length,
+                    childCount: _applyFilter(_mainFeedListingsForUi).length,
                   ),
                 ),
               ],
@@ -1226,27 +1278,38 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildFilterChips() {
     return SizedBox(
-      height: 48,
+      height: 54,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(
-            AppConstants.paddingH, 10, AppConstants.paddingH, 0),
+            AppConstants.paddingH, 8, AppConstants.paddingH, 8),
         itemCount: _filters.length,
         separatorBuilder: (_, __) =>
             const SizedBox(width: AppConstants.spacingSm),
         itemBuilder: (_, i) {
           final active = i == _activeFilter;
-          return GestureDetector(
+          return InkWell(
             onTap: () => setState(() => _activeFilter = i),
+            borderRadius: BorderRadius.circular(AppConstants.radiusFull),
             child: AnimatedContainer(
               duration: AppConstants.animFast,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
-                color: active ? AppColors.primary : Colors.white,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(AppConstants.radiusFull),
                 border: Border.all(
-                    color: active ? AppColors.primary : AppColors.border,
-                    width: 1.5),
+                  color:
+                      active ? AppColors.primaryLight : const Color(0xFFD8E1EE),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1257,18 +1320,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       height: 6,
                       decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: active
-                              ? AppColors.primaryLight
-                              : AppColors.success),
+                          color:
+                              active ? AppColors.success : AppColors.textMuted),
                     ),
-                    const SizedBox(width: 5),
+                    const SizedBox(width: 6),
                   ],
                   Text(_filters[i],
                       style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color:
-                              active ? Colors.white : AppColors.textSecondary)),
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: active
+                              ? AppColors.textPrimary
+                              : AppColors.textSecondary)),
                 ],
               ),
             ),
@@ -1480,15 +1543,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         width: 52,
                         height: 52,
                         decoration: BoxDecoration(
-                          color: isSelected ? AppColors.primary : (c['color'] as Color),
-                          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                          color: isSelected
+                              ? AppColors.primary
+                              : (c['color'] as Color),
+                          borderRadius:
+                              BorderRadius.circular(AppConstants.radiusMd),
                           border: isSelected
                               ? Border.all(color: AppColors.primary, width: 2)
                               : Border.all(color: Colors.transparent, width: 2),
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: AppColors.primary.withValues(alpha: 0.3),
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.3),
                                     blurRadius: 8,
                                     offset: const Offset(0, 4),
                                   )
@@ -1508,8 +1575,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 10,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                          color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                          fontWeight:
+                              isSelected ? FontWeight.w700 : FontWeight.w600,
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.textSecondary,
                           height: 1.3,
                         ),
                       ),
@@ -1981,7 +2051,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title, String action, {VoidCallback? onTap}) {
+  Widget _buildSectionHeader(String title, String action,
+      {VoidCallback? onTap}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppConstants.paddingH,
           AppConstants.paddingV, AppConstants.paddingH, 0),

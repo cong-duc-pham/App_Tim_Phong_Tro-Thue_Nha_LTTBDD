@@ -624,7 +624,38 @@ namespace Backend_API.Controllers.MVC
             report.ResolvedBy = GetCurrentAdminIdOrNull();
             await _context.SaveChangesAsync();
 
+            await EnsureReportResolvedNotificationAsync(report);
+
             return RedirectToAction(nameof(Reports));
+        }
+
+        private async Task EnsureReportResolvedNotificationAsync(Report report)
+        {
+            var exists = await _context.Notifications.AnyAsync(x =>
+                x.UserId == report.ReporterId &&
+                x.NotifType == "report_resolved" &&
+                x.RefType == "report" &&
+                x.RefId == report.ReportId);
+
+            if (exists)
+            {
+                return;
+            }
+
+            _context.Notifications.Add(new Notification
+            {
+                UserId = report.ReporterId,
+                Title = "Báo cáo đã được xử lý",
+                Body = "Cảm ơn bạn đã gửi báo cáo. Chúng tôi xin lỗi vì sự cố bạn gặp phải và đã xử lý vấn đề này.",
+                NotifType = "report_resolved",
+                RefId = report.ReportId,
+                RefType = "report",
+                IsRead = false,
+                FcmStatus = "pending",
+                SentAt = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
         }
 
         [HttpPost("reports/{id:long}/dismiss")]
