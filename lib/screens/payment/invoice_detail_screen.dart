@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/theme/profile_theme.dart';
 import '../../models/payment.dart';
 
 class InvoiceDetailScreen extends StatelessWidget {
@@ -28,7 +30,7 @@ class InvoiceDetailScreen extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content:
-              Text('Đã xuất bill và sao chép nội dung. File: ${file.path}'),
+              Text('invoice_export_success'.tr.replaceAll('{path}', file.path)),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ),
@@ -37,7 +39,7 @@ class InvoiceDetailScreen extends StatelessWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Không thể xuất bill: $e'),
+          content: Text('invoice_export_failed'.tr.replaceAll('{error}', '$e')),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -49,8 +51,8 @@ class InvoiceDetailScreen extends StatelessWidget {
     await Clipboard.setData(ClipboardData(text: _buildBillContent()));
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Đã sao chép nội dung bill.'),
+      SnackBar(
+        content: Text('invoice_copy_success'.tr),
         backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
       ),
@@ -59,20 +61,21 @@ class InvoiceDetailScreen extends StatelessWidget {
 
   String _buildBillContent() {
     return [
-      'SWING HOUSE - BILL THANH TOÁN',
+      'invoice_bill_title'.tr,
       '--------------------------------',
-      'Mã hóa đơn: ${invoice.invoiceCode}',
-      'Loại hóa đơn: ${invoice.typeLabel}',
-      'Trạng thái: ${invoice.statusLabel}',
-      'Số tiền: ${_formatMoney(invoice.totalAmount)}',
-      'Ngày tạo: ${_formatDate(invoice.createdAt)}',
+      'invoice_bill_code'.tr.replaceAll('{code}', invoice.invoiceCode),
+      'invoice_bill_type'.tr.replaceAll('{type}', invoice.typeLabel),
+      'invoice_bill_status'.tr.replaceAll('{status}', invoice.statusLabel),
+      'invoice_bill_amount'.tr.replaceAll('{amount}', _formatMoney(invoice.totalAmount)),
+      'invoice_bill_created'.tr.replaceAll('{date}', _formatDate(invoice.createdAt)),
       if (invoice.dueDate != null && invoice.dueDate!.trim().isNotEmpty)
-        'Hạn thanh toán: ${invoice.dueDate}',
-      if (invoice.listingId > 0) 'Mã tin đăng: #${invoice.listingId}',
+        'invoice_bill_due'.tr.replaceAll('{date}', invoice.dueDate!),
+      if (invoice.listingId > 0)
+        'invoice_bill_listing'.tr.replaceAll('{id}', '${invoice.listingId}'),
       if (invoice.note != null && invoice.note!.trim().isNotEmpty)
-        'Ghi chú: ${invoice.note!.trim()}',
+        'invoice_bill_note'.tr.replaceAll('{note}', invoice.note!.trim()),
       '--------------------------------',
-      'Cảm ơn bạn đã sử dụng SWING HOUSE.',
+      'invoice_bill_thank_you'.tr,
     ].join('\n');
   }
 
@@ -97,11 +100,11 @@ class InvoiceDetailScreen extends StatelessWidget {
     final statusColor = invoice.statusColor;
 
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        title: const Text('Chi tiết bill'),
+        title: Text('invoice_detail_title'.tr),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
           onPressed: () => context.pop(),
@@ -113,12 +116,12 @@ class InvoiceDetailScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.profileCard,
               borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-              border: Border.all(color: AppColors.borderLight),
+              border: Border.all(color: context.profileBorder),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.035),
+                  color: Colors.black.withValues(alpha: context.isDarkProfile ? 0.2 : 0.035),
                   blurRadius: 14,
                   offset: const Offset(0, 5),
                 ),
@@ -161,10 +164,10 @@ class InvoiceDetailScreen extends StatelessWidget {
                           const SizedBox(height: 3),
                           Text(
                             invoice.invoiceCode,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w900,
-                              color: AppColors.textPrimary,
+                              color: context.profileText,
                             ),
                           ),
                         ],
@@ -178,48 +181,48 @@ class InvoiceDetailScreen extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   decoration: BoxDecoration(
-                    color: AppColors.bgPage,
+                    color: context.profileSubtleCard,
                     borderRadius: BorderRadius.circular(AppConstants.radiusMd),
                   ),
                   child: Column(
                     children: [
-                      const Text(
-                        'Tổng thanh toán',
+                      Text(
+                        'invoice_bill_total_payment'.tr,
                         style: TextStyle(
                           fontSize: 12,
-                          color: AppColors.textMuted,
+                          color: context.profileTextMuted,
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         _formatMoney(invoice.totalAmount),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w900,
-                          color: AppColors.textPrimary,
+                          color: context.profileText,
                         ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 18),
-                _BillRow(label: 'Loại hóa đơn', value: invoice.typeLabel),
+                _BillRow(label: 'invoice_card_type'.tr, value: invoice.typeLabel),
                 _BillRow(
-                    label: 'Ngày tạo', value: _formatDate(invoice.createdAt)),
+                    label: 'invoice_card_created'.tr, value: _formatDate(invoice.createdAt)),
                 if (invoice.dueDate != null &&
                     invoice.dueDate!.trim().isNotEmpty)
-                  _BillRow(label: 'Hạn thanh toán', value: invoice.dueDate!),
+                  _BillRow(label: 'invoice_bill_due_label'.tr, value: invoice.dueDate!),
                 if (invoice.listingId > 0)
                   _BillRow(
-                      label: 'Mã tin đăng', value: '#${invoice.listingId}'),
+                      label: 'invoice_bill_listing_label'.tr, value: '#${invoice.listingId}'),
                 if (invoice.note != null && invoice.note!.trim().isNotEmpty)
-                  _BillRow(label: 'Ghi chú', value: invoice.note!.trim()),
-                const Divider(height: 28, color: AppColors.borderLight),
-                const Text(
-                  'Cảm ơn bạn đã sử dụng SWING HOUSE.',
+                  _BillRow(label: 'invoice_card_note'.tr, value: invoice.note!.trim()),
+                Divider(height: 28, color: context.profileBorder),
+                Text(
+                  'invoice_bill_thank_you'.tr,
                   style: TextStyle(
                     fontSize: 12.5,
-                    color: AppColors.textSecondary,
+                    color: context.profileTextSecondary,
                     height: 1.45,
                   ),
                 ),
@@ -233,7 +236,7 @@ class InvoiceDetailScreen extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () => _copyBill(context),
                   icon: const Icon(Icons.copy_rounded, size: 18),
-                  label: const Text('Sao chép'),
+                  label: Text('invoice_btn_copy'.tr),
                 ),
               ),
               const SizedBox(width: 10),
@@ -241,7 +244,7 @@ class InvoiceDetailScreen extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: () => _exportBill(context),
                   icon: const Icon(Icons.download_outlined, size: 18),
-                  label: const Text('Xuất file'),
+                  label: Text('invoice_btn_export'.tr),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -257,7 +260,7 @@ class InvoiceDetailScreen extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: () => context.push('/listing/${invoice.listingId}'),
                 icon: const Icon(Icons.home_work_outlined, size: 18),
-                label: const Text('Xem tin đăng liên quan'),
+                label: Text('invoice_btn_view_related_listing'.tr),
               ),
             ),
           ],
@@ -310,9 +313,9 @@ class _BillRow extends StatelessWidget {
             width: 110,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: AppColors.textMuted,
+                color: context.profileTextMuted,
               ),
             ),
           ),
@@ -320,10 +323,10 @@ class _BillRow extends StatelessWidget {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: context.profileText,
                 height: 1.35,
               ),
             ),
@@ -339,11 +342,11 @@ extension InvoiceBillView on Invoice {
   bool get isSuccess => statusId == 2;
 
   String get statusLabel {
-    if (statusId == 1) return 'Chờ thanh toán';
-    if (statusId == 2) return 'Đã thanh toán';
-    if (statusId == 3) return 'Thất bại';
-    if (statusId == 4) return 'Hoàn tiền';
-    return 'Trạng thái #$statusId';
+    if (statusId == 1) return 'invoice_status_pending'.tr;
+    if (statusId == 2) return 'invoice_status_paid'.tr;
+    if (statusId == 3) return 'invoice_status_failed'.tr;
+    if (statusId == 4) return 'invoice_status_refund'.tr;
+    return 'invoice_status_unknown'.tr.replaceAll('{id}', '$statusId');
   }
 
   Color get statusColor {
@@ -354,7 +357,7 @@ extension InvoiceBillView on Invoice {
   }
 
   String get typeLabel {
-    if (invoiceType == 'post_package') return 'Gói đăng tin';
+    if (invoiceType == 'post_package') return 'invoice_type_post_package'.tr;
     return invoiceType;
   }
 }

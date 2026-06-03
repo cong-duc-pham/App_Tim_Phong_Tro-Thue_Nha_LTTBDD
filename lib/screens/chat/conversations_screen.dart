@@ -6,6 +6,8 @@ import '../../core/constants/app_constants.dart';
 import '../../models/conversation.dart';
 import '../../repositories/message_repository.dart';
 import '../../services/chat_unread_service.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/theme/profile_theme.dart';
 
 class ConversationsScreen extends StatefulWidget {
   const ConversationsScreen({super.key});
@@ -151,9 +153,9 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: context.isDarkProfile ? context.profileCard : AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -167,15 +169,15 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
             }
           },
         ),
-        title: const Text(
-          'Tin nhắn',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        title: Text(
+          'chat_title'.tr,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
         actions: [
           IconButton(
             onPressed: () => _loadConversations(),
             icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Tải lại',
+            tooltip: 'chat_reload_tooltip'.tr,
           ),
         ],
       ),
@@ -198,9 +200,9 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     if (_errorMessage != null && _allConversations.isEmpty) {
       return _buildStateBox(
         icon: Icons.wifi_off_rounded,
-        title: 'Không tải được tin nhắn',
+        title: 'chat_load_error_title'.tr,
         message: _errorMessage!,
-        actionLabel: 'Thử lại',
+        actionLabel: 'common_retry'.tr,
         onAction: () => _loadConversations(),
       );
     }
@@ -209,10 +211,10 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
       return _buildStateBox(
         icon: Icons.chat_bubble_outline_rounded,
         title:
-            _searchQuery.isEmpty ? 'Chưa có cuộc trò chuyện' : 'Không tìm thấy',
+            _searchQuery.isEmpty ? 'chat_empty_title'.tr : 'chat_search_empty_title'.tr,
         message: _searchQuery.isEmpty
-            ? 'Khi bạn nhắn tin với chủ phòng, hội thoại sẽ hiển thị tại đây.'
-            : 'Thử tìm bằng tên người dùng, tin đăng hoặc nội dung khác.',
+            ? 'chat_empty_desc'.tr
+            : 'chat_search_empty_desc'.tr,
       );
     }
 
@@ -232,15 +234,16 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
 
   Widget _buildSearchAndFilters() {
     return Container(
-      color: AppColors.primary,
+      color: context.isDarkProfile ? context.profileCard : AppColors.primary,
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
       child: Column(
         children: [
           Container(
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.profileInputFill,
               borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+              border: context.isDarkProfile ? Border.all(color: context.profileBorder) : null,
             ),
             child: TextField(
               controller: _searchCtrl,
@@ -248,13 +251,14 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                 _searchQuery = val;
                 _applyFilters();
               },
+              style: TextStyle(color: context.profileText),
               decoration: InputDecoration(
-                hintText: 'Tìm người dùng, tin đăng, nội dung...',
+                hintText: 'chat_search_hint'.tr,
                 hintStyle:
-                    const TextStyle(color: AppColors.textMuted, fontSize: 13),
-                prefixIcon: const Icon(
+                    TextStyle(color: context.profileTextMuted, fontSize: 13),
+                prefixIcon: Icon(
                   Icons.search_rounded,
-                  color: AppColors.textSecondary,
+                  color: context.profileTextSecondary,
                   size: 20,
                 ),
                 suffixIcon: _searchQuery.isNotEmpty
@@ -264,7 +268,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                           _searchQuery = '';
                           _applyFilters();
                         },
-                        icon: const Icon(Icons.clear_rounded, size: 18),
+                        icon: Icon(Icons.clear_rounded, color: context.profileTextSecondary, size: 18),
                       )
                     : null,
                 border: InputBorder.none,
@@ -277,9 +281,9 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              _buildTabButton(id: 'all', label: 'Tất cả'),
+              _buildTabButton(id: 'all', label: 'chat_tab_all'.tr),
               const SizedBox(width: 8),
-              _buildTabButton(id: 'unread', label: 'Chưa đọc'),
+              _buildTabButton(id: 'unread', label: 'chat_tab_unread'.tr),
             ],
           ),
         ],
@@ -299,9 +303,10 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
           height: 36,
           decoration: BoxDecoration(
             color: isSelected
-                ? Colors.white
-                : Colors.white.withValues(alpha: 0.15),
+                ? (context.isDarkProfile ? AppColors.primary : Colors.white)
+                : (context.isDarkProfile ? context.profileInputFill : Colors.white.withValues(alpha: 0.15)),
             borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+            border: (!isSelected && context.isDarkProfile) ? Border.all(color: context.profileBorder) : null,
           ),
           alignment: Alignment.center,
           child: Text(
@@ -309,7 +314,9 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: isSelected ? AppColors.primary : Colors.white,
+              color: isSelected
+                  ? (context.isDarkProfile ? Colors.white : AppColors.primary)
+                  : (context.isDarkProfile ? context.profileTextSecondary : Colors.white),
             ),
           ),
         ),
@@ -333,10 +340,10 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.profileCard,
             borderRadius: BorderRadius.circular(AppConstants.radiusLg),
             border: Border.all(
-              color: hasUnread ? AppColors.primaryLight : AppColors.borderLight,
+              color: hasUnread ? AppColors.primary : context.profileBorder,
               width: hasUnread ? 1.5 : 1,
             ),
           ),
@@ -359,7 +366,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                               fontSize: 14,
                               fontWeight:
                                   hasUnread ? FontWeight.w800 : FontWeight.w700,
-                              color: AppColors.textPrimary,
+                              color: context.profileText,
                             ),
                           ),
                         ),
@@ -372,14 +379,14 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                                   hasUnread ? FontWeight.w700 : FontWeight.w500,
                             color: hasUnread
                                 ? AppColors.primary
-                                : AppColors.textMuted,
+                                : context.profileTextMuted,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      conv.lastMessage ?? 'Chưa có tin nhắn',
+                      conv.lastMessage ?? 'chat_no_messages'.tr,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -387,8 +394,8 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                         fontWeight:
                             hasUnread ? FontWeight.w600 : FontWeight.w400,
                         color: hasUnread
-                            ? AppColors.textDark
-                            : AppColors.textSecondary,
+                            ? context.profileText
+                            : context.profileTextSecondary,
                       ),
                     ),
                     if (conv.listingTitle != null) ...[
@@ -404,10 +411,10 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.primary,
-                              ),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.primary,
+                                ),
                             ),
                           ),
                         ],
@@ -448,8 +455,8 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
       height: 52,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.border, width: 2),
-        color: AppColors.bgCardLight,
+        border: Border.all(color: context.profileBorder, width: 2),
+        color: context.profileSubtleCard,
       ),
       child: conv.otherUserAvatar != null
           ? ClipOval(
@@ -476,10 +483,10 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     return Center(
       child: Text(
         initials.isNotEmpty ? initials : 'U',
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w700,
-          color: AppColors.primary,
+          color: context.isDarkProfile ? context.profileText : AppColors.primary,
         ),
       ),
     );
@@ -501,8 +508,8 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
             Container(
               width: 80,
               height: 80,
-              decoration: const BoxDecoration(
-                color: AppColors.primaryLight,
+              decoration: BoxDecoration(
+                color: context.isDarkProfile ? context.profileSubtleCard : AppColors.primaryLight,
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, size: 36, color: AppColors.primary),
@@ -511,19 +518,19 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: context.profileText,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: AppColors.textSecondary,
+                color: context.profileTextSecondary,
               ),
             ),
             if (actionLabel != null && onAction != null) ...[
@@ -545,14 +552,14 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     final now = DateTime.now();
     final difference = now.difference(date.toLocal());
 
-    if (difference.inMinutes < 1) return 'Vừa xong';
-    if (difference.inHours < 1) return '${difference.inMinutes} phút trước';
+    if (difference.inMinutes < 1) return 'chat_time_just_now'.tr;
+    if (difference.inHours < 1) return 'chat_time_minutes_ago'.tr.replaceAll('{minutes}', '${difference.inMinutes}');
     if (difference.inDays < 1 && date.day == now.day) {
       final minuteString =
           date.minute < 10 ? '0${date.minute}' : '${date.minute}';
       return '${date.hour}:$minuteString';
     }
-    if (difference.inDays < 2) return 'Hôm qua';
+    if (difference.inDays < 2) return 'chat_time_yesterday'.tr;
     return '${date.day}/${date.month}/${date.year}';
   }
 }

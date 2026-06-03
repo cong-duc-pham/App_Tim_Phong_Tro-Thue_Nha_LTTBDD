@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/theme/profile_theme.dart';
 import '../../models/post_package.dart';
 import '../../repositories/package_repository.dart';
 
@@ -66,8 +68,8 @@ class _PackageScreenState extends State<PackageScreen> {
     final listingId = widget.listingId;
     if (listingId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Hãy đăng tin trước khi mua gói VIP.'),
+        SnackBar(
+          content: Text('post_package_must_post_first'.tr),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -120,20 +122,20 @@ class _PackageScreenState extends State<PackageScreen> {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Đã tạo hóa đơn'),
+        title: Text('invoice_dialog_created_title'.tr),
         content: Text(
-          'Mã hóa đơn: $invoiceCode\n'
-          'Số tiền: ${_formatPrice(amount)}\n\n'
-          'Sau khi thanh toán thành công, gói $packageName sẽ được kích hoạt cho tin đăng.',
+          'invoice_dialog_code'.tr.replaceAll('{code}', invoiceCode) + '\n' +
+          'invoice_dialog_amount'.tr.replaceAll('{amount}', _formatPrice(amount)) + '\n\n' +
+          'invoice_dialog_success_desc'.tr.replaceAll('{package}', packageName),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Thanh toán sau'),
+            child: Text('invoice_dialog_btn_later'.tr),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Mô phỏng đã thanh toán'),
+            child: Text('invoice_dialog_btn_simulate'.tr),
           ),
         ],
       ),
@@ -146,8 +148,8 @@ class _PackageScreenState extends State<PackageScreen> {
       await _repository.simulateMomoPayment(invoiceCode);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Thanh toán thành công. Gói VIP đã được kích hoạt.'),
+        SnackBar(
+          content: Text('invoice_pay_success'.tr),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ),
@@ -182,7 +184,7 @@ class _PackageScreenState extends State<PackageScreen> {
   }
 
   String _formatPrice(double price) {
-    if (price <= 0) return 'Miễn phí';
+    if (price <= 0) return 'post_package_free'.tr;
     final raw = price.toInt().toString();
     final buffer = StringBuffer();
     for (var i = 0; i < raw.length; i++) {
@@ -195,11 +197,11 @@ class _PackageScreenState extends State<PackageScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        title: const Text('Chọn gói đăng tin'),
+        title: Text('invoice_vip_select'.tr),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
           onPressed: () {
@@ -229,19 +231,19 @@ class _PackageScreenState extends State<PackageScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.wifi_off_rounded,
-                  size: 42, color: AppColors.textMuted),
+              Icon(Icons.wifi_off_rounded,
+                  size: 42, color: context.profileTextMuted),
               const SizedBox(height: 12),
               Text(
                 _errorMessage!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(color: context.profileTextSecondary),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: _loadPackages,
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Thử lại'),
+                label: Text('common_retry'.tr),
               ),
             ],
           ),
@@ -308,19 +310,19 @@ class _PackagePlanCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.profileCard,
             borderRadius: BorderRadius.circular(AppConstants.radiusLg),
             border: Border.all(
               color: isSelected
                   ? accent
                   : isPopular
                       ? AppColors.primary
-                      : AppColors.borderLight,
+                      : context.profileBorder,
               width: isSelected || isPopular ? 1.7 : 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: Colors.black.withValues(alpha: context.isDarkProfile ? 0.2 : 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -354,21 +356,21 @@ class _PackagePlanCard extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 priceLabel,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
-                  color: AppColors.textPrimary,
+                  color: context.profileText,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                '${package.durationDays} ngày',
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
+                'post_package_days'.tr.replaceAll('{days}', '${package.durationDays}'),
+                style: TextStyle(
+                  color: context.profileTextSecondary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const Divider(height: 28, color: AppColors.borderLight),
+              Divider(height: 28, color: context.profileBorder),
               ...features.map(
                 (feature) => Padding(
                   padding: const EdgeInsets.only(bottom: 9),
@@ -380,7 +382,7 @@ class _PackagePlanCard extends StatelessWidget {
                             ? Icons.check_rounded
                             : Icons.close_rounded,
                         size: 18,
-                        color: feature.enabled ? accent : AppColors.textMuted,
+                        color: feature.enabled ? accent : context.profileTextMuted,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -388,8 +390,8 @@ class _PackagePlanCard extends StatelessWidget {
                           feature.label,
                           style: TextStyle(
                             color: feature.enabled
-                                ? AppColors.textPrimary
-                                : AppColors.textMuted,
+                                ? context.profileText
+                                : context.profileTextMuted,
                             fontWeight: feature.enabled
                                 ? FontWeight.w600
                                 : FontWeight.w500,
@@ -422,7 +424,7 @@ class _PackagePlanCard extends StatelessWidget {
                             color: Colors.white,
                           ),
                         )
-                      : Text(package.isFree ? 'Dùng gói thường' : 'Chọn gói'),
+                      : Text(package.isFree ? 'post_package_use_free'.tr : 'post_package_choose'.tr),
                 ),
               ),
             ],
@@ -438,9 +440,9 @@ class _PackagePlanCard extends StatelessWidget {
                 color: AppColors.primary,
                 borderRadius: BorderRadius.circular(AppConstants.radiusFull),
               ),
-              child: const Text(
-                'Phổ biến nhất',
-                style: TextStyle(
+              child: Text(
+                'post_package_popular'.tr,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
@@ -456,33 +458,33 @@ class _PackagePlanCard extends StatelessWidget {
     return [
       _PlanFeature(
         package.priority == 0
-            ? 'Hiển thị bình thường'
+            ? 'post_feature_show_normal'.tr
             : package.isFeatured
-                ? 'Ưu tiên cao nhất'
+                ? 'post_feature_highest_priority'.tr
                 : package.priority >= 2
-                    ? 'Ưu tiên hiển thị cao'
-                    : 'Ưu tiên hiển thị',
+                    ? 'post_feature_high_priority'.tr
+                    : 'post_feature_priority'.tr,
         true,
       ),
       _PlanFeature(
         package.maxImages >= 99
-            ? 'Không giới hạn ảnh'
-            : 'Tối đa ${package.maxImages} ảnh',
+            ? 'post_feature_unlimited_images'.tr
+            : 'post_feature_max_images'.tr.replaceAll('{max}', '${package.maxImages}'),
         true,
       ),
       _PlanFeature(
         package.badgeType == 'featured'
-            ? 'Badge nổi bật vàng'
-            : 'Badge VIP xanh',
+            ? 'post_feature_badge_gold'.tr
+            : 'post_feature_badge_blue'.tr,
         package.badgeType != null,
       ),
-      _PlanFeature('Xuất hiện trên banner', package.allowBanner),
+      _PlanFeature('post_feature_banner'.tr, package.allowBanner),
       _PlanFeature(
-        '${package.maxVideos} video đăng kèm',
+        'post_feature_max_videos'.tr.replaceAll('{max}', '${package.maxVideos}'),
         package.maxVideos > 0,
       ),
       _PlanFeature(
-        package.isFeatured ? 'Thống kê chi tiết' : 'Thống kê lượt xem',
+        package.isFeatured ? 'post_feature_analytics_detailed'.tr : 'post_feature_analytics_views'.tr,
         package.hasAnalytics,
       ),
     ];

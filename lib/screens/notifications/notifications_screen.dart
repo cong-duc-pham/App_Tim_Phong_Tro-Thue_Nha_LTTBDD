@@ -5,6 +5,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/settings/app_settings_controller.dart';
+import '../../core/theme/profile_theme.dart';
 import '../../models/app_notification.dart';
 import '../../repositories/notification_repository.dart';
 
@@ -131,10 +132,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (time == null) return '';
     final local = time.toLocal();
     final diff = DateTime.now().difference(local);
-    if (diff.inMinutes < 1) return 'Vừa xong';
-    if (diff.inHours < 1) return '${diff.inMinutes} phút trước';
-    if (diff.inDays < 1) return '${diff.inHours} giờ trước';
-    if (diff.inDays < 7) return '${diff.inDays} ngày trước';
+    if (diff.inMinutes < 1) return 'notif_just_now'.tr;
+    if (diff.inHours < 1) return '${diff.inMinutes} ${'notif_mins_ago'.tr}';
+    if (diff.inDays < 1) return '${diff.inHours} ${'notif_hours_ago'.tr}';
+    if (diff.inDays < 7) return '${diff.inDays} ${'notif_days_ago'.tr}';
     return '${local.day}/${local.month}/${local.year}';
   }
 
@@ -175,7 +176,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final unreadCount = _items.where((item) => !item.isRead).length;
 
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       body: Column(
         children: [
           _Header(unreadCount: unreadCount),
@@ -219,9 +220,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           const SizedBox(height: 120),
           _StateBox(
             icon: Icons.wifi_off_rounded,
-            title: 'Không tải được thông báo',
+            title: 'notif_load_failed'.tr,
             message: _errorMessage!,
-            actionLabel: 'Thử lại',
+            actionLabel: 'notif_retry'.tr,
             onAction: _loadNotifications,
           ),
         ],
@@ -231,13 +232,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (_items.isEmpty) {
       return ListView(
         padding: const EdgeInsets.all(AppConstants.paddingH),
-        children: const [
-          SizedBox(height: 120),
+        children: [
+          const SizedBox(height: 120),
           _StateBox(
             icon: Icons.notifications_none_rounded,
-            title: 'Chưa có thông báo',
-            message:
-                'Các cập nhật về tin đăng, tin nhắn và thanh toán sẽ hiển thị tại đây.',
+            title: 'notif_empty'.tr,
+            message: 'notif_empty_desc'.tr,
           ),
         ],
       );
@@ -295,9 +295,9 @@ class _Header extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Thông báo',
-                    style: TextStyle(
+                  Text(
+                    'notif_title'.tr,
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -314,7 +314,7 @@ class _Header extends StatelessWidget {
                             BorderRadius.circular(AppConstants.radiusFull),
                       ),
                       child: Text(
-                        '$unreadCount chưa đọc',
+                        '$unreadCount ${'notif_unread_suffix'.tr}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -328,9 +328,9 @@ class _Header extends StatelessWidget {
             const SizedBox(height: 20),
             Container(
               height: 20,
-              decoration: const BoxDecoration(
-                color: AppColors.bgPage,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: BoxDecoration(
+                color: context.profileBg,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
               ),
             ),
           ],
@@ -363,11 +363,11 @@ class _NotificationTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: item.isRead ? Colors.white : AppColors.primaryLight,
+          color: item.isRead ? context.profileCard : context.profileSubtleCard,
           borderRadius: BorderRadius.circular(AppConstants.radiusLg),
           border: Border.all(
             color: item.isRead
-                ? AppColors.borderLight
+                ? context.profileBorder
                 : AppColors.primary.withValues(alpha: 0.18),
           ),
           boxShadow: [
@@ -404,10 +404,10 @@ class _NotificationTile extends StatelessWidget {
                           item.title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                            color: context.profileText,
                             height: 1.3,
                           ),
                         ),
@@ -432,9 +432,9 @@ class _NotificationTile extends StatelessWidget {
                       item.body,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.textSecondary,
+                        color: context.profileTextSecondary,
                         height: 1.45,
                       ),
                     ),
@@ -443,10 +443,10 @@ class _NotificationTile extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       timeLabel,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textMuted,
+                        color: context.profileTextMuted,
                       ),
                     ),
                   ],
@@ -484,7 +484,7 @@ class _StateBox extends StatelessWidget {
             width: 88,
             height: 88,
             decoration: BoxDecoration(
-              color: AppColors.primaryLight,
+              color: context.profileSubtleCard,
               borderRadius: BorderRadius.circular(AppConstants.radiusXxl),
             ),
             alignment: Alignment.center,
@@ -494,19 +494,19 @@ class _StateBox extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: context.profileText,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
-              color: AppColors.textMuted,
+              color: context.profileTextSecondary,
               height: 1.5,
             ),
           ),

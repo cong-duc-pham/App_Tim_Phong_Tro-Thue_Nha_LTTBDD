@@ -15,6 +15,8 @@ import '../../repositories/listing_repository.dart';
 import '../../repositories/notification_repository.dart';
 import '../../services/api_service.dart';
 import '../../services/search_history_service.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/theme/profile_theme.dart';
 
 // ─── Model ────────────────────────────────────────────────────────────────────
 
@@ -158,11 +160,6 @@ final _allListings = [
   ),
 ];
 
-List<ListingItem> get _featuredListings =>
-    _allListings.where((e) => e.isFeatured || e.isNew).toList();
-List<ListingItem> get _suggestedListings =>
-    _allListings.where((e) => !e.isFeatured && !e.isNew).toList();
-
 // ─── Filter Model ─────────────────────────────────────────────────────────────
 
 class _FilterState {
@@ -236,11 +233,11 @@ class _HomeScreenState extends State<HomeScreen> {
       NotificationRepository();
   int _activeFilter = 0;
   final List<String> _filters = [
-    'Gần đây',
-    'Theo ngân sách',
-    'Phòng mới',
-    'Nuôi thú cưng',
-    'VIP'
+    'home_filter_nearby',
+    'home_filter_by_budget',
+    'home_filter_new',
+    'home_filter_allow_pet',
+    'home_filter_vip'
   ];
   final List<String> _savedIds = [];
 
@@ -261,6 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Set<String> _preferredAreas = {};
   Set<String> _preferredAmenities = {};
   double? _preferredMaxBudget;
+  String? _lastLanguageCode;
 
   @override
   void initState() {
@@ -277,6 +275,20 @@ class _HomeScreenState extends State<HomeScreen> {
       _searchCtrl.text = widget.initialSearchQuery!;
       _searchQuery = widget.initialSearchQuery!.trim().toLowerCase();
       _isSearching = true;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final languageCode = Localizations.localeOf(context).languageCode;
+    if (_lastLanguageCode == null) {
+      _lastLanguageCode = languageCode;
+      return;
+    }
+    if (_lastLanguageCode != languageCode) {
+      _lastLanguageCode = languageCode;
+      _loadListingsFromSql();
     }
   }
 
@@ -313,7 +325,22 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final listings = await _listingRepository.getListings(pageSize: 30);
+      var listings = await _listingRepository.getListings(pageSize: 50);
+      if (!mounted) return;
+      if (Localizations.localeOf(context).languageCode == 'en') {
+        final translatedHead = await Future.wait(
+          listings
+              .take(12)
+              .map((listing) => _listingRepository.translateListing(
+                    listing,
+                    targetLanguage: 'English',
+                  )),
+        );
+        listings = [
+          ...translatedHead,
+          ...listings.skip(translatedHead.length),
+        ];
+      }
       if (!mounted) return;
       setState(() {
         _sqlListings = listings.map(_mapSqlListingToHomeItem).toList();
@@ -620,6 +647,60 @@ class _HomeScreenState extends State<HomeScreen> {
         : message;
   }
 
+  void _openListingDetail(ListingItem item) {
+    HapticFeedback.lightImpact();
+    context.push('/listing/${item.id}', extra: _toListingFallback(item));
+  }
+
+  Listing _toListingFallback(ListingItem item) {
+    return Listing(
+      listingId: int.tryParse(item.id) ?? 0,
+      title: item.title,
+      description: null,
+      price: item.price,
+      area: item.area,
+      typeId: _typeIdFromHomeType(item.type),
+      typeName: _typeNameFromHomeType(item.type),
+      provinceName: item.provinceName,
+      streetAddress: item.address,
+      image0: item.imageUrl,
+      allowPet: item.allowPet,
+      isVerified: item.isVerified,
+      isFeatured: item.isFeatured,
+      statusName: item.status,
+      averageRating: 0,
+      reviewCount: 0,
+      amenityNames: item.tags,
+      createdAt: item.createdAt,
+    );
+  }
+
+  int _typeIdFromHomeType(String type) {
+    switch (type) {
+      case 'can-ho':
+        return 2;
+      case 'o-ghep':
+        return 3;
+      case 'nha-nguyen-can':
+        return 4;
+      default:
+        return 1;
+    }
+  }
+
+  String _typeNameFromHomeType(String type) {
+    switch (type) {
+      case 'can-ho':
+        return 'home_type_can_ho'.tr;
+      case 'o-ghep':
+        return 'home_type_o_ghep'.tr;
+      case 'nha-nguyen-can':
+        return 'home_type_nha_can'.tr;
+      default:
+        return 'home_type_phong_tro'.tr;
+    }
+  }
+
   Future<void> _selectLocation(String value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(AppConstants.keySelectedHomeLocation, value);
@@ -633,9 +714,9 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) {
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(
+          decoration: BoxDecoration(
+            color: context.profileCard,
+            borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(AppConstants.radiusXxl)),
           ),
           child: SafeArea(
@@ -648,21 +729,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: context.profileBorder,
                     borderRadius:
                         BorderRadius.circular(AppConstants.radiusFull),
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(20, 14, 20, 8),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Chọn khu vực',
+                      'home_location_select_title'.tr,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: context.profileText,
                       ),
                     ),
                   ),
@@ -686,12 +767,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             size: 20,
                             color: selected
                                 ? AppColors.primary
-                                : AppColors.textMuted,
+                                : context.profileTextMuted,
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              location,
+                              location == 'Tất cả khu vực'
+                                  ? 'home_location_all'.tr
+                                  : location,
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: selected
@@ -699,7 +782,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     : FontWeight.w500,
                                 color: selected
                                     ? AppColors.primary
-                                    : AppColors.textPrimary,
+                                    : context.profileText,
                               ),
                             ),
                           ),
@@ -812,6 +895,66 @@ class _HomeScreenState extends State<HomeScreen> {
 
   int _listingIdValue(ListingItem item) => int.tryParse(item.id) ?? 0;
 
+  bool get _isEnglish => Localizations.localeOf(context).languageCode == 'en';
+
+  String _localizedListingTitle(String title) {
+    if (!_isEnglish) return title;
+    return title
+        .replaceAll('Phong tro SV', 'Student Room')
+        .replaceAll('Can ho DV', 'Service Apt')
+        .replaceAll('O ghep', 'Shared Room')
+        .replaceAll('Nha nguyen can', 'Whole House')
+        .replaceAll('Phong tro sinh vien', 'Student Room')
+        .replaceAll('Can ho dich vu', 'Service Apartment')
+        .replaceAll('Phòng trọ SV', 'Student Room')
+        .replaceAll('Căn hộ DV', 'Service Apt')
+        .replaceAll('Ở ghép', 'Shared Room')
+        .replaceAll('Nhà nguyên căn', 'Whole House')
+        .replaceAll('Phòng trọ sinh viên', 'Student Room')
+        .replaceAll('Căn hộ dịch vụ', 'Service Apartment')
+        .replaceAll(
+            'gần trường, đầy đủ tiện nghi', 'near campus, fully equipped');
+  }
+
+  String _localizedListingAddress(String address) {
+    if (!_isEnglish) return address;
+    return address
+        .replaceAll('So ', 'No. ')
+        .replaceAll(' duong ', ' Street, ')
+        .replaceAll('Quan ', 'District ')
+        .replaceAll('Thanh pho ', 'City ')
+        .replaceAll('Phuong ', 'Ward ')
+        .replaceAll('Số ', 'No. ')
+        .replaceAll(' đường ', ' Street, ')
+        .replaceAll('Quận ', 'District ')
+        .replaceAll('Thành phố ', 'City ')
+        .replaceAll('TP.HCM', 'HCMC')
+        .replaceAll('Phường ', 'Ward ')
+        .replaceAll('Tân Bình', 'Tan Binh')
+        .replaceAll('Bình Thạnh', 'Binh Thanh')
+        .replaceAll('Gò Vấp', 'Go Vap')
+        .replaceAll('Thủ Đức', 'Thu Duc');
+  }
+
+  String _localizedAmenityName(String name) {
+    if (!_isEnglish) return name.tr;
+    final normalized = _removeDiacritics(name.toLowerCase());
+    if (normalized.contains('wifi')) return 'Wi-Fi';
+    if (normalized.contains('dieu hoa')) return 'Air conditioner';
+    if (normalized.contains('may giat')) return 'Washing machine';
+    if (normalized.contains('tu lanh')) return 'Refrigerator';
+    if (normalized.contains('bep')) return 'Kitchen';
+    if (normalized.contains('bai xe') || normalized.contains('gui xe')) {
+      return 'Parking';
+    }
+    if (normalized.contains('camera') || normalized.contains('an ninh')) {
+      return 'Security camera';
+    }
+    if (normalized.contains('thang may')) return 'Elevator';
+    if (normalized.contains('ho boi')) return 'Pool';
+    return name;
+  }
+
   List<ListingItem> get _personalizedSuggestedListings {
     final list = List<ListingItem>.from(_suggestedListingsForUi);
     if (!_hasSavedPreferences) return list;
@@ -868,7 +1011,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       body: Stack(
         children: [
           CustomScrollView(
@@ -919,57 +1062,77 @@ class _HomeScreenState extends State<HomeScreen> {
   // ── Header ────────────────────────────────────────────────────────────────
 
   Widget _buildHeader() {
+    final double topPad = MediaQuery.of(context).padding.top;
     return Container(
-      color: AppColors.primary,
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(AppConstants.radiusXl),
+          bottomRight: Radius.circular(AppConstants.radiusXl),
+        ),
+      ),
       child: SafeArea(
-        bottom: false,
+        top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-              AppConstants.paddingH, 4, AppConstants.paddingH, 24),
+          padding: EdgeInsets.fromLTRB(
+              AppConstants.paddingH, topPad + 12, AppConstants.paddingH, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  GestureDetector(
+                    onTap: _showLocationSheet,
+                    child: Row(
                       children: [
-                        Row(children: [
-                          const Icon(Icons.location_on_rounded,
-                              size: 13, color: Colors.white70),
-                          const SizedBox(width: 4),
-                          Text('Vị trí của bạn',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.white.withValues(alpha: 0.75))),
-                        ]),
-                        const SizedBox(height: 2),
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: _showLocationSheet,
-                          child: Row(children: [
-                            Flexible(
-                              child: Text(_selectedLocation,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white)),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.keyboard_arrow_down_rounded,
-                                size: 18, color: Colors.white),
-                          ]),
+                        const Icon(Icons.location_on_rounded,
+                            color: Colors.white, size: 20),
+                        const SizedBox(width: 4),
+                        Text(
+                          _selectedLocation,
+                          style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white),
                         ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.keyboard_arrow_down_rounded,
+                            color: Colors.white, size: 18),
                       ],
                     ),
                   ),
-                  _IconBtn(
-                      icon: Icons.notifications_outlined,
-                      badge: _unreadNotificationCount > 0,
-                      onTap: () => context.go(AppConstants.routeNotifications)),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => context.go(AppConstants.routeNotifications),
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(alpha: 0.25)),
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.notifications_none_rounded,
+                              color: Colors.white, size: 20),
+                        ),
+                        if (_unreadNotificationCount > 0)
+                          Positioned(
+                            top: 2,
+                            right: 2,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                  color: AppColors.error,
+                                  shape: BoxShape.circle),
+                              constraints: const BoxConstraints(
+                                  minWidth: 8, minHeight: 8),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(width: 10),
                   GestureDetector(
                     onTap: () => context.go(AppConstants.routeProfile),
@@ -990,13 +1153,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              Text('Xin chào 👋',
+              Text('home_hello'.tr,
                   style: TextStyle(
                       fontSize: 13,
                       color: Colors.white.withValues(alpha: 0.85))),
               const SizedBox(height: 2),
-              const Text('Bạn muốn tìm phòng nào?',
-                  style: TextStyle(
+              Text('home_welcome_question'.tr,
+                  style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
                       color: Colors.white)),
@@ -1012,7 +1175,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildSearchBar() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.profileCard,
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
         boxShadow: [
           BoxShadow(
@@ -1025,8 +1188,7 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
       child: Row(
         children: [
-          const Icon(Icons.search_rounded,
-              color: AppColors.textMuted, size: 20),
+          Icon(Icons.search_rounded, color: context.profileTextMuted, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
@@ -1039,13 +1201,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   SearchHistoryService.addHistory(val.trim());
                 }
               },
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 14,
-                  color: AppColors.textPrimary,
+                  color: context.profileText,
                   fontWeight: FontWeight.w500),
-              decoration: const InputDecoration(
-                hintText: 'Tên đường, quận, trường học...',
-                hintStyle: AppTextStyles.inputHint,
+              decoration: InputDecoration(
+                hintText: 'home_search_hint'.tr,
+                hintStyle: AppTextStyles.inputHint
+                    .copyWith(color: context.profileTextMuted),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
@@ -1054,7 +1217,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 focusedErrorBorder: InputBorder.none,
                 filled: false,
                 isDense: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
               ),
             ),
           ),
@@ -1181,10 +1344,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildSearchResultItem(ListingItem item) {
     final saved = _savedIds.contains(item.id);
     return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        context.push('/listing/${item.id}');
-      },
+      onTap: () => _openListingDetail(item),
       child: Container(
         margin: const EdgeInsets.fromLTRB(AppConstants.paddingH, 0,
             AppConstants.paddingH, AppConstants.spacingSm),
@@ -1231,7 +1391,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _HighlightText(
-                      text: item.title,
+                      text: _localizedListingTitle(item.title),
                       query: _searchQuery,
                       style: const TextStyle(
                           fontSize: 13,
@@ -1245,7 +1405,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(width: 2),
                       Expanded(
                         child: _HighlightText(
-                          text: item.address,
+                          text: _localizedListingAddress(item.address),
                           query: _searchQuery,
                           style: AppTextStyles.cardAddress,
                           maxLines: 1,
@@ -1309,11 +1469,13 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 38,
               padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: active
+                    ? AppColors.primary
+                        .withValues(alpha: context.isDarkProfile ? 0.25 : 0.1)
+                    : context.profileCard,
                 borderRadius: BorderRadius.circular(AppConstants.radiusFull),
                 border: Border.all(
-                  color:
-                      active ? AppColors.primaryLight : const Color(0xFFD8E1EE),
+                  color: active ? AppColors.primary : context.profileBorder,
                   width: 1.2,
                 ),
                 boxShadow: [
@@ -1333,18 +1495,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       height: 6,
                       decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color:
-                              active ? AppColors.success : AppColors.textMuted),
+                          color: active
+                              ? AppColors.success
+                              : context.profileTextMuted),
                     ),
                     const SizedBox(width: 6),
                   ],
-                  Text(_filters[i],
+                  Text(_filters[i].tr,
                       style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
                           color: active
-                              ? AppColors.textPrimary
-                              : AppColors.textSecondary)),
+                              ? AppColors.primary
+                              : context.profileTextSecondary)),
                 ],
               ),
             ),
@@ -1363,7 +1526,9 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.primaryLight,
+          color: context.isDarkProfile
+              ? AppColors.primary.withValues(alpha: 0.15)
+              : AppColors.primaryLight,
           borderRadius: BorderRadius.circular(AppConstants.radiusMd),
           border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
         ),
@@ -1372,10 +1537,10 @@ class _HomeScreenState extends State<HomeScreen> {
             const Icon(Icons.filter_list_rounded,
                 size: 16, color: AppColors.primary),
             const SizedBox(width: 8),
-            const Expanded(
+            Expanded(
               child: Text(
-                'Đang áp dụng bộ lọc',
-                style: TextStyle(
+                'home_filter_active_banner'.tr,
+                style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.primary,
                     fontWeight: FontWeight.w600),
@@ -1383,9 +1548,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             GestureDetector(
               onTap: () => setState(() => _filter = _FilterState()),
-              child: const Text(
-                'Xóa lọc',
-                style: TextStyle(
+              child: Text(
+                'home_filter_clear'.tr,
+                style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.error,
                     fontWeight: FontWeight.w600),
@@ -1402,7 +1567,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ..._preferredTypes.map(_typeLabel),
       ..._preferredAreas,
       if (_preferredMaxBudget != null)
-        'Dưới ${(_preferredMaxBudget! / 1000000).toStringAsFixed(0)}tr',
+        'home_pref_budget_under'.tr.replaceAll(
+            '{budget}', (_preferredMaxBudget! / 1000000).toStringAsFixed(0)),
     ].where((e) => e.isNotEmpty).take(3).toList();
 
     return Padding(
@@ -1417,9 +1583,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.profileCard,
             borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-            border: Border.all(color: AppColors.borderLight),
+            border: Border.all(color: context.profileBorder),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.02),
@@ -1436,21 +1602,23 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: Text(
                   chips.isEmpty
-                      ? 'Gợi ý đang được cá nhân hóa theo khảo sát của bạn'
-                      : 'Ưu tiên: ${chips.join(' · ')}',
+                      ? 'home_pref_banner_empty'.tr
+                      : 'home_pref_banner_prefix'
+                          .tr
+                          .replaceAll('{preferences}', chips.join(' · ')),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: AppColors.textSecondary,
+                    color: context.profileTextSecondary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              const Text(
-                'Sửa',
-                style: TextStyle(
+              Text(
+                'home_pref_banner_edit'.tr,
+                style: const TextStyle(
                   fontSize: 12,
                   color: AppColors.primary,
                   fontWeight: FontWeight.w800,
@@ -1472,13 +1640,13 @@ class _HomeScreenState extends State<HomeScreen> {
   String _typeLabel(String type) {
     switch (type) {
       case 'phong-tro':
-        return 'Phòng trọ';
+        return 'home_type_phong_tro'.tr;
       case 'can-ho':
-        return 'Căn hộ';
+        return 'home_type_can_ho'.tr;
       case 'o-ghep':
-        return 'Ở ghép';
+        return 'home_type_o_ghep'.tr;
       case 'nha-nguyen-can':
-        return 'Nhà nguyên căn';
+        return 'home_type_nha_can'.tr;
       default:
         return '';
     }
@@ -1491,25 +1659,25 @@ class _HomeScreenState extends State<HomeScreen> {
       {
         'type': 'phong-tro',
         'icon': Icons.home_rounded,
-        'label': 'Phòng trọ\nSV',
+        'label': 'home_type_phong_tro_short',
         'color': AppColors.catBlue
       },
       {
         'type': 'can-ho',
         'icon': Icons.apartment_rounded,
-        'label': 'Căn hộ\nDV',
+        'label': 'home_type_can_ho_short',
         'color': AppColors.catIndigo
       },
       {
         'type': 'o-ghep',
         'icon': Icons.people_rounded,
-        'label': 'Ở ghép',
+        'label': 'home_type_o_ghep_short',
         'color': AppColors.catCyan
       },
       {
         'type': 'nha-nguyen-can',
         'icon': Icons.house_rounded,
-        'label': 'Nhà\nnguyên căn',
+        'label': 'home_type_nha_can_short',
         'color': AppColors.catSky
       },
     ];
@@ -1519,8 +1687,8 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         children: [
           _buildSectionHeader(
-            'Loại hình',
-            'Xem tất cả',
+            'home_categories_title'.tr,
+            'home_view_all'.tr,
             onTap: () {
               HapticFeedback.lightImpact();
               setState(() {
@@ -1584,7 +1752,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        c['label'] as String,
+                        (c['label'] as String).tr,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 10,
@@ -1592,7 +1760,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               isSelected ? FontWeight.w700 : FontWeight.w600,
                           color: isSelected
                               ? AppColors.primary
-                              : AppColors.textSecondary,
+                              : context.profileTextSecondary,
                           height: 1.3,
                         ),
                       ),
@@ -1612,21 +1780,18 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildBanner() {
     final bannerItems = _applyFilter(_bannerListingsForUi);
     final bannerItem = bannerItems.isNotEmpty ? bannerItems.first : null;
-    final bannerTitle = bannerItem?.title ?? 'Phong VIP gia tot';
+    final bannerTitle = bannerItem == null
+        ? 'home_banner_fallback_title'.tr
+        : _localizedListingTitle(bannerItem.title);
     final bannerSubtitle = bannerItem == null
-        ? 'Xac thuc - Anh thuc te - An toan'
-        : '${_formatPrice(bannerItem.price)}/thang - ${bannerItem.area.toStringAsFixed(0)} m2';
+        ? 'home_banner_fallback_subtitle'.tr
+        : '${_formatPrice(bannerItem.price)}${'home_price_unit_long'.tr} · ${bannerItem.area.toStringAsFixed(0)} ${AppLocalizations.tr('language') == 'English' ? "sqm" : "m²"}';
 
     final dynamicBanner = Padding(
       padding: const EdgeInsets.fromLTRB(AppConstants.paddingH,
           AppConstants.paddingV, AppConstants.paddingH, 0),
       child: GestureDetector(
-        onTap: bannerItem == null
-            ? null
-            : () {
-                HapticFeedback.lightImpact();
-                context.push('/listing/${bannerItem.id}');
-              },
+        onTap: bannerItem == null ? null : () => _openListingDetail(bannerItem),
         child: Container(
           decoration: BoxDecoration(
               color: AppColors.primary,
@@ -1725,9 +1890,9 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(AppConstants.radiusMd),
           border: Border.all(color: AppColors.warning.withValues(alpha: 0.25)),
         ),
-        child: const Text(
-          'Chưa kết nối được SQL, đang hiển thị dữ liệu mẫu.',
-          style: TextStyle(
+        child: Text(
+          'home_sql_fallback'.tr,
+          style: const TextStyle(
             color: AppColors.warningText,
             fontSize: 12,
             fontWeight: FontWeight.w600,
@@ -1740,11 +1905,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildFeaturedCards() {
     final list = _applyFilter(_featuredListingsForUi);
     if (list.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
         child: Center(
-            child: Text('Không có tin nổi bật phù hợp',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 13))),
+            child: Text('home_featured_empty'.tr,
+                style:
+                    const TextStyle(color: AppColors.textMuted, fontSize: 13))),
       );
     }
     return SizedBox(
@@ -1824,18 +1990,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildRoomCard(ListingItem item) {
     final saved = _savedIds.contains(item.id);
     final showBadge = item.isNew || item.badgeLabel != null;
-    final badgeText = item.isNew ? 'MỚI' : (item.badgeLabel ?? 'VIP');
+    final badgeText =
+        item.isNew ? 'home_badge_new'.tr : (item.badgeLabel ?? 'VIP');
     return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        context.push('/listing/${item.id}');
-      },
+      onTap: () => _openListingDetail(item),
       child: Container(
         width: AppConstants.cardWidth,
         decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.profileCard,
             borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-            border: Border.all(color: AppColors.borderLight)),
+            border: Border.all(color: context.profileBorder)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1884,8 +2048,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Container(
                     width: 28,
                     height: 28,
-                    decoration: const BoxDecoration(
-                        color: Colors.white, shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                        color: context.profileCard, shape: BoxShape.circle),
                     alignment: Alignment.center,
                     child: Icon(
                         saved
@@ -1907,24 +2071,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     TextSpan(
                         text: _formatPrice(item.price),
                         style: AppTextStyles.cardPrice),
-                    const TextSpan(
-                        text: '/tháng', style: AppTextStyles.cardPriceSub),
+                    TextSpan(
+                        text: 'home_price_unit_long'.tr,
+                        style: AppTextStyles.cardPriceSub),
                   ])),
                   const SizedBox(height: 2),
-                  Text(item.title,
+                  Text(_localizedListingTitle(item.title),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.cardTitle),
+                      style: AppTextStyles.cardTitle
+                          .copyWith(color: context.profileText)),
                   const SizedBox(height: 4),
                   Row(children: [
-                    const Icon(Icons.location_on_rounded,
-                        size: 11, color: AppColors.textMuted),
+                    Icon(Icons.location_on_rounded,
+                        size: 11, color: context.profileTextMuted),
                     const SizedBox(width: 2),
                     Expanded(
-                        child: Text(item.address,
+                        child: Text(_localizedListingAddress(item.address),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.cardAddress)),
+                            style: AppTextStyles.cardAddress.copyWith(
+                                color: context.profileTextSecondary))),
                   ]),
                   const SizedBox(height: 6),
                   Wrap(
@@ -1936,10 +2103,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                  color: AppColors.infoBg,
+                                  color: context.profileSubtleCard,
                                   borderRadius: BorderRadius.circular(
                                       AppConstants.radiusSm)),
-                              child: Text(t, style: AppTextStyles.cardTag),
+                              child: Text(_localizedAmenityName(t),
+                                  style: AppTextStyles.cardTag.copyWith(
+                                      color: context.profileTextSecondary)),
                             ))
                         .toList(),
                   ),
@@ -1955,17 +2124,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildFullCard(ListingItem item) {
     final saved = _savedIds.contains(item.id);
     return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        context.push('/listing/${item.id}');
-      },
+      onTap: () => _openListingDetail(item),
       child: Container(
         margin: const EdgeInsets.fromLTRB(AppConstants.paddingH, 0,
             AppConstants.paddingH, AppConstants.spacingSm),
         decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.profileCard,
             borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-            border: Border.all(color: AppColors.borderLight)),
+            border: Border.all(color: context.profileBorder)),
         child: Row(
           children: [
             Container(
@@ -1999,8 +2165,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                            child: Text(item.title,
-                                style: AppTextStyles.cardTitleLarge)),
+                            child: Text(_localizedListingTitle(item.title),
+                                style: AppTextStyles.cardTitleLarge
+                                    .copyWith(color: context.profileText))),
                         const SizedBox(width: 8),
                         GestureDetector(
                           onTap: () => _toggleSave(item.id),
@@ -2019,18 +2186,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       TextSpan(
                           text: _formatPrice(item.price),
                           style: AppTextStyles.cardPrice),
-                      const TextSpan(
-                          text: '/th', style: AppTextStyles.cardPriceSub),
+                      TextSpan(
+                          text: 'home_price_unit_short'.tr,
+                          style: AppTextStyles.cardPriceSub),
                     ])),
                     const SizedBox(height: 4),
                     Row(children: [
-                      const Icon(Icons.location_on_rounded,
-                          size: 11, color: AppColors.textMuted),
+                      Icon(Icons.location_on_rounded,
+                          size: 11, color: context.profileTextMuted),
                       const SizedBox(width: 2),
                       Expanded(
                         child: Text(
-                          item.address,
-                          style: AppTextStyles.cardAddress,
+                          _localizedListingAddress(item.address),
+                          style: AppTextStyles.cardAddress
+                              .copyWith(color: context.profileTextSecondary),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -2042,12 +2211,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         _StatusBadge(status: item.status),
                         if (item.isVerified)
-                          const Row(children: [
-                            Icon(Icons.verified_rounded,
+                          Row(children: [
+                            const Icon(Icons.verified_rounded,
                                 size: 12, color: AppColors.primary),
-                            SizedBox(width: 3),
-                            Text('Đã xác thực',
-                                style: TextStyle(
+                            const SizedBox(width: 3),
+                            Text('profile_verified'.tr,
+                                style: const TextStyle(
                                     fontSize: 10,
                                     color: AppColors.primary,
                                     fontWeight: FontWeight.w600)),
@@ -2072,7 +2241,9 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: AppTextStyles.sectionTitle),
+          Text(title,
+              style: AppTextStyles.sectionTitle
+                  .copyWith(color: context.profileText)),
           GestureDetector(
             onTap: onTap,
             child: Text(action, style: AppTextStyles.sectionLink),
@@ -2136,13 +2307,18 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     Navigator.pop(context);
   }
 
+  String _formatBudget(double val) {
+    final isEn = AppLocalizations.tr('language') == 'English';
+    return '${val.toStringAsFixed(0)}${isEn ? 'M' : 'tr'}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXxl)),
+      decoration: BoxDecoration(
+        color: context.profileCard,
+        borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radiusXxl)),
       ),
       child: SafeArea(
         top: false,
@@ -2155,7 +2331,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.border,
+                color: context.profileBorder,
                 borderRadius: BorderRadius.circular(AppConstants.radiusFull),
               ),
             ),
@@ -2165,16 +2341,16 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                   AppConstants.paddingH, 8, AppConstants.paddingH, 0),
               child: Row(
                 children: [
-                  const Text('Bộ lọc tìm kiếm',
+                  Text('home_filter_title'.tr,
                       style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary)),
+                          color: context.profileText)),
                   const Spacer(),
                   GestureDetector(
                     onTap: _reset,
-                    child: const Text('Đặt lại',
-                        style: TextStyle(
+                    child: Text('home_filter_reset'.tr,
+                        style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.error,
                             fontWeight: FontWeight.w600)),
@@ -2182,7 +2358,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                 ],
               ),
             ),
-            const Divider(height: 20, color: AppColors.borderLight),
+            Divider(height: 20, color: context.profileBorder),
             // Scrollable content
             Flexible(
               child: SingleChildScrollView(
@@ -2191,7 +2367,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionLabel('Loại hình'),
+                    _buildSectionLabel('home_filter_type'.tr),
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
@@ -2199,6 +2375,20 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                       children: _typeOptions.map((opt) {
                         final key = opt['key'] as String;
                         final active = _local.types.contains(key);
+                        String translatedLabel = opt['label'] as String;
+                        if (key == 'phong-tro') {
+                          translatedLabel = 'home_type_phong_tro'.tr;
+                        }
+                        if (key == 'can-ho') {
+                          translatedLabel = 'home_type_can_ho'.tr;
+                        }
+                        if (key == 'o-ghep') {
+                          translatedLabel = 'home_type_o_ghep'.tr;
+                        }
+                        if (key == 'nha-nguyen-can') {
+                          translatedLabel = 'home_type_nha_can'.tr;
+                        }
+
                         return GestureDetector(
                           onTap: () => setState(() {
                             final updated = Set<String>.from(_local.types);
@@ -2216,13 +2406,13 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                             decoration: BoxDecoration(
                               color: active
                                   ? AppColors.primary
-                                  : AppColors.bgCardLight,
+                                  : context.profileSubtleCard,
                               borderRadius:
                                   BorderRadius.circular(AppConstants.radiusMd),
                               border: Border.all(
                                 color: active
                                     ? AppColors.primary
-                                    : AppColors.border,
+                                    : context.profileBorder,
                               ),
                             ),
                             child: Row(
@@ -2231,13 +2421,13 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                                 Text(opt['icon'] as String,
                                     style: const TextStyle(fontSize: 14)),
                                 const SizedBox(width: 6),
-                                Text(opt['label'] as String,
+                                Text(translatedLabel,
                                     style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w500,
                                         color: active
                                             ? Colors.white
-                                            : AppColors.textSecondary)),
+                                            : context.profileTextSecondary)),
                               ],
                             ),
                           ),
@@ -2245,15 +2435,15 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                       }).toList(),
                     ),
                     const SizedBox(height: 20),
-                    _buildSectionLabel('Khoảng giá (triệu/tháng)'),
+                    _buildSectionLabel('home_filter_price'.tr),
                     const SizedBox(height: 4),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           _local.priceRange.start == 0
-                              ? 'Không giới hạn'
-                              : '${_local.priceRange.start.toStringAsFixed(0)}tr',
+                              ? 'home_filter_price_unlimited'.tr
+                              : _formatBudget(_local.priceRange.start),
                           style: const TextStyle(
                               fontSize: 12,
                               color: AppColors.primary,
@@ -2261,8 +2451,10 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                         ),
                         Text(
                           _local.priceRange.end >= 15
-                              ? '15tr+'
-                              : '${_local.priceRange.end.toStringAsFixed(0)}tr',
+                              ? (AppLocalizations.tr('language') == 'English'
+                                  ? '15M+'
+                                  : '15tr+')
+                              : _formatBudget(_local.priceRange.end),
                           style: const TextStyle(
                               fontSize: 12,
                               color: AppColors.primary,
@@ -2291,7 +2483,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                     ),
                     const SizedBox(height: 16),
                     _buildSectionLabel(
-                        'Diện tích tối đa: ${_local.maxArea >= 80 ? "80m²+" : "${_local.maxArea.toInt()}m²"}'),
+                        '${'home_filter_area'.tr}: ${_local.maxArea >= 80 ? (AppLocalizations.tr('language') == 'English' ? "80 sqm+" : "80m²+") : "${_local.maxArea.toInt()}${AppLocalizations.tr('language') == 'English' ? " sqm" : "m²"}"}'),
                     const SizedBox(height: 4),
                     SliderTheme(
                       data: SliderTheme.of(context).copyWith(
@@ -2313,7 +2505,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _buildSectionLabel('Tiện nghi'),
+                    _buildSectionLabel('home_filter_amenity'.tr),
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
@@ -2337,22 +2529,22 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                             decoration: BoxDecoration(
                               color: active
                                   ? AppColors.primaryLight
-                                  : AppColors.bgCardLight,
+                                  : context.profileSubtleCard,
                               borderRadius: BorderRadius.circular(
                                   AppConstants.radiusFull),
                               border: Border.all(
                                 color: active
                                     ? AppColors.primary
-                                    : AppColors.border,
+                                    : context.profileBorder,
                               ),
                             ),
-                            child: Text(a,
+                            child: Text(a.tr,
                                 style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                     color: active
                                         ? AppColors.primary
-                                        : AppColors.textSecondary)),
+                                        : context.profileTextSecondary)),
                           ),
                         );
                       }).toList(),
@@ -2372,8 +2564,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                                 BorderRadius.circular(AppConstants.radiusLg),
                           ),
                         ),
-                        child: const Text('Áp dụng bộ lọc',
-                            style: TextStyle(
+                        child: Text('home_filter_apply'.tr,
+                            style: const TextStyle(
                                 fontSize: 15, fontWeight: FontWeight.w700)),
                       ),
                     ),
@@ -2389,10 +2581,10 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
 
   Widget _buildSectionLabel(String label) {
     return Text(label,
-        style: const TextStyle(
+        style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary));
+            color: context.profileText));
   }
 }
 
@@ -2449,47 +2641,6 @@ class _HighlightText extends StatelessWidget {
 }
 
 // ─── Reusable Widgets ─────────────────────────────────────────────────────────
-
-class _IconBtn extends StatelessWidget {
-  final IconData icon;
-  final bool badge;
-  final VoidCallback onTap;
-  const _IconBtn({required this.icon, this.badge = false, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.18)),
-            alignment: Alignment.center,
-            child: Icon(icon, color: Colors.white, size: 20),
-          ),
-          if (badge)
-            Positioned(
-              top: 6,
-              right: 6,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                    color: AppColors.notifDot,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.primary, width: 1.5)),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
 
 class _StatusBadge extends StatelessWidget {
   final String status;
