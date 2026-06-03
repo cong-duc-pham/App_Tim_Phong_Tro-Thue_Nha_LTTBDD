@@ -13,6 +13,9 @@ namespace Backend_API.Services.Interfaces
         /// <summary>Xóa tin đăng cùng toàn bộ ảnh trên Firebase Storage.</summary>
         Task DeleteListingAsync(long listingId);
 
+        /// <summary>Tạm ẩn hoặc hiện lại tin đăng bằng cách toggle trạng thái giữa Active và Hidden.</summary>
+        Task<ListingResponseDto> ToggleListingStatusAsync(long listingId, long landlordId);
+
         /// <summary>Lấy chi tiết 1 tin đăng theo ID (bao gồm tiện ích, gói VIP, rating).</summary>
         Task<ListingResponseDto?> GetListingByIdAsync(long listingId);
 
