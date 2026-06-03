@@ -1,0 +1,220 @@
+@{
+    ViewData["Title"] = "Gửi thông báo thủ công";
+    var hasTargetUser = ViewBag.TargetUserId != null;
+    long? targetUserId = ViewBag.TargetUserId;
+    string targetName = ViewBag.TargetUserFullName ?? "";
+    string targetEmail = ViewBag.TargetUserEmail ?? "";
+}
+
+@if (TempData["AdminSuccess"] is string successMessage)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-1"></i>
+        @successMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["AdminError"] is string errorMessage)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+        @errorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-md-8 offset-md-2 col-lg-6 offset-lg-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-primary text-white py-3">
+                <h5 class="card-title fw-bold mb-0">
+                    <i class="bi bi-send-fill me-2"></i> Soạn và gửi thông báo mới
+                </h5>
+                <small class="text-white-50">Hệ thống tự động lưu vào Database và Push thông báo tới Firebase Cloud Messaging (FCM)</small>
+            </div>
+            
+            <div class="card-body p-4">
+                <form method="post" action="/admin/notifications/send" id="notificationForm">
+                    @Html.AntiForgeryToken()
+                    
+                    <!-- Nhóm đối tượng nhận thông báo -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Gửi đến đối tượng</label>
+                        <select name="targetType" id="targetType" class="form-select mb-3" onchange="toggleRecipientType()">
+                            @if (hasTargetUser)
+                            {
+                                <option value="single" selected>Một người dùng cụ thể</option>
+                                <option value="all">Tất cả người dùng (Tenant & Landlord)</option>
+                                <option value="landlords">Tất cả Chủ trọ (Landlords)</option>
+                                <option value="tenants">Tất cả Người thuê phòng (Tenants)</option>
+                            }
+                            else
+                            {
+                                <option value="single">Một người dùng cụ thể</option>
+                                <option value="all" selected>Tất cả người dùng (Tenant & Landlord)</option>
+                                <option value="landlords">Tất cả Chủ trọ (Landlords)</option>
+                                <option value="tenants">Tất cả Người thuê phòng (Tenants)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Ô tìm kiếm người dùng cụ thể (ẩn/hiện dựa theo select) -->
+                    <div class="mb-4 bg-light p-3 rounded border" id="userSearchSection" style="display: @(hasTargetUser ? "block" : "none");">
+                        <label class="form-label fw-semibold text-dark">Tìm kiếm người nhận</label>
+                        
+                        <div class="input-group mb-2">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" id="userSearchInput" class="form-control" placeholder="Nhập tên, email hoặc số điện thoại..." autocomplete="off" />
+                        </div>
+                        
+                        <!-- Kết quả tìm kiếm AJAX -->
+                        <div id="searchResultsList" class="list-group shadow-sm mt-1 position-absolute w-100" style="z-index: 1000; max-height: 220px; overflow-y: auto; display: none;"></div>
+
+                        <!-- Thông tin người nhận được chọn hiện tại -->
+                        <div id="selectedUserContainer" class="mt-3 p-2 bg-white rounded border d-flex align-items-center justify-content-between">
+                            @if (hasTargetUser)
+                            {
+                                <div>
+                                    <div class="fw-bold text-primary" id="selectedUserName">@targetName</div>
+                                    <small class="text-muted" id="selectedUserDetail">Email: @targetEmail</small>
+                                </div>
+                                <input type="hidden" name="userId" id="userIdInput" value="@targetUserId" />
+                            }
+                            else
+                            {
+                                <div>
+                                    <div class="fw-bold text-muted" id="selectedUserName">Chưa chọn người nhận</div>
+                                    <small class="text-muted" id="selectedUserDetail">Tìm kiếm ở trên và bấm chọn</small>
+                                </div>
+                                <input type="hidden" name="userId" id="userIdInput" value="" />
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Tiêu đề thông báo -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tiêu đề thông báo <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" placeholder="Nhập tiêu đề ngắn gọn..." required maxLength="100" />
+                    </div>
+
+                    <!-- Nội dung thông báo -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Nội dung chi tiết <span class="text-danger">*</span></label>
+                        <textarea name="body" class="form-control" rows="5" placeholder="Nhập nội dung thông báo gửi đến người dùng..." required></textarea>
+                    </div>
+
+                    <!-- Nút hành động -->
+                    <div class="d-flex align-items-center justify-content-end gap-2 border-top pt-3">
+                        <a href="/admin/users" class="btn btn-light">Hủy bỏ</a>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-send me-1"></i> Gửi thông báo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function toggleRecipientType() {
+            const targetType = document.getElementById('targetType').value;
+            const searchSec = document.getElementById('userSearchSection');
+            const userIdInput = document.getElementById('userIdInput');
+
+            if (targetType === 'single') {
+                searchSec.style.display = 'block';
+                // Đặt thuộc tính required cho userIdInput nếu cần, hoặc kiểm tra qua JS khi submit
+            } else {
+                searchSec.style.display = 'none';
+                userIdInput.value = '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Đảm bảo trạng thái ban đầu chính xác
+            toggleRecipientType();
+
+            const searchInput = document.getElementById('userSearchInput');
+            const resultsList = document.getElementById('searchResultsList');
+            const userIdInput = document.getElementById('userIdInput');
+            const selectedUserName = document.getElementById('selectedUserName');
+            const selectedUserDetail = document.getElementById('selectedUserDetail');
+            
+            let debounceTimer;
+
+            // Xử lý sự kiện gõ phím tìm kiếm người dùng
+            searchInput.addEventListener('input', function () {
+                clearTimeout(debounceTimer);
+                const query = this.value.trim();
+
+                if (query.length < 2) {
+                    resultsList.innerHTML = '';
+                    resultsList.style.display = 'none';
+                    return;
+                }
+
+                debounceTimer = setTimeout(function () {
+                    // Gọi API tìm kiếm
+                    fetch('/admin/users/search?q=' + encodeURIComponent(query))
+                        .then(response => response.json())
+                        .then(data => {
+                            resultsList.innerHTML = '';
+                            if (data.length === 0) {
+                                resultsList.innerHTML = '<div class="list-group-item text-muted">Không tìm thấy người dùng phù hợp</div>';
+                                resultsList.style.display = 'block';
+                                return;
+                            }
+
+                            data.forEach(user => {
+                                const item = document.createElement('button');
+                                item.type = 'button';
+                                item.className = 'list-group-item list-group-item-action text-start py-2';
+                                item.innerHTML = `
+                                    <div class="fw-bold">${user.fullName}</div>
+                                    <small class="text-muted">Email: ${user.email} | SĐT: ${user.phone}</small>
+                                `;
+                                
+                                // Khi click chọn người dùng này
+                                item.addEventListener('click', function () {
+                                    userIdInput.value = user.userId;
+                                    selectedUserName.textContent = user.fullName;
+                                    selectedUserName.className = 'fw-bold text-primary';
+                                    selectedUserDetail.textContent = `Email: ${user.email} | SĐT: ${user.phone}`;
+                                    
+                                    searchInput.value = '';
+                                    resultsList.innerHTML = '';
+                                    resultsList.style.display = 'none';
+                                });
+
+                                resultsList.appendChild(item);
+                            });
+
+                            resultsList.style.display = 'block';
+                        })
+                        .catch(err => {
+                            console.error('Lỗi khi tìm kiếm user:', err);
+                        });
+                }, 300);
+            });
+
+            // Ẩn bảng kết quả khi click ra ngoài
+            document.addEventListener('click', function (e) {
+                if (e.target !== searchInput && e.target !== resultsList) {
+                    resultsList.style.display = 'none';
+                }
+            });
+
+            // Kiểm tra tính hợp lệ trước khi submit form
+            document.getElementById('notificationForm').addEventListener('submit', function (e) {
+                const targetType = document.getElementById('targetType').value;
+                if (targetType === 'single' && !userIdInput.value) {
+                    e.preventDefault();
+                    alert('Vui lòng tìm kiếm và chọn một người dùng cụ thể trước khi gửi!');
+                }
+            });
+        });
+    </script>
+}

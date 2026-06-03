@@ -1,4 +1,4 @@
-﻿@model Backend_API.Models.ViewModels.Admin.AdminUsersViewModel
+@model Backend_API.Models.ViewModels.Admin.AdminUsersViewModel
 @{
     ViewData["Title"] = "Quản lý Users";
 }
@@ -83,6 +83,9 @@
                                     }
                                 </td>
                                 <td class="text-end">
+                                    <a href="/admin/notifications/send?targetUserId=@user.UserId" class="btn btn-sm btn-outline-primary me-1">
+                                        <i class="bi bi-bell-fill"></i> Thông báo
+                                    </a>
                                     <form method="post" action="/admin/users/@user.UserId/toggle-active" class="d-inline">
                                         @Html.AntiForgeryToken()
                                         @if (user.IsActive)
