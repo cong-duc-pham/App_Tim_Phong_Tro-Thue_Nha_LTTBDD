@@ -127,13 +127,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (type.contains('payment') || refType.contains('payment')) {
       return Icons.payments_outlined;
     }
+    if (type.contains('report') || refType.contains('report')) {
+      return Icons.flag_outlined;
+    }
     if (type.contains('vip')) return Icons.workspace_premium_outlined;
     return Icons.notifications_none_rounded;
   }
 
   Color _colorFor(AppNotification item) {
     final type = item.type.toLowerCase();
+    final refType = item.refType?.toLowerCase() ?? '';
     if (type.contains('payment')) return AppColors.success;
+    if (type.contains('report') || refType.contains('report')) {
+      return AppColors.info;
+    }
     if (type.contains('vip')) return AppColors.warning;
     if (type.contains('listing')) return AppColors.primary;
     if (type.contains('chat')) return AppColors.info;
