@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../models/post_package.dart';
+import '../../models/amenity.dart';
 import '../../repositories/listing_repository.dart';
 import '../../repositories/package_repository.dart';
 import '../../screens/payment/package_screen.dart';
@@ -99,6 +100,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
   bool _isLoadingPackages = false;
   String? _packageError;
 
+  List<Amenity> _allAmenities = [];
+  List<int> _selectedAmenityIds = [];
+  bool _isLoadingAmenities = false;
+
   String? _selectedProvince;
   String? _selectedDistrict;
   String? _selectedWard;
@@ -129,12 +134,34 @@ class _PostListingScreenState extends State<PostListingScreen> {
   void initState() {
     super.initState();
     _loadPackages();
+    _loadAmenities();
     for (final c in [
       _titleCtrl, _descCtrl, _priceCtrl, _areaCtrl, _floorCtrl,
       _totalFloorsCtrl, _maxOccupantsCtrl, _streetCtrl,
       _electricCtrl, _waterCtrl, _internetCtrl, _parkingCtrl,
     ]) {
       c.addListener(_markDraftChanged);
+    }
+  }
+
+  Future<void> _loadAmenities() async {
+    setState(() {
+      _isLoadingAmenities = true;
+    });
+
+    try {
+      final amenities = await _listingRepository.getAmenities();
+      if (!mounted) return;
+      setState(() {
+        _allAmenities = amenities;
+        _isLoadingAmenities = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingAmenities = false;
+      });
+      debugPrint('Lỗi tải danh sách tiện ích: $e');
     }
   }
 
@@ -552,7 +579,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
       'parkingPrice': _parseDecimal(_parkingCtrl.text),
       'allowPet': _allowPet,
       'availableFrom': _availableFrom?.toIso8601String().split('T').first,
-      'amenityIds': <int>[],
+      'amenityIds': _selectedAmenityIds,
       'image0': _maxSelectableImages > 0 ? _slots[0].networkUrl : null,
       'image1': _maxSelectableImages > 1 ? _slots[1].networkUrl : null,
       'image2': _maxSelectableImages > 2 ? _slots[2].networkUrl : null,
@@ -1386,6 +1413,69 @@ class _PostListingScreenState extends State<PostListingScreen> {
                   prefixIcon: Icons.directions_car_outlined)),
             ]),
           ]),
+        ),
+        const SizedBox(height: 14),
+        _SectionCard(
+          title: 'Tiện ích đi kèm',
+          icon: Icons.checklist_outlined,
+          child: _isLoadingAmenities
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                )
+              : _allAmenities.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'Không có tiện ích nào khả dụng.',
+                        style: TextStyle(color: Colors.grey, fontSize: 13),
+                      ),
+                    )
+                  : Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _allAmenities.map((amenity) {
+                        final isSelected = _selectedAmenityIds.contains(amenity.amenityId);
+                        return FilterChip(
+                          selected: isSelected,
+                          label: Text(
+                            amenity.name,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : Colors.black87,
+                              fontSize: 13,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                            ),
+                          ),
+                          selectedColor: AppColors.primary,
+                          checkmarkColor: Colors.white,
+                          backgroundColor: Colors.grey.shade100,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color: isSelected ? AppColors.primary : Colors.grey.shade300,
+                            ),
+                          ),
+                          onSelected: (selected) {
+                            setState(() {
+                              if (selected) {
+                                _selectedAmenityIds.add(amenity.amenityId);
+                              } else {
+                                _selectedAmenityIds.remove(amenity.amenityId);
+                              }
+                            });
+                            _markDraftChanged();
+                          },
+                        );
+                      }).toList(),
+                    ),
         ),
         const SizedBox(height: 14),
         _PreviewCard(
