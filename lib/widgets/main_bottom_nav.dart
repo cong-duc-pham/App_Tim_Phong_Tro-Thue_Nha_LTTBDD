@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
 import '../core/constants/app_text_styles.dart';
+import '../core/localization/app_localizations.dart';
 import '../services/chat_unread_service.dart';
 import '../services/post_listing_draft_service.dart';
 
@@ -48,11 +49,17 @@ class _MainBottomNavState extends State<MainBottomNav>
   @override
   Widget build(BuildContext context) {
     final path = GoRouterState.of(context).uri.path;
+    final navTheme = Theme.of(context).bottomNavigationBarTheme;
+    final bgColor =
+        navTheme.backgroundColor ?? Theme.of(context).colorScheme.surface;
+    final borderColor = Theme.of(context).dividerColor;
+    final activeColor = navTheme.selectedItemColor ?? AppColors.navActive;
+    final inactiveColor = navTheme.unselectedItemColor ?? AppColors.navInactive;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: AppColors.borderLight)),
+      decoration: BoxDecoration(
+        color: bgColor,
+        border: Border(top: BorderSide(color: borderColor)),
       ),
       padding: EdgeInsets.only(
         top: 10,
@@ -62,14 +69,18 @@ class _MainBottomNavState extends State<MainBottomNav>
         children: [
           _NavItem(
             icon: Icons.home_rounded,
-            label: 'Trang chủ',
+            label: 'nav_home'.tr,
             active: path == AppConstants.routeHome,
+            activeColor: activeColor,
+            inactiveColor: inactiveColor,
             onTap: () => _goTo(context, AppConstants.routeHome),
           ),
           _NavItem(
             icon: Icons.favorite_border_rounded,
-            label: 'Yêu thích',
+            label: 'nav_favorites'.tr,
             active: path == AppConstants.routeFavorites,
+            activeColor: activeColor,
+            inactiveColor: inactiveColor,
             onTap: () => _goTo(context, AppConstants.routeFavorites),
           ),
           Expanded(
@@ -94,7 +105,12 @@ class _MainBottomNavState extends State<MainBottomNav>
                     ),
                   ),
                 ),
-                const Text('Đăng tin', style: AppTextStyles.navLabel),
+                Text(
+                  'nav_post'.tr,
+                  style: AppTextStyles.navLabel.copyWith(
+                    color: inactiveColor,
+                  ),
+                ),
               ],
             ),
           ),
@@ -103,17 +119,21 @@ class _MainBottomNavState extends State<MainBottomNav>
             builder: (context, unreadCount, child) {
               return _NavItem(
                 icon: Icons.chat_bubble_outline_rounded,
-                label: 'Tin nhắn',
+                label: 'nav_chat'.tr,
                 active: path == AppConstants.routeChat,
                 badgeCount: unreadCount,
+                activeColor: activeColor,
+                inactiveColor: inactiveColor,
                 onTap: () => _goTo(context, AppConstants.routeChat),
               );
             },
           ),
           _NavItem(
             icon: Icons.person_outline_rounded,
-            label: 'Cá nhân',
+            label: 'nav_profile'.tr,
             active: path == AppConstants.routeProfile,
+            activeColor: activeColor,
+            inactiveColor: inactiveColor,
             onTap: () => _goTo(context, AppConstants.routeProfile),
           ),
         ],
@@ -130,18 +150,16 @@ class _MainBottomNavState extends State<MainBottomNav>
       final shouldLeave = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Bỏ thông tin đang nhập?'),
-          content: const Text(
-            'Bạn đang nhập dở tin đăng. Nếu rời khỏi trang này, thông tin chưa đăng sẽ bị mất.',
-          ),
+          title: Text('leave_draft_title'.tr),
+          content: Text('leave_draft_desc'.tr),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Ở lại'),
+              child: Text('stay'.tr),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Rời trang'),
+              child: Text('leave_page'.tr),
             ),
           ],
         ),
@@ -161,6 +179,8 @@ class _NavItem extends StatelessWidget {
     required this.label,
     required this.active,
     required this.onTap,
+    required this.activeColor,
+    required this.inactiveColor,
     this.badgeCount = 0,
   });
 
@@ -168,6 +188,8 @@ class _NavItem extends StatelessWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
+  final Color activeColor;
+  final Color inactiveColor;
   final int badgeCount;
 
   @override
@@ -183,12 +205,14 @@ class _NavItem extends StatelessWidget {
               icon: icon,
               active: active,
               badgeCount: badgeCount,
+              activeColor: activeColor,
+              inactiveColor: inactiveColor,
             ),
             const SizedBox(height: 3),
             Text(
               label,
               style: AppTextStyles.navLabel.copyWith(
-                color: active ? AppColors.navActive : AppColors.navInactive,
+                color: active ? activeColor : inactiveColor,
               ),
             ),
           ],
@@ -203,11 +227,15 @@ class _NavIconWithBadge extends StatelessWidget {
     required this.icon,
     required this.active,
     required this.badgeCount,
+    required this.activeColor,
+    required this.inactiveColor,
   });
 
   final IconData icon;
   final bool active;
   final int badgeCount;
+  final Color activeColor;
+  final Color inactiveColor;
 
   @override
   Widget build(BuildContext context) {
@@ -223,7 +251,7 @@ class _NavIconWithBadge extends StatelessWidget {
           Icon(
             icon,
             size: AppConstants.iconLg,
-            color: active ? AppColors.navActive : AppColors.navInactive,
+            color: active ? activeColor : inactiveColor,
           ),
           if (badgeCount > 0)
             Positioned(
@@ -237,7 +265,13 @@ class _NavIconWithBadge extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.notifDot,
                   borderRadius: BorderRadius.circular(9),
-                  border: Border.all(color: Colors.white, width: 1.5),
+                  border: Border.all(
+                    color: Theme.of(context)
+                            .bottomNavigationBarTheme
+                            .backgroundColor ??
+                        Theme.of(context).colorScheme.surface,
+                    width: 1.5,
+                  ),
                 ),
                 child: Text(
                   displayCount,

@@ -1,31 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/constants/app_router.dart';
 import 'core/theme/app_theme.dart';
-import 'core/constants/app_constants.dart';
 import 'core/localization/app_localizations.dart';
-
-final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
+import 'core/settings/app_settings_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-
-  // Load saved theme mode
-  final prefs = await SharedPreferences.getInstance();
-  final themeStr = prefs.getString(AppConstants.keyThemeMode) ?? 'light';
-  ThemeMode initialTheme = ThemeMode.light;
-  if (themeStr == 'dark') {
-    initialTheme = ThemeMode.dark;
-  } else if (themeStr == 'system') {
-    initialTheme = ThemeMode.system;
-  }
-  themeNotifier.value = initialTheme;
-
-  // Load saved language
-  final langStr = prefs.getString(AppConstants.keyAppLanguage) ?? 'vi';
-  languageNotifier.value = langStr;
+  await loadAppSettings();
 
   runApp(const MyApp());
 }
@@ -47,6 +31,16 @@ class MyApp extends StatelessWidget {
               theme: AppTheme.lightTheme,
               darkTheme: AppTheme.darkTheme,
               themeMode: currentThemeMode,
+              locale: Locale(currentLanguage),
+              supportedLocales: const [
+                Locale('vi'),
+                Locale('en'),
+              ],
+              localizationsDelegates: const [
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
               routerConfig: appRouter,
             );
           },

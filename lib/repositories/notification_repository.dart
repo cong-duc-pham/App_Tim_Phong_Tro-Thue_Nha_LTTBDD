@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constants/app_constants.dart';
+import '../core/settings/app_settings_controller.dart';
 import '../models/app_notification.dart';
 import '../services/api_service.dart';
 
@@ -13,6 +14,8 @@ class NotificationRepository {
   final ApiService _apiService;
 
   Future<List<AppNotification>> getNotifications() async {
+    if (!notificationsEnabledNotifier.value) return const [];
+
     try {
       final response = await _authorizedRequest<Map<String, dynamic>>(
         (accessToken) => _apiService.dio.get<Map<String, dynamic>>(
@@ -36,6 +39,8 @@ class NotificationRepository {
   }
 
   Future<int> getUnreadCount() async {
+    if (!notificationsEnabledNotifier.value) return 0;
+
     try {
       final response = await _authorizedRequest<Map<String, dynamic>>(
         (accessToken) => _apiService.dio.get<Map<String, dynamic>>(
@@ -54,6 +59,8 @@ class NotificationRepository {
   }
 
   Future<void> markAsRead(int notificationId) async {
+    if (!notificationsEnabledNotifier.value) return;
+
     try {
       await _authorizedRequest<Map<String, dynamic>>(
         (accessToken) => _apiService.dio.put<Map<String, dynamic>>(

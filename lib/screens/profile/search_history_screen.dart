@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/theme/profile_theme.dart';
 import '../../services/search_history_service.dart';
 
 class SearchHistoryScreen extends StatefulWidget {
@@ -50,7 +52,7 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
     // Đẩy từ khóa này lên đầu lịch sử tìm kiếm gần đây
     await SearchHistoryService.addHistory(keyword);
     if (!mounted) return;
-    
+
     // Điều hướng quay lại Trang chủ kèm tham số truy vấn tìm kiếm
     context.go('/home?q=${Uri.encodeComponent(keyword)}');
   }
@@ -73,12 +75,13 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppConstants.radiusLg),
         ),
-        title: const Text('Xóa lịch sử tìm kiếm?', style: TextStyle(fontWeight: FontWeight.w700)),
-        content: const Text('Bạn có chắc chắn muốn xóa toàn bộ lịch sử tìm kiếm gần đây không? Hành động này không thể hoàn tác.'),
+        title: Text('clear_search_confirm_title'.tr,
+            style: const TextStyle(fontWeight: FontWeight.w700)),
+        content: Text('clear_search_confirm_desc'.tr),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
+            child: Text('cancel'.tr),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -92,7 +95,7 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Xóa sạch'),
+            child: Text('clear'.tr),
           ),
         ],
       ),
@@ -102,7 +105,7 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       body: Column(
         children: [
           _buildHeader(),
@@ -148,9 +151,9 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Lịch sử tìm kiếm',
-                    style: TextStyle(
+                  Text(
+                    'profile_search_history'.tr,
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -162,18 +165,21 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
                     GestureDetector(
                       onTap: _clearAllHistory,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                          borderRadius:
+                              BorderRadius.circular(AppConstants.radiusMd),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 16),
-                            SizedBox(width: 4),
+                            const Icon(Icons.delete_sweep_rounded,
+                                color: Colors.white, size: 16),
+                            const SizedBox(width: 4),
                             Text(
-                              'Xóa sạch',
-                              style: TextStyle(
+                              'clear'.tr,
+                              style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
@@ -189,9 +195,10 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
             const SizedBox(height: 22),
             Container(
               height: 20,
-              decoration: const BoxDecoration(
-                color: AppColors.bgPage,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: BoxDecoration(
+                color: context.profileBg,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
               ),
             ),
           ],
@@ -222,9 +229,9 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.profileCard,
             borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-            border: Border.all(color: AppColors.borderLight),
+            border: Border.all(color: context.profileBorder),
           ),
           child: Row(
             children: [
@@ -236,12 +243,13 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
                     left: Radius.circular(AppConstants.radiusMd),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.history_rounded,
-                          color: AppColors.textMuted,
+                          color: context.profileTextMuted,
                           size: 18,
                         ),
                         const SizedBox(width: 12),
@@ -250,10 +258,10 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
                             keyword,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: AppColors.textPrimary,
+                              color: context.profileText,
                             ),
                           ),
                         ),
@@ -274,9 +282,9 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
                     width: 48,
                     height: 48,
                     alignment: Alignment.center,
-                    child: const Icon(
+                    child: Icon(
                       Icons.close_rounded,
-                      color: AppColors.textMuted,
+                      color: context.profileTextMuted,
                       size: 18,
                     ),
                   ),
@@ -312,15 +320,17 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Lịch sử trống',
-            style: AppTextStyles.h3,
+          Text(
+            'search_history_empty_title'.tr,
+            style: AppTextStyles.h3.copyWith(color: context.profileText),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Bạn chưa thực hiện lượt tìm kiếm phòng trọ nào gần đây.',
+          Text(
+            'search_history_empty_desc'.tr,
             textAlign: TextAlign.center,
-            style: AppTextStyles.bodyMedium,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: context.profileTextSecondary,
+            ),
           ),
           const SizedBox(height: 40),
           _buildSuggestionsSection(),
@@ -335,12 +345,12 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Từ khóa gợi ý phổ biến',
+        Text(
+          'search_history_suggestions'.tr,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: context.profileText,
           ),
         ),
         const SizedBox(height: 12),
@@ -352,11 +362,12 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
               onTap: () => _onSelectKeyword(suggestion),
               borderRadius: BorderRadius.circular(AppConstants.radiusFull),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.profileCard,
                   borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-                  border: Border.all(color: AppColors.borderLight),
+                  border: Border.all(color: context.profileBorder),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -369,10 +380,10 @@ class _SearchHistoryScreenState extends State<SearchHistoryScreen> {
                     const SizedBox(width: 6),
                     Text(
                       suggestion,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
+                        color: context.profileTextSecondary,
                       ),
                     ),
                   ],

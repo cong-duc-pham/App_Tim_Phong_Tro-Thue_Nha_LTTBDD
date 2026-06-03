@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/theme/profile_theme.dart';
 
 class AboutAppScreen extends StatelessWidget {
   const AboutAppScreen({super.key});
@@ -15,7 +17,7 @@ class AboutAppScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       body: Column(
         children: [
           _buildHeader(context),
@@ -23,7 +25,7 @@ class AboutAppScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
               children: [
-                _buildIntroCard(),
+                _buildIntroCard(context),
                 const SizedBox(height: 14),
                 _buildSection(
                   title: 'Tính năng chính',
@@ -134,9 +136,9 @@ class AboutAppScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Về ứng dụng',
-                    style: TextStyle(
+                  Text(
+                    'profile_about_app'.tr,
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -148,9 +150,10 @@ class AboutAppScreen extends StatelessWidget {
             const SizedBox(height: 22),
             Container(
               height: 20,
-              decoration: const BoxDecoration(
-                color: AppColors.bgPage,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: BoxDecoration(
+                color: context.profileBg,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
               ),
             ),
           ],
@@ -159,13 +162,13 @@ class AboutAppScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildIntroCard() {
+  Widget _buildIntroCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.profileCard,
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.profileBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -194,7 +197,7 @@ class AboutAppScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 14),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -203,15 +206,15 @@ class AboutAppScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
+                        color: context.profileText,
                       ),
                     ),
-                    SizedBox(height: 3),
+                    const SizedBox(height: 3),
                     Text(
                       'Ứng dụng tìm kiếm phòng trọ',
                       style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.textSecondary,
+                        color: context.profileTextSecondary,
                       ),
                     ),
                   ],

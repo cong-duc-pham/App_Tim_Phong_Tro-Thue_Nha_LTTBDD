@@ -20,6 +20,8 @@ namespace Backend_API.Services.Implementations
 
         public async Task<ReviewResponseDto> CreateReviewAsync(long reviewerId, long listingId, ReviewCreateDto dto)
         {
+            await EnsureReviewLikesTableAsync();
+
             // Validate: không tự review phòng mình
             var listing = await _context.Listings
                 .FirstOrDefaultAsync(l => l.ListingId == listingId)
@@ -76,20 +78,25 @@ namespace Backend_API.Services.Implementations
             return result;
         }
 
-        public async Task<List<ReviewResponseDto>> GetReviewsByListingAsync(long listingId)
+        public async Task<List<ReviewResponseDto>> GetReviewsByListingAsync(long listingId, long? currentUserId = null)
         {
+            await EnsureReviewLikesTableAsync();
+
             var reviews = await _context.Reviews
                 .Include(r => r.Reviewer)
                 .Include(r => r.ReviewImages)
+                .Include(r => r.ReviewLikes)
                 .Where(r => r.ListingId == listingId && r.IsApproved == true)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
 
-            return reviews.Select(MapToDto).ToList();
+            return reviews.Select(r => MapToDto(r, currentUserId)).ToList();
         }
 
         public async Task<ReviewResponseDto> ReplyReviewAsync(long landlordId, long reviewId, ReviewReplyDto dto)
         {
+            await EnsureReviewLikesTableAsync();
+
             var review = await _context.Reviews
                 .Include(r => r.Listing)
                 .FirstOrDefaultAsync(r => r.ReviewId == reviewId)
@@ -111,14 +118,51 @@ namespace Backend_API.Services.Implementations
 
         // ── Private helpers
 
-        private async Task<ReviewResponseDto?> BuildResponseDto(long reviewId)
+        public async Task<ReviewResponseDto> ToggleLikeAsync(long userId, long reviewId)
+        {
+            await EnsureReviewLikesTableAsync();
+
+            var review = await _context.Reviews
+                .Include(r => r.Listing)
+                .FirstOrDefaultAsync(r => r.ReviewId == reviewId && r.IsApproved == true);
+            if (review == null)
+                throw new Exception("Không tìm thấy đánh giá.");
+
+            if (review.Listing.LandlordId == userId)
+                throw new Exception("Chủ bài đăng không thể thích bình luận của bài mình.");
+
+            var existing = await _context.ReviewLikes
+                .FirstOrDefaultAsync(x => x.ReviewId == reviewId && x.UserId == userId);
+
+            if (existing != null)
+            {
+                _context.ReviewLikes.Remove(existing);
+            }
+            else
+            {
+                await _context.ReviewLikes.AddAsync(new ReviewLike
+                {
+                    ReviewId = reviewId,
+                    UserId = userId,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            await _context.SaveChangesAsync();
+
+            return await BuildResponseDto(reviewId, userId)
+                   ?? throw new Exception("Cập nhật lượt thích thất bại.");
+        }
+
+        private async Task<ReviewResponseDto?> BuildResponseDto(long reviewId, long? currentUserId = null)
         {
             var review = await _context.Reviews
                 .Include(r => r.Reviewer)
                 .Include(r => r.ReviewImages)
+                .Include(r => r.ReviewLikes)
                 .FirstOrDefaultAsync(r => r.ReviewId == reviewId);
 
-            return review == null ? null : MapToDto(review);
+            return review == null ? null : MapToDto(review, currentUserId);
         }
 
         private async Task NotifyLandlordReviewCreatedAsync(Listing listing, ReviewResponseDto review)
@@ -153,7 +197,7 @@ namespace Backend_API.Services.Implementations
             return value.Length <= maxLength ? value : value[..maxLength].TrimEnd() + "...";
         }
 
-        private static ReviewResponseDto MapToDto(Review r) => new()
+        private static ReviewResponseDto MapToDto(Review r, long? currentUserId = null) => new()
         {
             ReviewId       = r.ReviewId,
             ReviewerId     = r.ReviewerId,
@@ -169,8 +213,29 @@ namespace Backend_API.Services.Implementations
             LandlordReply   = r.LandlordReply,
             RepliedAt       = r.RepliedAt,
             CreatedAt       = r.CreatedAt,
+            LikeCount       = r.ReviewLikes.Count,
+            IsLiked         = currentUserId.HasValue && r.ReviewLikes.Any(x => x.UserId == currentUserId.Value),
             ImageUrls       = r.ReviewImages.Select(img => img.ImageUrl).ToList()
         };
+
+        private async Task EnsureReviewLikesTableAsync()
+        {
+            const string sql = @"
+IF OBJECT_ID(N'[dbo].[ReviewLikes]', N'U') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[ReviewLikes] (
+        [review_like_id] BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [review_id] BIGINT NOT NULL,
+        [user_id] BIGINT NOT NULL,
+        [created_at] DATETIME2 NOT NULL CONSTRAINT [DF_ReviewLikes_created_at] DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT [UX_ReviewLikes_Review_User] UNIQUE ([review_id], [user_id]),
+        CONSTRAINT [FK_ReviewLikes_Reviews] FOREIGN KEY ([review_id]) REFERENCES [dbo].[Reviews]([review_id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_ReviewLikes_Users] FOREIGN KEY ([user_id]) REFERENCES [dbo].[Users]([user_id])
+    );
+END";
+
+            await _context.Database.ExecuteSqlRawAsync(sql);
+        }
 
         private static string ExtractPublicIdFromCloudinaryUrl(string url)
         {

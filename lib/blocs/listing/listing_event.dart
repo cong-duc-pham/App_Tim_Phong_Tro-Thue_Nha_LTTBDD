@@ -39,3 +39,31 @@ class SubmitListingReview extends ListingDetailEvent {
   @override
   List<Object?> get props => [listingId, rating, comment];
 }
+
+class ToggleReviewLike extends ListingDetailEvent {
+  final int listingId;
+  final int reviewId;
+
+  const ToggleReviewLike({
+    required this.listingId,
+    required this.reviewId,
+  });
+
+  @override
+  List<Object?> get props => [listingId, reviewId];
+}
+
+class ReplyListingReview extends ListingDetailEvent {
+  final int listingId;
+  final int reviewId;
+  final String reply;
+
+  const ReplyListingReview({
+    required this.listingId,
+    required this.reviewId,
+    required this.reply,
+  });
+
+  @override
+  List<Object?> get props => [listingId, reviewId, reply];
+}

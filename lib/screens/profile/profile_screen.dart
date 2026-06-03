@@ -7,9 +7,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/auth/logout_helper.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/theme/profile_theme.dart';
 import '../../repositories/auth_repository.dart';
 import '../../repositories/listing_repository.dart';
 
@@ -255,23 +258,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!_isLoggedIn) return _buildNotLoggedIn();
 
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(child: _buildHeader()),
           SliverToBoxAdapter(child: _buildStats()),
           SliverToBoxAdapter(
               child: _buildMenuSection(
-            title: 'Tài khoản',
+            title: 'profile_account'.tr,
             items: [
               _MenuItem(
                 icon: Icons.person_outline_rounded,
-                label: 'Thông tin cá nhân',
+                label: 'profile_personal_info'.tr,
                 onTap: () => _showEditProfile(),
               ),
               _MenuItem(
                 icon: Icons.lock_outline_rounded,
-                label: 'Đổi mật khẩu',
+                label: 'profile_change_password'.tr,
                 onTap: () {
                   HapticFeedback.lightImpact();
                   context.push(AppConstants.routeChangePassword);
@@ -279,7 +282,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               _MenuItem(
                 icon: Icons.verified_user_outlined,
-                label: 'Xác thực tài khoản',
+                label: 'profile_verify_account'.tr,
                 trailing:
                     _user.isVerified ? _VerifiedBadge() : _UnverifiedBadge(),
                 onTap: () async {
@@ -289,7 +292,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               _MenuItem(
                 icon: Icons.tune_rounded,
-                label: 'Nhu cầu tìm phòng',
+                label: 'profile_preferences'.tr,
                 onTap: () {
                   context.push('${AppConstants.routePreference}?from=profile');
                 },
@@ -298,42 +301,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
           )),
           SliverToBoxAdapter(
               child: _buildMenuSection(
-            title: 'Hoạt động',
+            title: 'profile_activity'.tr,
             items: [
               _MenuItem(
                 icon: Icons.favorite_border_rounded,
-                label: 'Phòng đã lưu',
+                label: 'profile_saved_rooms'.tr,
                 badge:
                     _user.favoritesCount > 0 ? '${_user.favoritesCount}' : null,
                 onTap: () => context.push(AppConstants.routeFavorites),
               ),
               _MenuItem(
                 icon: Icons.rate_review_outlined,
-                label: 'Đánh giá của tôi',
+                label: 'profile_my_reviews'.tr,
                 badge: _user.reviewsCount > 0 ? '${_user.reviewsCount}' : null,
                 onTap: () => context.push(AppConstants.routeMyReviews),
               ),
               _MenuItem(
                 icon: Icons.history_rounded,
-                label: 'Lịch sử tìm kiếm',
+                label: 'profile_search_history'.tr,
                 onTap: () => context.push(AppConstants.routeSearchHistory),
               ),
               _MenuItem(
                 icon: Icons.settings_outlined,
-                label: 'Cài đặt hệ thống',
+                label: 'settings_title'.tr,
                 onTap: () => context.push(AppConstants.routeSettings),
               ),
               if (_user.role == 'landlord') ...[
                 _MenuItem(
                   icon: Icons.home_work_outlined,
-                  label: 'Tin đăng của tôi',
+                  label: 'profile_my_listings'.tr,
                   badge:
                       _user.listingsCount > 0 ? '${_user.listingsCount}' : null,
                   onTap: () => context.push(AppConstants.routeMyListings),
                 ),
                 _MenuItem(
                   icon: Icons.receipt_long_outlined,
-                  label: 'Hóa đơn & Thanh toán',
+                  label: 'profile_invoices'.tr,
                   onTap: () => context.push(AppConstants.routeInvoices),
                 ),
               ],
@@ -341,21 +344,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
           )),
           SliverToBoxAdapter(
               child: _buildMenuSection(
-            title: 'Hỗ trợ',
+            title: 'profile_support'.tr,
             items: [
               _MenuItem(
                 icon: Icons.help_outline_rounded,
-                label: 'Trung tâm hỗ trợ',
+                label: 'profile_support_center'.tr,
                 onTap: () => context.push(AppConstants.routeSupportCenter),
               ),
               _MenuItem(
                 icon: Icons.bug_report_outlined,
-                label: 'Báo cáo sự cố',
+                label: 'profile_report_issue'.tr,
                 onTap: () => context.push(AppConstants.routeReportIssue),
               ),
               _MenuItem(
                 icon: Icons.star_border_rounded,
-                label: 'Đánh giá ứng dụng',
+                label: 'profile_rate_app'.tr,
                 trailing: _appRating == null
                     ? null
                     : Text(
@@ -370,7 +373,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               _MenuItem(
                 icon: Icons.info_outline_rounded,
-                label: 'Về ứng dụng',
+                label: 'profile_about_app'.tr,
                 trailing: const Text(
                   'v1.0.0',
                   style: TextStyle(fontSize: 12, color: AppColors.textMuted),
@@ -590,9 +593,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Curved bottom
             Container(
               height: 20,
-              decoration: const BoxDecoration(
-                color: AppColors.bgPage,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: BoxDecoration(
+                color: context.profileBg,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
               ),
             ),
           ],
@@ -607,29 +611,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.profileCard,
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.profileBorder),
       ),
       child: Row(
         children: [
           _StatItem(
             value: '${_user.favoritesCount}',
-            label: 'Yêu thích',
+            label: 'profile_favorites_count'.tr,
             icon: Icons.favorite_rounded,
             color: AppColors.error,
           ),
           _Divider(),
           _StatItem(
             value: _formatJoinDate(_user.createdAt),
-            label: 'Ngày tham gia',
+            label: 'profile_joined_date'.tr,
             icon: Icons.calendar_today_rounded,
             color: AppColors.primary,
           ),
           _Divider(),
           _StatItem(
             value: '${_user.reviewsCount}',
-            label: 'Đánh giá',
+            label: 'profile_reviews_count'.tr,
             icon: Icons.star_rounded,
             color: AppColors.warning,
           ),
@@ -656,16 +660,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textMuted,
                 letterSpacing: 0.8,
-              ),
+              ).copyWith(color: context.profileTextMuted),
             ),
           ),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.profileCard,
               borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-              border: Border.all(color: AppColors.borderLight),
+              border: Border.all(color: context.profileBorder),
             ),
             child: Column(
               children: items.asMap().entries.map((entry) {
@@ -675,9 +678,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     _MenuTile(item: item),
                     if (i < items.length - 1)
-                      const Divider(
+                      Divider(
                         height: 1,
-                        color: AppColors.borderLight,
+                        color: context.profileBorder,
                         indent: 52,
                       ),
                   ],
@@ -705,14 +708,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
             borderRadius: BorderRadius.circular(AppConstants.radiusLg),
             border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
           ),
-          child: const Row(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.logout_rounded, size: 18, color: AppColors.error),
-              SizedBox(width: 8),
+              const Icon(
+                Icons.logout_rounded,
+                size: 18,
+                color: AppColors.error,
+              ),
+              const SizedBox(width: 8),
               Text(
-                'Đăng xuất',
-                style: TextStyle(
+                'profile_logout'.tr,
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: AppColors.error,
@@ -728,9 +735,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ── Not logged in state ───────────────────────────────────────────────────
 
   Widget _buildLoading() {
-    return const Scaffold(
-      backgroundColor: AppColors.bgPage,
-      body: Center(
+    return Scaffold(
+      backgroundColor: context.profileBg,
+      body: const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
       ),
     );
@@ -738,7 +745,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildNotLoggedIn() {
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       body: SafeArea(
         child: Column(
           children: [
@@ -746,11 +753,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               color: AppColors.primary,
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-              child: const Row(
+              child: Row(
                 children: [
                   Text(
-                    'Cá nhân',
-                    style: TextStyle(
+                    'nav_profile'.tr,
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -782,22 +789,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      const Text(
-                        'Chưa đăng nhập',
-                        style: AppTextStyles.h2,
+                      Text(
+                        'profile_not_logged_title'.tr,
+                        style: AppTextStyles.h2.copyWith(
+                          color: context.profileText,
+                        ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'Đăng nhập để xem thông tin cá nhân,\nphòng đã lưu và nhiều tính năng khác',
+                      Text(
+                        'profile_not_logged_desc'.tr,
                         textAlign: TextAlign.center,
-                        style: AppTextStyles.bodyMedium,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: context.profileTextSecondary,
+                        ),
                       ),
                       const SizedBox(height: 28),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () => context.go(AppConstants.routeLogin),
-                          child: const Text('Đăng nhập ngay'),
+                          child: Text('profile_login_now'.tr),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -806,7 +817,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: OutlinedButton(
                           onPressed: () =>
                               context.go(AppConstants.routeRegister),
-                          child: const Text('Tạo tài khoản mới'),
+                          child: Text('profile_register_now'.tr),
                         ),
                       ),
                     ],
@@ -828,35 +839,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppConstants.radiusLg)),
-        title: const Text('Đăng xuất?',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-        content:
-            const Text('Bạn có chắc chắn muốn đăng xuất khỏi tài khoản không?'),
+        title: Text('profile_logout_title'.tr,
+            style: const TextStyle(fontWeight: FontWeight.w700)),
+        content: Text('profile_logout_desc'.tr),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
+            child: Text('cancel'.tr),
           ),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              await FirebaseAuth.instance.signOut();
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.remove(AppConstants.keyUserToken);
-              await prefs.remove(AppConstants.keyUserId);
-              await prefs.remove(AppConstants.keyUserRole);
-              await prefs.remove('refresh_token');
-              await prefs.remove('user_email');
-              await prefs.remove('user_full_name');
+              final router = GoRouter.of(context);
               if (!mounted) return;
-              setState(() => _isLoggedIn = false);
-              context.go(AppConstants.routeLogin);
+              await LogoutHelper.signOutAndGoToLogin(router);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Đăng xuất'),
+            child: Text('profile_logout'.tr),
           ),
         ],
       ),
@@ -987,10 +989,10 @@ class _AppRatingSheetState extends State<_AppRatingSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXxl)),
+      decoration: BoxDecoration(
+        color: context.profileCard,
+        borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radiusXxl)),
       ),
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -1005,7 +1007,7 @@ class _AppRatingSheetState extends State<_AppRatingSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.border,
+                color: context.profileBorder,
                 borderRadius: BorderRadius.circular(AppConstants.radiusFull),
               ),
             ),
@@ -1013,19 +1015,23 @@ class _AppRatingSheetState extends State<_AppRatingSheet> {
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Row(
                 children: [
-                  const Text(
-                    'Đánh giá ứng dụng',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                  Text(
+                    'profile_rate_app'.tr,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: context.profileText,
+                    ),
                   ),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.close, color: AppColors.textMuted),
+                    child: Icon(Icons.close, color: context.profileTextMuted),
                   ),
                 ],
               ),
             ),
-            const Divider(height: 20, color: AppColors.borderLight),
+            Divider(height: 20, color: context.profileBorder),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               child: Column(
@@ -1053,19 +1059,19 @@ class _AppRatingSheetState extends State<_AppRatingSheet> {
                         const SizedBox(height: 8),
                         Text(
                           '${_rating.toStringAsFixed(0)}/5',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
+                            color: context.profileText,
                           ),
                         ),
                         if (widget.submittedAt != null) ...[
                           const SizedBox(height: 4),
                           Text(
-                            'Đã đánh giá ngày ${_formatSubmittedAt(widget.submittedAt!)}',
-                            style: const TextStyle(
+                            '${'profile_update_rating'.tr}: ${_formatSubmittedAt(widget.submittedAt!)}',
+                            style: TextStyle(
                               fontSize: 11,
-                              color: AppColors.textMuted,
+                              color: context.profileTextMuted,
                             ),
                           ),
                         ],
@@ -1073,12 +1079,12 @@ class _AppRatingSheetState extends State<_AppRatingSheet> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const Text(
-                    'Góp ý',
+                  Text(
+                    'profile_feedback'.tr,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
+                      color: context.profileTextSecondary,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -1088,14 +1094,15 @@ class _AppRatingSheetState extends State<_AppRatingSheet> {
                     maxLines: 6,
                     maxLength: 500,
                     decoration: InputDecoration(
-                      hintText:
-                          'Bạn thích điều gì, hoặc muốn ứng dụng cải thiện điểm nào?',
-                      hintStyle: AppTextStyles.inputHint,
+                      hintText: 'profile_rating_hint'.tr,
+                      hintStyle: AppTextStyles.inputHint.copyWith(
+                        color: context.profileTextMuted,
+                      ),
                       filled: true,
-                      fillColor: AppColors.bgPage,
-                      counterStyle: const TextStyle(
+                      fillColor: context.profileInputFill,
+                      counterStyle: TextStyle(
                         fontSize: 10,
-                        color: AppColors.textMuted,
+                        color: context.profileTextMuted,
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 14,
@@ -1104,12 +1111,12 @@ class _AppRatingSheetState extends State<_AppRatingSheet> {
                       border: OutlineInputBorder(
                         borderRadius:
                             BorderRadius.circular(AppConstants.radiusMd),
-                        borderSide: const BorderSide(color: AppColors.border),
+                        borderSide: BorderSide(color: context.profileBorder),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius:
                             BorderRadius.circular(AppConstants.radiusMd),
-                        borderSide: const BorderSide(color: AppColors.border),
+                        borderSide: BorderSide(color: context.profileBorder),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius:
@@ -1138,8 +1145,8 @@ class _AppRatingSheetState extends State<_AppRatingSheet> {
                           : const Icon(Icons.star_rounded, size: 18),
                       label: Text(
                         widget.submittedAt == null
-                            ? 'Gửi đánh giá'
-                            : 'Cập nhật đánh giá',
+                            ? 'profile_send_rating'.tr
+                            : 'profile_update_rating'.tr,
                       ),
                     ),
                   ),
@@ -1187,10 +1194,10 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppConstants.radiusXxl)),
+      decoration: BoxDecoration(
+        color: context.profileCard,
+        borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radiusXxl)),
       ),
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -1206,7 +1213,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.border,
+                color: context.profileBorder,
                 borderRadius: BorderRadius.circular(AppConstants.radiusFull),
               ),
             ),
@@ -1214,32 +1221,37 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Row(
                 children: [
-                  const Text('Chỉnh sửa thông tin',
-                      style:
-                          TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                  Text(
+                    'profile_edit_info'.tr,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: context.profileText,
+                    ),
+                  ),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.close, color: AppColors.textMuted),
+                    child: Icon(Icons.close, color: context.profileTextMuted),
                   ),
                 ],
               ),
             ),
-            const Divider(height: 20, color: AppColors.borderLight),
+            Divider(height: 20, color: context.profileBorder),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               child: Column(
                 children: [
                   _FormField(
                     ctrl: _nameCtrl,
-                    label: 'Họ và tên',
-                    hint: 'Nhập họ và tên',
+                    label: 'profile_full_name'.tr,
+                    hint: 'profile_full_name'.tr,
                     icon: Icons.person_outline_rounded,
                   ),
                   const SizedBox(height: 14),
                   _FormField(
                     ctrl: _phoneCtrl,
-                    label: 'Số điện thoại',
+                    label: 'profile_phone'.tr,
                     hint: '0901 234 567',
                     icon: Icons.phone_outlined,
                     keyboardType: TextInputType.phone,
@@ -1255,8 +1267,8 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                               final phone = _phoneCtrl.text.trim();
                               if (name.isEmpty) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Họ và tên không được để trống'),
+                                  SnackBar(
+                                    content: Text('profile_name_required'.tr),
                                     backgroundColor: AppColors.error,
                                   ),
                                 );
@@ -1274,8 +1286,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: const Text(
-                                        'Đã cập nhật thông tin thành công'),
+                                    content: Text('profile_update_success'.tr),
                                     backgroundColor: AppColors.success,
                                     behavior: SnackBarBehavior.floating,
                                     shape: RoundedRectangleBorder(
@@ -1312,7 +1323,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Text('Lưu thay đổi'),
+                          : Text('profile_save_changes'.tr),
                     ),
                   ),
                 ],
@@ -1349,16 +1360,16 @@ class _StatItem extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: context.profileText,
               ),
             ),
             const SizedBox(height: 2),
             Text(label,
                 style:
-                    const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                    TextStyle(fontSize: 11, color: context.profileTextMuted)),
           ],
         ),
       ),
@@ -1372,7 +1383,7 @@ class _Divider extends StatelessWidget {
     return Container(
       width: 1,
       height: 48,
-      color: AppColors.borderLight,
+      color: context.profileBorder,
     );
   }
 }
@@ -1410,7 +1421,9 @@ class _MenuTile extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: AppColors.primaryLight.withValues(alpha: 0.5),
+                color: context.isDarkProfile
+                    ? AppColors.primary.withValues(alpha: 0.16)
+                    : AppColors.primaryLight.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(AppConstants.radiusSm),
               ),
               alignment: Alignment.center,
@@ -1420,10 +1433,10 @@ class _MenuTile extends StatelessWidget {
             Expanded(
               child: Text(
                 item.label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary,
+                  color: context.profileText,
                 ),
               ),
             ),
@@ -1446,8 +1459,8 @@ class _MenuTile extends StatelessWidget {
             ] else if (item.trailing != null) ...[
               item.trailing!,
             ] else ...[
-              const Icon(Icons.chevron_right_rounded,
-                  size: 20, color: AppColors.textMuted),
+              Icon(Icons.chevron_right_rounded,
+                  size: 20, color: context.profileTextMuted),
             ],
           ],
         ),
@@ -1465,13 +1478,14 @@ class _VerifiedBadge extends StatelessWidget {
         color: AppColors.successBg,
         borderRadius: BorderRadius.circular(AppConstants.radiusFull),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.verified_rounded, size: 12, color: AppColors.success),
-          SizedBox(width: 4),
-          Text('Đã xác thực',
-              style: TextStyle(
+          const Icon(Icons.verified_rounded,
+              size: 12, color: AppColors.success),
+          const SizedBox(width: 4),
+          Text('profile_verified'.tr,
+              style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: AppColors.successText)),
@@ -1490,13 +1504,14 @@ class _UnverifiedBadge extends StatelessWidget {
         color: AppColors.warningBg,
         borderRadius: BorderRadius.circular(AppConstants.radiusFull),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.warning_amber_rounded, size: 12, color: AppColors.warning),
-          SizedBox(width: 4),
-          Text('Chưa xác thực',
-              style: TextStyle(
+          const Icon(Icons.warning_amber_rounded,
+              size: 12, color: AppColors.warning),
+          const SizedBox(width: 4),
+          Text('profile_unverified'.tr,
+              style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: AppColors.warningText)),
@@ -1526,30 +1541,32 @@ class _FormField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary)),
+                color: context.profileTextSecondary)),
         const SizedBox(height: 6),
         TextFormField(
           controller: ctrl,
           keyboardType: keyboardType,
-          style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+          style: TextStyle(fontSize: 14, color: context.profileText),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: AppTextStyles.inputHint,
+            hintStyle: AppTextStyles.inputHint.copyWith(
+              color: context.profileTextMuted,
+            ),
             prefixIcon: Icon(icon, color: AppColors.primary, size: 18),
             filled: true,
-            fillColor: AppColors.bgPage,
+            fillColor: context.profileInputFill,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderSide: BorderSide(color: context.profileBorder),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderSide: BorderSide(color: context.profileBorder),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusMd),

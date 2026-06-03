@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/settings/app_settings_controller.dart';
 import '../../models/app_notification.dart';
 import '../../repositories/notification_repository.dart';
 
@@ -22,6 +24,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
+    notificationsEnabledNotifier.addListener(_handleNotificationSettingChanged);
+    _loadNotifications();
+  }
+
+  @override
+  void dispose() {
+    notificationsEnabledNotifier
+        .removeListener(_handleNotificationSettingChanged);
+    super.dispose();
+  }
+
+  void _handleNotificationSettingChanged() {
+    if (!mounted) return;
+    if (!notificationsEnabledNotifier.value) {
+      setState(() {
+        _items = [];
+        _isLoading = false;
+        _errorMessage = null;
+      });
+      return;
+    }
     _loadNotifications();
   }
 
@@ -172,6 +195,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
+
+    if (!notificationsEnabledNotifier.value) {
+      return ListView(
+        padding: const EdgeInsets.all(AppConstants.paddingH),
+        children: [
+          const SizedBox(height: 120),
+          _StateBox(
+            icon: Icons.notifications_off_outlined,
+            title: 'notifications_off_title'.tr,
+            message: 'notifications_off_desc'.tr,
+          ),
+        ],
       );
     }
 
