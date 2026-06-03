@@ -212,6 +212,40 @@ namespace Backend_API.Controllers.API
         }
 
         /// <summary>
+        /// Tạm ẩn hoặc hiện lại tin đăng (Đánh dấu đã thuê / còn phòng).
+        /// </summary>
+        /// <param name="id">ID tin đăng</param>
+        /// <response code="200">Thay đổi trạng thái thành công</response>
+        /// <response code="401">Chưa đăng nhập</response>
+        /// <response code="403">Không phải chủ sở hữu bài đăng</response>
+        /// <response code="400">Yêu cầu không hợp lệ</response>
+        [Authorize]
+        [HttpPatch("{id:long}/toggle-status")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ToggleStatus(long id)
+        {
+            try
+            {
+                long userId = GetCurrentUserId();
+                var updated = await _listingService.ToggleListingStatusAsync(id, userId);
+                return Ok(new { success = true, data = updated });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                if (ex.Message.Contains("chủ sở hữu"))
+                    return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = ex.Message });
+                return Unauthorized(new { success = false, message = "Chưa đăng nhập." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Tăng lượt xem tin đăng. Không yêu cầu đăng nhập.
         /// </summary>
         /// <param name="id">ID tin đăng</param>

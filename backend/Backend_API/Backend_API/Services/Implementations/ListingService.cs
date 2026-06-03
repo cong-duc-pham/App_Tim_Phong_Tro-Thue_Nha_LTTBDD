@@ -218,6 +218,34 @@ namespace Backend_API.Services.Implementations
             await _context.SaveChangesAsync();
         }
 
+        public async Task<ListingResponseDto> ToggleListingStatusAsync(long listingId, long landlordId)
+        {
+            var listing = await _context.Listings.FindAsync(listingId)
+                          ?? throw new Exception("Không tìm thấy tin đăng.");
+
+            if (listing.LandlordId != landlordId)
+                throw new UnauthorizedAccessException("Bạn không phải chủ sở hữu bài đăng này.");
+
+            if (listing.StatusId == STATUS_ACTIVE)
+            {
+                listing.StatusId = STATUS_HIDDEN;
+            }
+            else if (listing.StatusId == STATUS_HIDDEN)
+            {
+                listing.StatusId = STATUS_ACTIVE;
+            }
+            else
+            {
+                throw new Exception("Chỉ bài đăng đang hoạt động hoặc đang tạm ẩn mới có thể thay đổi trạng thái.");
+            }
+
+            listing.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return await BuildResponseDto(listingId)
+                   ?? throw new Exception("Cập nhật tin đăng thất bại.");
+        }
+
         // ─────────────────────────────────────────────
         // GET BY ID
         // ─────────────────────────────────────────────

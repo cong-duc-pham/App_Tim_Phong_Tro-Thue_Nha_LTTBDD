@@ -154,6 +154,27 @@ class ListingRepository {
     }
   }
 
+  Future<Listing> toggleListingStatus(int listingId) async {
+    try {
+      final response = await _authorizedRequest<Map<String, dynamic>>(
+        (accessToken) => _apiService.dio.patch<Map<String, dynamic>>(
+          '/listings/$listingId/toggle-status',
+          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+        ),
+      );
+
+      final body = response.data ?? {};
+      final data = body['data'] ?? body['Data'];
+      if (data is! Map) {
+        throw Exception('Không nhận được phản hồi hợp lệ từ máy chủ.');
+      }
+
+      return Listing.fromJson(Map<String, dynamic>.from(data));
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
   Future<String> uploadListingImage({
     required int listingId,
     required String filePath,

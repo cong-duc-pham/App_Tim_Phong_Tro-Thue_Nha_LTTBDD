@@ -74,7 +74,10 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final listing = listings[index];
-                return _MyListingCard(listing: listing);
+                return _MyListingCard(
+                  listing: listing,
+                  onRefresh: _refresh,
+                );
               },
             ),
           );
@@ -193,13 +196,92 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
 }
 
 class _MyListingCard extends StatelessWidget {
-  const _MyListingCard({required this.listing});
+  const _MyListingCard({
+    required this.listing,
+    this.onRefresh,
+  });
 
   final Listing listing;
+  final VoidCallback? onRefresh;
+
+  Future<void> _handleToggleStatus(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+
+    try {
+      final repository = ListingRepository();
+      final updated = await repository.toggleListingStatus(listing.listingId);
+      
+      if (context.mounted) Navigator.of(context).pop();
+
+      if (context.mounted) {
+        final message = updated.statusName.toLowerCase() == 'hidden'
+            ? 'Đã tạm ẩn tin đăng (đánh dấu đã thuê) thành công.'
+            : 'Đã hiển thị lại tin đăng thành công.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+
+      if (onRefresh != null) {
+        onRefresh!();
+      }
+    } catch (e) {
+      if (context.mounted) Navigator.of(context).pop();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final canViewAnalytics = listing.hasAnalytics;
+
+    Color statusColor;
+    String statusLabel;
+    switch (listing.statusName.toLowerCase()) {
+      case 'active':
+        statusColor = AppColors.success;
+        statusLabel = 'Hoạt động';
+        break;
+      case 'hidden':
+        statusColor = Colors.orange;
+        statusLabel = 'Đã thuê / Tạm ẩn';
+        break;
+      case 'pending':
+        statusColor = AppColors.warning;
+        statusLabel = 'Chờ duyệt';
+        break;
+      case 'rejected':
+        statusColor = AppColors.error;
+        statusLabel = 'Bị từ chối';
+        break;
+      case 'expired':
+        statusColor = AppColors.textSecondary;
+        statusLabel = 'Hết hạn';
+        break;
+      default:
+        statusColor = AppColors.textSecondary;
+        statusLabel = listing.statusName.isEmpty ? 'Đang xử lý' : listing.statusName;
+    }
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -250,10 +332,8 @@ class _MyListingCard extends StatelessWidget {
                       runSpacing: 6,
                       children: [
                         _MiniBadge(
-                          label: listing.statusName.isEmpty
-                              ? 'Đang xử lý'
-                              : listing.statusName,
-                          color: AppColors.textSecondary,
+                          label: statusLabel,
+                          color: statusColor,
                         ),
                         if (listing.packageName != null)
                           _MiniBadge(
@@ -296,22 +376,57 @@ class _MyListingCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: canViewAnalytics
-                  ? () => context.push(
-                        '${AppConstants.routeListingAnalytics}/${listing.listingId}',
-                        extra: listing,
-                      )
-                  : null,
-              icon: const Icon(Icons.analytics_outlined, size: 18),
-              label: Text(
-                canViewAnalytics
-                    ? 'Xem thống kê chi tiết'
-                    : 'Gói hiện tại chưa có thống kê chi tiết',
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: FilledButton.icon(
+                  onPressed: canViewAnalytics
+                      ? () => context.push(
+                            '${AppConstants.routeListingAnalytics}/${listing.listingId}',
+                            extra: listing,
+                          )
+                      : null,
+                  icon: const Icon(Icons.analytics_outlined, size: 16),
+                  label: Text(
+                    canViewAnalytics ? 'Thống kê' : 'Không có thống kê',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 4,
+                child: OutlinedButton.icon(
+                  onPressed: (listing.statusName.toLowerCase() == 'active' ||
+                          listing.statusName.toLowerCase() == 'hidden')
+                      ? () => _handleToggleStatus(context)
+                      : null,
+                  icon: Icon(
+                    listing.statusName.toLowerCase() == 'active'
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    size: 16,
+                  ),
+                  label: Text(
+                    listing.statusName.toLowerCase() == 'active'
+                        ? 'Ẩn tin (Đã thuê)'
+                        : 'Hiện tin (Còn phòng)',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: listing.statusName.toLowerCase() == 'active'
+                        ? Colors.orange
+                        : AppColors.success,
+                    side: BorderSide(
+                      color: listing.statusName.toLowerCase() == 'active'
+                          ? Colors.orange
+                          : AppColors.success,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
