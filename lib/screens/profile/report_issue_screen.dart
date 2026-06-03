@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../repositories/report_repository.dart';
 
 enum _IssueType {
   account,
@@ -58,12 +59,14 @@ class ReportIssueScreen extends StatefulWidget {
 }
 
 class _ReportIssueScreenState extends State<ReportIssueScreen> {
+  final _reportRepository = ReportRepository();
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
   final _descriptionCtrl = TextEditingController();
   final _contactCtrl = TextEditingController();
   _IssueType _selectedType = _IssueType.appError;
   bool _includeDeviceInfo = true;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -335,8 +338,17 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        onPressed: _submitReport,
-        icon: const Icon(Icons.send_rounded, size: 18),
+        onPressed: _isSubmitting ? null : _submitReport,
+        icon: _isSubmitting
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Icon(Icons.send_rounded, size: 18),
         label: const Text('Gửi báo cáo'),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
@@ -350,8 +362,33 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     );
   }
 
-  void _submitReport() {
+  Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      await _reportRepository.createIssueReport(
+        reason: _selectedType.label,
+        description: _buildReportDescription(),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          ),
+        ),
+      );
+      setState(() => _isSubmitting = false);
+      return;
+    }
+
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -365,6 +402,23 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     );
 
     context.pop();
+  }
+
+  String _buildReportDescription() {
+    final lines = <String>[
+      'Tiêu đề: ${_titleCtrl.text.trim()}',
+      'Mô tả: ${_descriptionCtrl.text.trim()}',
+    ];
+
+    final contact = _contactCtrl.text.trim();
+    if (contact.isNotEmpty) {
+      lines.add('Liên hệ: $contact');
+    }
+
+    lines.add(
+      'Gửi kèm thông tin thiết bị: ${_includeDeviceInfo ? 'Có' : 'Không'}',
+    );
+    return lines.join('\n');
   }
 }
 

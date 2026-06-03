@@ -3,6 +3,13 @@
     ViewData["Title"] = "Xử lý báo cáo";
 }
 
+<style>
+    .report-description {
+        max-width: 420px;
+        white-space: pre-line;
+    }
+</style>
+
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white fw-semibold">Danh sách báo cáo chờ xử lý</div>
     <div class="card-body p-0">
@@ -33,7 +40,7 @@
                             <tr>
                                 <td>@report.ReportId</td>
                                 <td>@report.Reason</td>
-                                <td>@(string.IsNullOrWhiteSpace(report.Description) ? "-" : report.Description)</td>
+                                <td class="report-description">@(string.IsNullOrWhiteSpace(report.Description) ? "-" : report.Description)</td>
                                 <td>@report.ReporterName</td>
                                 <td>
                                     @if (!string.IsNullOrWhiteSpace(report.ListingTitle))
