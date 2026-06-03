@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../repositories/favorite_repository.dart';
 import '../../repositories/listing_repository.dart';
 import '../../repositories/review_repository.dart';
+import '../../models/listing.dart';
 import 'listing_event.dart';
 import 'listing_state.dart';
 
@@ -36,17 +37,35 @@ class ListingDetailBloc extends Bloc<ListingDetailEvent, ListingDetailState> {
 
     try {
       // gọi song song để giảm thời gian chờ
-      final results = await Future.wait([
-        _listingRepo.getListingById(event.listingId),
-        _reviewRepo.getReviews(event.listingId),
-      ]);
+      late Listing listing;
+      try {
+        listing = await _listingRepo.getListingById(event.listingId);
+      } catch (_) {
+        final fallback = event.initialListing;
+        if (fallback == null) rethrow;
+        listing = fallback;
+      }
 
-      final listing = results[0] as dynamic;
-      final reviewData = results[1] as ({
-        List<ReviewItem> reviews,
-        double averageRating,
-        int count,
-      });
+      final targetLanguage = event.targetLanguage;
+      if (targetLanguage != null &&
+          targetLanguage.toLowerCase().startsWith('en')) {
+        listing = await _listingRepo.translateListing(
+          listing,
+          targetLanguage: 'English',
+        );
+      }
+
+      var reviews = <ReviewItem>[];
+      var averageRating = listing.averageRating;
+      var reviewCount = listing.reviewCount;
+      try {
+        final reviewData = await _reviewRepo.getReviews(event.listingId);
+        reviews = reviewData.reviews;
+        averageRating = reviewData.averageRating;
+        reviewCount = reviewData.count;
+      } catch (_) {
+        // Vẫn hiển thị chi tiết tin nếu endpoint review chưa có dữ liệu.
+      }
 
       // tăng view không cần chờ kết quả
       _listingRepo.incrementView(event.listingId);
@@ -63,9 +82,9 @@ class ListingDetailBloc extends Bloc<ListingDetailEvent, ListingDetailState> {
       emit(ListingDetailLoaded(
         listing: listing,
         isFavorite: isFavorite,
-        reviews: reviewData.reviews,
-        averageRating: reviewData.averageRating,
-        reviewCount: reviewData.count,
+        reviews: reviews,
+        averageRating: averageRating,
+        reviewCount: reviewCount,
       ));
     } catch (e) {
       final msg = e.toString();

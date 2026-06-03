@@ -5,11 +5,13 @@ import 'core/constants/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/settings/app_settings_controller.dart';
+import 'services/post_listing_draft_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   await loadAppSettings();
+  await PostListingDraftService.init();
 
   runApp(const MyApp());
 }

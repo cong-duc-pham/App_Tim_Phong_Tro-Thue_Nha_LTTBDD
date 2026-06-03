@@ -118,9 +118,7 @@ final appRouter = GoRouter(
     GoRoute(
         path: '/forgot-password',
         builder: (_, __) => const ForgotPasswordScreen()),
-    GoRoute(
-        path: '/settings',
-        builder: (_, __) => const SettingsScreen()),
+    GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
     GoRoute(
       path: '/chat/detail',
       builder: (context, state) {
@@ -133,9 +131,12 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
         final section = state.uri.queryParameters['section'];
+        final initialListing =
+            state.extra is Listing ? state.extra as Listing : null;
         return ListingDetailScreen(
           listingId: id,
           scrollToReviews: section == 'reviews',
+          initialListing: initialListing,
         );
       },
     ),

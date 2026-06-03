@@ -70,9 +70,10 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
   String _formatPrice(double price) {
     if (price >= 1000000) {
       final m = price / 1000000;
-      return '${m % 1 == 0 ? m.toInt() : m.toStringAsFixed(1)} triệu/tháng';
+      final value = m % 1 == 0 ? '${m.toInt()}' : m.toStringAsFixed(1);
+      return 'price_million_per_month'.tr.replaceAll('{price}', value);
     }
-    return '${price.toInt()}đ/tháng';
+    return 'price_vnd_per_month'.tr.replaceAll('{price}', '${price.toInt()}');
   }
 
   // Định dạng ngày tháng hiển thị dd/MM/yyyy
@@ -91,14 +92,22 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppConstants.radiusLg),
         ),
-        title: const Text('Xóa đánh giá này?',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-        content: const Text(
-            'Đánh giá này sẽ bị gỡ vĩnh viễn khỏi phòng trọ. Bạn có chắc chắn muốn thực hiện hành động này?'),
+        backgroundColor: context.profileCard,
+        title: Text(
+          'myreviews_remove_title'.tr,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: context.profileText,
+          ),
+        ),
+        content: Text(
+          'myreviews_remove_desc'.tr,
+          style: TextStyle(color: context.profileTextSecondary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
+            child: Text('cancel'.tr),
           ),
           ElevatedButton(
             onPressed: () {
@@ -108,8 +117,8 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
               });
               // Hiển thị phản hồi trực quan bằng SnackBar
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Đã gỡ bài đánh giá thành công!'),
+                SnackBar(
+                  content: Text('myreviews_remove_success'.tr),
                   backgroundColor: AppColors.primary,
                   behavior: SnackBarBehavior.floating,
                 ),
@@ -119,7 +128,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Đồng ý'),
+            child: Text('confirm'.tr),
           ),
         ],
       ),
@@ -365,9 +374,9 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                                   size: 14,
                                 ),
                                 const SizedBox(width: 6),
-                                const Text(
-                                  'Chủ nhà phản hồi',
-                                  style: TextStyle(
+                                Text(
+                                  'myreviews_landlord_reply'.tr,
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
                                     color: AppColors.primary,
@@ -419,17 +428,17 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                         height: 44,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         alignment: Alignment.center,
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.delete_outline_rounded,
                               color: AppColors.error,
                               size: 16,
                             ),
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Text(
-                              'Gỡ đánh giá',
-                              style: TextStyle(
+                              'myreviews_remove_action'.tr,
+                              style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.error,
@@ -473,12 +482,12 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
           ),
           const SizedBox(height: 20),
           Text(
-            'Không có đánh giá',
+            'myreviews_empty_title'.tr,
             style: AppTextStyles.h3.copyWith(color: context.profileText),
           ),
           const SizedBox(height: 8),
           Text(
-            'Bạn chưa gửi bất kỳ lượt đánh giá chất lượng phòng trọ nào.',
+            'myreviews_empty_desc'.tr,
             textAlign: TextAlign.center,
             style: AppTextStyles.bodyMedium.copyWith(
               color: context.profileTextSecondary,
@@ -497,9 +506,9 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                 borderRadius: BorderRadius.circular(AppConstants.radiusFull),
               ),
             ),
-            child: const Text(
-              'Khám phá phòng trọ ngay',
-              style: TextStyle(
+            child: Text(
+              'myreviews_explore'.tr,
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
               ),

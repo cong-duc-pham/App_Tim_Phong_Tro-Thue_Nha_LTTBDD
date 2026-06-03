@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/theme/profile_theme.dart';
 import '../../models/payment.dart';
 import '../../repositories/package_repository.dart';
 
@@ -56,8 +58,8 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       await _repository.simulateMomoPayment(invoice.invoiceCode);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Thanh toán thành công. Gói VIP đã được kích hoạt.'),
+        SnackBar(
+          content: Text('invoice_pay_success'.tr),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ),
@@ -103,11 +105,11 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        title: const Text('Hóa đơn & Thanh toán'),
+        title: Text('invoice_title'.tr),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
           onPressed: () {
@@ -133,9 +135,9 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     if (_errorMessage != null) {
       return _StateView(
         icon: Icons.wifi_off_rounded,
-        title: 'Không tải được hóa đơn',
+        title: 'invoice_load_failed'.tr,
         message: _errorMessage!,
-        actionLabel: 'Thử lại',
+        actionLabel: 'invoice_retry'.tr,
         onAction: _loadInvoices,
       );
     }
@@ -143,9 +145,9 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
     if (_invoices.isEmpty) {
       return _StateView(
         icon: Icons.receipt_long_outlined,
-        title: 'Chưa có hóa đơn',
-        message: 'Các hóa đơn mua gói đăng tin sẽ hiển thị tại đây.',
-        actionLabel: 'Xem gói đăng tin',
+        title: 'invoice_empty_title'.tr,
+        message: 'invoice_empty_desc'.tr,
+        actionLabel: 'invoice_view_packages'.tr,
         onAction: () => context.push(AppConstants.routePackages),
       );
     }
@@ -203,20 +205,20 @@ class _InvoiceSummary extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.profileCard,
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.profileBorder),
       ),
       child: Row(
         children: [
-          _SummaryItem(label: 'Tổng', value: '$total', color: AppColors.info),
+          _SummaryItem(label: 'invoice_summary_total'.tr, value: '$total', color: AppColors.info),
           _SummaryItem(
-            label: 'Đã thanh toán',
+            label: 'invoice_summary_paid'.tr,
             value: '$paid',
             color: AppColors.success,
           ),
           _SummaryItem(
-            label: 'Chờ xử lý',
+            label: 'invoice_summary_pending'.tr,
             value: '$pending',
             color: AppColors.warning,
           ),
@@ -254,7 +256,7 @@ class _SummaryItem extends StatelessWidget {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+            style: TextStyle(fontSize: 11, color: context.profileTextMuted),
           ),
         ],
       ),
@@ -288,12 +290,12 @@ class _InvoiceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.profileCard,
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.profileBorder),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.035),
+            color: Colors.black.withValues(alpha: context.isDarkProfile ? 0.2 : 0.035),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -321,18 +323,18 @@ class _InvoiceCard extends StatelessWidget {
                   children: [
                     Text(
                       invoice.invoiceCode,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
+                        color: context.profileText,
                       ),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       invoice.typeLabel,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textMuted,
+                        color: context.profileTextSecondary,
                       ),
                     ),
                   ],
@@ -341,13 +343,13 @@ class _InvoiceCard extends StatelessWidget {
               _StatusBadge(label: invoice.statusLabel, color: color),
             ],
           ),
-          const Divider(height: 24, color: AppColors.borderLight),
-          _InfoRow(label: 'Số tiền', value: amountLabel, strong: true),
+          Divider(height: 24, color: context.profileBorder),
+          _InfoRow(label: 'invoice_card_amount'.tr, value: amountLabel, strong: true),
           const SizedBox(height: 8),
-          _InfoRow(label: 'Ngày tạo', value: createdLabel),
+          _InfoRow(label: 'invoice_card_created'.tr, value: createdLabel),
           if (invoice.note != null && invoice.note!.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
-            _InfoRow(label: 'Ghi chú', value: invoice.note!.trim()),
+            _InfoRow(label: 'invoice_card_note'.tr, value: invoice.note!.trim()),
           ],
           const SizedBox(height: 14),
           Row(
@@ -357,7 +359,7 @@ class _InvoiceCard extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: onOpenListing,
                     icon: const Icon(Icons.home_work_outlined, size: 18),
-                    label: const Text('Xem tin'),
+                    label: Text('invoice_btn_view_listing'.tr),
                   ),
                 ),
               if (onOpenListing != null && invoice.isPending)
@@ -376,7 +378,7 @@ class _InvoiceCard extends StatelessWidget {
                             ),
                           )
                         : const Icon(Icons.payments_outlined, size: 18),
-                    label: Text(isPaying ? 'Đang xử lý' : 'Thanh toán'),
+                    label: Text(isPaying ? 'invoice_btn_processing'.tr : 'invoice_btn_pay'.tr),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
@@ -391,7 +393,7 @@ class _InvoiceCard extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: onViewBill,
               icon: const Icon(Icons.description_outlined, size: 18),
-              label: const Text('Xem bill'),
+              label: Text('invoice_btn_view_bill'.tr),
             ),
           ),
         ],
@@ -446,7 +448,7 @@ class _InfoRow extends StatelessWidget {
           width: 72,
           child: Text(
             label,
-            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+            style: TextStyle(fontSize: 12, color: context.profileTextMuted),
           ),
         ),
         Expanded(
@@ -456,7 +458,7 @@ class _InfoRow extends StatelessWidget {
             style: TextStyle(
               fontSize: strong ? 14 : 12.5,
               fontWeight: strong ? FontWeight.w800 : FontWeight.w600,
-              color: strong ? AppColors.textPrimary : AppColors.textSecondary,
+              color: strong ? context.profileText : context.profileTextSecondary,
               height: 1.35,
             ),
           ),
@@ -503,19 +505,19 @@ class _StateView extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
+                color: context.profileText,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: AppColors.textSecondary,
+                color: context.profileTextSecondary,
                 height: 1.45,
               ),
             ),
@@ -539,11 +541,11 @@ extension _InvoiceView on Invoice {
   bool get isSuccess => statusId == 2;
 
   String get statusLabel {
-    if (statusId == 1) return 'Chờ thanh toán';
-    if (statusId == 2) return 'Đã thanh toán';
-    if (statusId == 3) return 'Thất bại';
-    if (statusId == 4) return 'Hoàn tiền';
-    return 'Trạng thái #$statusId';
+    if (statusId == 1) return 'invoice_status_pending'.tr;
+    if (statusId == 2) return 'invoice_status_paid'.tr;
+    if (statusId == 3) return 'invoice_status_failed'.tr;
+    if (statusId == 4) return 'invoice_status_refund'.tr;
+    return 'invoice_status_unknown'.tr.replaceAll('{id}', '$statusId');
   }
 
   Color get statusColor {
@@ -554,7 +556,7 @@ extension _InvoiceView on Invoice {
   }
 
   String get typeLabel {
-    if (invoiceType == 'post_package') return 'Gói đăng tin';
+    if (invoiceType == 'post_package') return 'invoice_type_post_package'.tr;
     return invoiceType;
   }
 }

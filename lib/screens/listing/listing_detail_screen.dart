@@ -24,11 +24,13 @@ import '../../repositories/review_repository.dart';
 class ListingDetailScreen extends StatefulWidget {
   final int listingId;
   final bool scrollToReviews;
+  final Listing? initialListing;
 
   const ListingDetailScreen({
     super.key,
     required this.listingId,
     this.scrollToReviews = false,
+    this.initialListing,
   });
 
   @override
@@ -126,6 +128,172 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   }
 
   // Thực hiện cuộc gọi đến số điện thoại của chủ nhà
+  bool get _isEnglish => Localizations.localeOf(context).languageCode == 'en';
+
+  String _ui(String vi, String en) => _isEnglish ? en : vi;
+
+  String _localizedListingTitle(String title) {
+    if (!_isEnglish) return title;
+    return title
+        .replaceAll('Phong tro SV', 'Student Room')
+        .replaceAll('Can ho DV', 'Service Apt')
+        .replaceAll('O ghep', 'Shared Room')
+        .replaceAll('Nha nguyen can', 'Whole House')
+        .replaceAll('Phong tro sinh vien', 'Student Room')
+        .replaceAll('Can ho dich vu', 'Service Apartment')
+        .replaceAll('Phòng trọ SV', 'Student Room')
+        .replaceAll('Căn hộ DV', 'Service Apt')
+        .replaceAll('Ở ghép', 'Shared Room')
+        .replaceAll('Nhà nguyên căn', 'Whole House')
+        .replaceAll('Phòng trọ sinh viên', 'Student Room')
+        .replaceAll('Căn hộ dịch vụ', 'Service Apartment')
+        .replaceAll(
+            'gần trường, đầy đủ tiện nghi', 'near campus, fully equipped');
+  }
+
+  String _localizedListingAddress(String address) {
+    if (!_isEnglish) return address;
+    return address
+        .replaceAll('So ', 'No. ')
+        .replaceAll(' duong ', ' Street, ')
+        .replaceAll('Quan ', 'District ')
+        .replaceAll('Thanh pho ', 'City ')
+        .replaceAll('Phuong ', 'Ward ')
+        .replaceAll('Số ', 'No. ')
+        .replaceAll(' đường ', ' Street, ')
+        .replaceAll('Quận ', 'District ')
+        .replaceAll('Thành phố ', 'City ')
+        .replaceAll('TP.HCM', 'HCMC')
+        .replaceAll('Phường ', 'Ward ')
+        .replaceAll('Tân Bình', 'Tan Binh')
+        .replaceAll('Bình Thạnh', 'Binh Thanh')
+        .replaceAll('Gò Vấp', 'Go Vap')
+        .replaceAll('Thủ Đức', 'Thu Duc');
+  }
+
+  String _foldVietnamese(String value) {
+    const from =
+        'àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ';
+    const to =
+        'aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyyd';
+    var result = value.toLowerCase();
+    for (var i = 0; i < from.length; i++) {
+      result = result.replaceAll(from[i], to[i]);
+    }
+    return result;
+  }
+
+  String _localizedTypeName(String typeName) {
+    if (!_isEnglish) return typeName;
+    final normalized = _foldVietnamese(typeName);
+    if (normalized.contains('can ho')) return 'Service Apt';
+    if (normalized.contains('o ghep')) return 'Shared Room';
+    if (normalized.contains('nha')) return 'Whole House';
+    if (normalized.contains('phong')) return 'Student Room';
+    return typeName;
+  }
+
+  String _localizedAmenityName(String name) {
+    if (!_isEnglish) return name;
+    final normalized = _foldVietnamese(name);
+    if (normalized.contains('wifi')) return 'Wi-Fi';
+    if (normalized.contains('dieu hoa') || normalized.contains('may lanh')) {
+      return 'Air conditioner';
+    }
+    if (normalized.contains('may giat')) return 'Washing machine';
+    if (normalized.contains('tu lanh')) return 'Refrigerator';
+    if (normalized.contains('bep')) return 'Kitchen';
+    if (normalized.contains('bai xe') ||
+        normalized.contains('gui xe') ||
+        normalized.contains('do xe')) {
+      return 'Parking';
+    }
+    if (normalized.contains('camera') || normalized.contains('an ninh')) {
+      return 'Security camera';
+    }
+    if (normalized.contains('thang may')) return 'Elevator';
+    if (normalized.contains('ho boi')) return 'Pool';
+    return name;
+  }
+
+  String _localizedDescription(Listing listing) {
+    final raw = listing.description?.trim();
+    if (!_isEnglish) {
+      return raw ?? 'KhÃ´ng cÃ³ mÃ´ táº£ chi tiáº¿t cho phÃ²ng trá» nÃ y.';
+    }
+    if (raw == null || raw.isEmpty) {
+      return 'No detailed description is available for this listing.';
+    }
+    final normalized = _foldVietnamese(raw);
+    if (normalized.contains('tin seed') ||
+        normalized.contains('kiem thu') ||
+        normalized.contains('day du tien nghi')) {
+      return 'Seed listing for testing the Home and listing detail screens. Clean room, flexible hours, safe residential area, contact the landlord to schedule a viewing.';
+    }
+    return raw;
+  }
+
+  String _localizedStaticText(String text) {
+    if (!_isEnglish) return text;
+    final normalized = _foldVietnamese(text);
+    switch (normalized) {
+      case 'luot xem':
+        return 'Views';
+      case 'da luu':
+        return 'Saved';
+      case 'chua co':
+        return 'None';
+      case 'danh gia':
+        return 'Reviews';
+      case 'gia dien':
+        return 'Electricity';
+      case 'gia nuoc':
+        return 'Water';
+      case 'gui xe':
+        return 'Parking';
+      case 'tang so':
+        return 'Floor';
+      case 'so nguoi o toi da':
+        return 'Max occupants';
+      case 'cho phep nuoi thu cung':
+        return 'Pets allowed';
+      case 'san sang tu ngay':
+        return 'Available from';
+      case 'chua cap nhat':
+        return 'Not updated';
+      case 'khong gioi han':
+        return 'No limit';
+      case 'co':
+        return 'Yes';
+      case 'khong':
+        return 'No';
+      case 'o ngay':
+        return 'Available now';
+      case 'theo evn':
+        return 'EVN rate';
+      case 'theo ubnd':
+        return 'City rate';
+      case 'mien phi':
+        return 'Free';
+      case 'mien phi/khong co':
+        return 'Free/None';
+      case 'da xac thuc':
+        return 'VERIFIED';
+      default:
+        if (normalized.endsWith(' danh gia')) {
+          return text.replaceFirst(RegExp(r'\D+$'), ' reviews');
+        }
+        if (normalized.endsWith(' nguoi')) {
+          return text.replaceFirst(RegExp(r'\D+$'), ' people');
+        }
+        return text
+            .replaceAll('/tháng', '/month')
+            .replaceAll('/thang', '/month')
+            .replaceAll('/khối', '/m3')
+            .replaceAll('/khoi', '/m3');
+    }
+  }
+
   Future<void> _makePhoneCall(String phone) async {
     final cleanPhone = phone.replaceAll(RegExp(r'\s+'), '');
     final uri = Uri(scheme: 'tel', path: cleanPhone);
@@ -221,8 +389,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) =>
-          ListingDetailBloc()..add(LoadListingDetail(widget.listingId)),
+      create: (_) => ListingDetailBloc()
+        ..add(LoadListingDetail(
+          widget.listingId,
+          initialListing: widget.initialListing,
+          targetLanguage: Localizations.localeOf(context).languageCode,
+        )),
       child: Scaffold(
         backgroundColor: AppColors.bgPage,
         body: BlocListener<ListingDetailBloc, ListingDetailState>(
@@ -346,7 +518,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       leading: Padding(
         padding: const EdgeInsets.only(left: 8.0),
         child: CircleAvatar(
-          backgroundColor: Colors.black.withOpacity(0.4),
+          backgroundColor: Colors.black.withValues(alpha: 0.4),
           child: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded,
                 color: Colors.white, size: 18),
@@ -356,17 +528,20 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       ),
       actions: [
         CircleAvatar(
-          backgroundColor: Colors.black.withOpacity(0.4),
+          backgroundColor: Colors.black.withValues(alpha: 0.4),
           child: IconButton(
             icon:
                 const Icon(Icons.share_rounded, color: Colors.white, size: 18),
             onPressed: () async {
               final formattedPrice = _formatPrice(listing.price);
-              final shareContent =
-                  '🏠 ${listing.title}\n💵 Giá: $formattedPrice/tháng\n📍 Địa chỉ: ${listing.displayAddress}\n👉 Xem chi tiết tại ứng dụng: swinghouse://listing/${listing.listingId}\nHoặc truy cập website: https://swinghouse.vn/listing/${listing.listingId}';
+              final shareContent = _isEnglish
+                  ? '🏠 ${_localizedListingTitle(listing.title)}\n💵 Price: $formattedPrice/month\n📍 Address: ${_localizedListingAddress(listing.displayAddress)}\n👉 View details in app: swinghouse://listing/${listing.listingId}\nOr visit website: https://swinghouse.vn/listing/${listing.listingId}'
+                  : '🏠 ${listing.title}\n💵 Giá: $formattedPrice/tháng\n📍 Địa chỉ: ${listing.displayAddress}\n👉 Xem chi tiết tại ứng dụng: swinghouse://listing/${listing.listingId}\nHoặc truy cập website: https://swinghouse.vn/listing/${listing.listingId}';
 
               try {
-                await Share.share(shareContent);
+                await SharePlus.instance.share(
+                  ShareParams(text: shareContent),
+                );
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -383,7 +558,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         ),
         const SizedBox(width: 8),
         CircleAvatar(
-          backgroundColor: Colors.black.withOpacity(0.4),
+          backgroundColor: Colors.black.withValues(alpha: 0.4),
           child: IconButton(
             icon: state.isFavorite
                 ? const Icon(Icons.favorite_rounded,
@@ -493,7 +668,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   borderRadius: BorderRadius.circular(AppConstants.radiusSm),
                 ),
                 child: Text(
-                  listing.typeName,
+                  _localizedTypeName(listing.typeName),
                   style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
@@ -510,14 +685,14 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                     color: AppColors.successBg,
                     borderRadius: BorderRadius.circular(AppConstants.radiusSm),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(Icons.verified_rounded,
+                      const Icon(Icons.verified_rounded,
                           size: 10, color: AppColors.success),
-                      SizedBox(width: 2),
+                      const SizedBox(width: 2),
                       Text(
-                        'ĐÃ XÁC THỰC',
-                        style: TextStyle(
+                        _ui('ĐÃ XÁC THỰC', 'VERIFIED'),
+                        style: const TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w800,
                           color: AppColors.successText,
@@ -531,7 +706,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            listing.title,
+            _localizedListingTitle(listing.title),
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
@@ -552,9 +727,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   color: AppColors.error,
                 ),
               ),
-              const Text(
-                '/tháng',
-                style: TextStyle(
+              Text(
+                _ui('/tháng', '/month'),
+                style: const TextStyle(
                   fontSize: 13,
                   color: AppColors.textSecondary,
                   fontWeight: FontWeight.w500,
@@ -586,7 +761,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      listing.displayAddress,
+                      _localizedListingAddress(listing.displayAddress),
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
@@ -598,9 +773,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                       const SizedBox(height: 6),
                       InkWell(
                         onTap: () => _openMap(listing),
-                        child: const Text(
-                          'Xem trên bản đồ Google Maps',
-                          style: TextStyle(
+                        child: Text(
+                          _ui('Xem trên bản đồ Google Maps',
+                              'View on Google Maps'),
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: AppColors.primary,
@@ -674,7 +850,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         ),
         const SizedBox(height: 2),
         Text(
-          label,
+          _localizedStaticText(label),
           style: const TextStyle(
             fontSize: 11,
             color: AppColors.textMuted,
@@ -694,7 +870,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Chi phí dịch vụ', style: AppTextStyles.h3),
+          Text(_ui('Chi phí dịch vụ', 'Service fees'), style: AppTextStyles.h3),
           const SizedBox(height: 14),
           GridView.count(
             crossAxisCount: 2,
@@ -765,12 +941,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(label,
+                Text(_localizedStaticText(label),
                     style: const TextStyle(
                         fontSize: 10, color: AppColors.textMuted)),
                 const SizedBox(height: 2),
                 Text(
-                  value,
+                  _localizedStaticText(value),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -797,7 +973,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Thông tin phòng', style: AppTextStyles.h3),
+            Text(_ui('Thông tin phòng', 'Room details'),
+                style: AppTextStyles.h3),
             const SizedBox(height: 14),
             _buildInfoRow(
                 Icons.layers_rounded,
@@ -833,13 +1010,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         children: [
           Icon(icon, size: 16, color: AppColors.textSecondary),
           const SizedBox(width: 10),
-          Text(label,
+          Text(_localizedStaticText(label),
               style: const TextStyle(
                   fontSize: 13,
                   color: AppColors.textSecondary,
                   fontWeight: FontWeight.w500)),
           const Spacer(),
-          Text(value,
+          Text(_localizedStaticText(value),
               style: const TextStyle(
                   fontSize: 13,
                   color: AppColors.textPrimary,
@@ -862,7 +1039,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Tiện ích phòng trọ', style: AppTextStyles.h3),
+            Text(_ui('Tiện ích phòng trọ', 'Amenities'),
+                style: AppTextStyles.h3),
             const SizedBox(height: 14),
             Wrap(
               spacing: 8,
@@ -882,7 +1060,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                       _getAmenityIcon(name),
                       const SizedBox(width: 6),
                       Text(
-                        name,
+                        _localizedAmenityName(name),
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
@@ -939,8 +1117,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
   // Mô tả chi tiết (collapsible)
   Widget _buildDescriptionSection(Listing listing) {
-    final desc = listing.description?.trim() ??
-        'Không có mô tả chi tiết cho phòng trọ này.';
+    final desc = _localizedDescription(listing);
 
     return Container(
       margin: const EdgeInsets.only(top: 8),
@@ -949,7 +1126,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Mô tả chi tiết', style: AppTextStyles.h3),
+          Text(_ui('Mô tả chi tiết', 'Description'), style: AppTextStyles.h3),
           const SizedBox(height: 10),
           AnimatedSize(
             duration: AppConstants.animFast,
@@ -981,7 +1158,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      _isDescExpanded ? 'Thu gọn' : 'Đọc thêm',
+                      _isDescExpanded
+                          ? _ui('Thu gọn', 'Collapse')
+                          : _ui('Đọc thêm', 'Read more'),
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -1008,7 +1187,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
   // Thông tin chủ trọ
   Widget _buildLandlordSection(BuildContext context, Listing listing) {
-    final name = listing.landlordName ?? 'Chủ nhà';
+    final name = listing.landlordName ?? _ui('Chủ nhà', 'Landlord');
     final avatar = listing.landlordAvatar;
 
     return Container(
@@ -1018,7 +1197,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Thông tin người cho thuê', style: AppTextStyles.h3),
+          Text(_ui('Thông tin người cho thuê', 'Landlord information'),
+              style: AppTextStyles.h3),
           const SizedBox(height: 14),
           Row(
             children: [
@@ -1125,8 +1305,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         children: [
           Row(
             children: [
-              Text('Đánh giá phòng (${state.reviewCount})',
-                  style: AppTextStyles.h3),
+              Text(
+                '${_ui('Đánh giá phòng', 'Room reviews')} (${state.reviewCount})',
+                style: AppTextStyles.h3,
+              ),
               const Spacer(),
               if (state.reviews.isNotEmpty)
                 Row(
@@ -1682,7 +1864,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 16,
               offset: const Offset(0, -4),
             ),
@@ -1717,7 +1899,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                         size: 20,
                       ),
                 label: Text(
-                  state.isFavorite ? 'Đã lưu' : 'Lưu tin',
+                  state.isFavorite
+                      ? _ui('Đã lưu', 'Saved')
+                      : _ui('Lưu tin', 'Save'),
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -1759,9 +1943,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                         color: Colors.white,
                         size: 20,
                       ),
-                label: const Text(
-                  'Nhắn tin ngay',
-                  style: TextStyle(
+                label: Text(
+                  _ui('Nhắn tin ngay', 'Message now'),
+                  style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: Colors.white),
@@ -1886,9 +2070,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
                   onPressed: () {
-                    context
-                        .read<ListingDetailBloc>()
-                        .add(LoadListingDetail(widget.listingId));
+                    context.read<ListingDetailBloc>().add(LoadListingDetail(
+                          widget.listingId,
+                          initialListing: widget.initialListing,
+                          targetLanguage:
+                              Localizations.localeOf(context).languageCode,
+                        ));
                   },
                   icon: const Icon(Icons.refresh_rounded,
                       size: 18, color: Colors.white),

@@ -139,13 +139,13 @@ extension _SortOptionExt on _SortOption {
 
 String _removeDiacritics(String s) {
   const map = {
-    'Ã Ã¡Ã¢Ã£Äƒáº¯áº·áº±áº³áºµáº¥áº§áº©áº«áº­': 'a',
-    'Ã¨Ã©Ãªáº¹áº»áº½áº¿á»á»ƒá»…á»‡': 'e',
-    'Ã¬Ã­Ã®Ã¯á»‰á»‹Ä©': 'i',
-    'Ã²Ã³Ã´Ãµá»á»á»‘á»“á»•á»—á»™á»›á»á»Ÿá»¡á»£': 'o',
-    'Ã¹ÃºÃ»á»¥á»§á»©á»«á»­á»¯á»±Å©': 'u',
-    'Ã½á»³á»·á»¹á»µ': 'y',
-    'Ä‘': 'd',
+    'àáâãăắặằẳẵấầẩẫậ': 'a',
+    'èéêẹẻẽếềểễệ': 'e',
+    'ìíîïỉịĩ': 'i',
+    'òóôõọỏốồổỗộớờởỡợ': 'o',
+    'ùúûụủứừửữựũ': 'u',
+    'ýỳỷỹỵ': 'y',
+    'đ': 'd',
   };
   String result = s.toLowerCase();
   map.forEach((chars, replacement) {
@@ -221,11 +221,13 @@ class _FavoritesScreenState extends State<FavoritesScreen>
       id: listing.listingId.toString(),
       title: listing.title.isNotEmpty
           ? listing.title
-          : 'Tin Ä‘Äƒng chÆ°a cÃ³ tiÃªu Ä‘á»',
+          : 'favorites_default_title'.tr,
       address: listing.displayAddress,
       price: listing.price,
       area: listing.area,
-      type: listing.typeName.isNotEmpty ? listing.typeName : 'PhÃ²ng trá»',
+      type: listing.typeName.isNotEmpty
+          ? listing.typeName
+          : 'favorites_default_type'.tr,
       isVerified: listing.isVerified,
       isNew: _isNewListing(listing.createdAt),
       tags: listing.amenityNames.take(4).toList(),
@@ -256,10 +258,10 @@ class _FavoritesScreenState extends State<FavoritesScreen>
 
   String _emojiForType(String type) {
     final normalized = _removeDiacritics(type);
-    if (normalized.contains('can ho')) return 'ðŸ¢';
-    if (normalized.contains('nha')) return 'ðŸ ';
-    if (normalized.contains('ghep')) return 'ðŸ‘¥';
-    return 'ðŸ›‹ï¸';
+    if (normalized.contains('can ho')) return '🏢';
+    if (normalized.contains('nha')) return '🏠';
+    if (normalized.contains('ghep')) return '👥';
+    return '🛋️';
   }
 
   String? _resolveImageUrl(String? url) {
@@ -310,6 +312,10 @@ class _FavoritesScreenState extends State<FavoritesScreen>
   }
 
   Future<void> _removeFavorite(String id) async {
+    final originalIndex = _favorites.indexWhere((e) => e.id == id);
+    if (originalIndex == -1) return;
+    final removedItem = _favorites[originalIndex];
+
     setState(() => _removingIds.add(id));
     try {
       final isStillFavorite =
@@ -334,10 +340,13 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     }
     Future.delayed(const Duration(milliseconds: 350), () {
       if (!mounted) return;
+      final currentIndex = _favorites.indexWhere((e) => e.id == id);
+      if (currentIndex == -1) return;
       setState(() {
-        _favorites.removeWhere((e) => e.id == id);
+        _favorites.removeAt(currentIndex);
         _removingIds.remove(id);
       });
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Row(children: [
           const Icon(Icons.favorite_border_rounded,
@@ -350,10 +359,30 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppConstants.radiusMd)),
         action: SnackBarAction(
-          label: 'HoÃ n tÃ¡c',
+          label: 'favorites_undo'.tr,
           textColor: AppColors.primaryLight,
-          onPressed: () {
-            // TODO: hoÃ n tÃ¡c
+          onPressed: () async {
+            setState(() {
+              final restoreIndex = originalIndex.clamp(0, _favorites.length);
+              _favorites.insert(restoreIndex, removedItem);
+            });
+            try {
+              await _favoriteRepository.toggleFavorite(int.parse(id));
+            } catch (e) {
+              setState(() {
+                _favorites.removeWhere((e) => e.id == id);
+              });
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(_cleanError(e)),
+                  backgroundColor: AppColors.error,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                  ),
+                ));
+              }
+            }
           },
         ),
       ));
@@ -376,15 +405,15 @@ class _FavoritesScreenState extends State<FavoritesScreen>
       final m = price / 1000000;
       return '${m % 1 == 0 ? m.toInt() : m.toStringAsFixed(1)}tr';
     }
-    return '${price.toInt()}Ä‘';
+    return '${price.toInt()}đ';
   }
 
   String _formatSavedDate(DateTime date) {
     final now = DateTime.now();
     final diff = now.difference(date).inDays;
-    if (diff == 0) return 'HÃ´m nay';
-    if (diff == 1) return 'HÃ´m qua';
-    if (diff < 7) return '$diff ngÃ y trÆ°á»›c';
+    if (diff == 0) return 'today'.tr;
+    if (diff == 1) return 'yesterday'.tr;
+    if (diff < 7) return 'days_ago'.tr.replaceAll('{days}', '$diff');
     return '${date.day}/${date.month}/${date.year}';
   }
 
@@ -609,7 +638,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
           ),
           const SizedBox(height: 20),
           Text(
-            'KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch yÃªu thÃ­ch',
+            'favorites_load_error'.tr,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 17,
@@ -619,7 +648,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            _errorMessage ?? 'Vui lÃ²ng thá»­ láº¡i.',
+            _errorMessage ?? 'favorites_retry_desc'.tr,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
@@ -926,7 +955,7 @@ class _FavoriteCard extends StatelessWidget {
                                 text: priceLabel,
                                 style: AppTextStyles.cardPrice),
                             TextSpan(
-                                text: '/thÃ¡ng',
+                                text: 'favorites_month_suffix'.tr,
                                 style: AppTextStyles.cardPriceSub.copyWith(
                                   color: context.profileTextMuted,
                                 )),
@@ -937,7 +966,7 @@ class _FavoriteCard extends StatelessWidget {
                           Icon(Icons.straighten_rounded,
                               size: 12, color: context.profileTextMuted),
                           const SizedBox(width: 3),
-                          Text('${item.area.toInt()} mÂ²',
+                          Text('${item.area.toInt()} m²',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: context.profileTextMuted,
