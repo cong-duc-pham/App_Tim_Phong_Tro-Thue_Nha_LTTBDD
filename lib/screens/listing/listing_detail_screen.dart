@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../blocs/listing/listing_bloc.dart';
 import '../../blocs/listing/listing_event.dart';
@@ -332,13 +333,23 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
           child: IconButton(
             icon:
                 const Icon(Icons.share_rounded, color: Colors.white, size: 18),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Tính năng chia sẻ tin đăng đang phát triển'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+            onPressed: () async {
+              final formattedPrice = _formatPrice(listing.price);
+              final shareContent = '🏠 ${listing.title}\n💵 Giá: $formattedPrice/tháng\n📍 Địa chỉ: ${listing.displayAddress}\n👉 Xem chi tiết tại ứng dụng: swinghouse://listing/${listing.listingId}\nHoặc truy cập website: https://swinghouse.vn/listing/${listing.listingId}';
+              
+              try {
+                await Share.share(shareContent);
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Không thể chia sẻ tin đăng: $e'),
+                      backgroundColor: AppColors.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
             },
           ),
         ),

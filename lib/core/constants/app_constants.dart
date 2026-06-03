@@ -57,6 +57,9 @@ class AppConstants {
   static const String keyPreferenceAmenities = 'preference_amenities';
   static const String keyPreferenceMaxBudget = 'preference_max_budget';
   static const String keySelectedHomeLocation = 'selected_home_location';
+  static const String keyThemeMode = 'app_theme_mode';
+  static const String keyNotificationsEnabled = 'app_notifications_enabled';
+  static const String keyAppLanguage = 'app_language';
 
   // ─── Routes ──────────────────────────────────────────────────────────────
   static const String routeSplash = '/';
@@ -83,6 +86,7 @@ class AppConstants {
   static const String routeVerifyAccount = '/verify-account';
   static const String routeChangePassword = '/change-password';
   static const String routeForgotPassword = '/forgot-password';
+  static const String routeSettings = '/settings';
 
   // ─── Pagination ──────────────────────────────────────────────────────────
   static const int pageSize = 10; // Số item mỗi trang
