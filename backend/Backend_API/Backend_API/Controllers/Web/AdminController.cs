@@ -943,6 +943,140 @@ namespace Backend_API.Controllers.MVC
             return RedirectToAction(nameof(Amenities));
         }
 
+        // ==========================================
+        // GỬI THÔNG BÁO THỦ CÔNG (MANUAL NOTIFICATIONS)
+        // ==========================================
+
+        // API tìm kiếm nhanh người dùng bằng AJAX cho Form gửi thông báo
+        [HttpGet("users/search")]
+        public async Task<IActionResult> SearchUsers(string q)
+        {
+            if (string.IsNullOrWhiteSpace(q))
+            {
+                return Json(new List<object>());
+            }
+
+            var keyword = q.Trim().ToLowerInvariant();
+            var users = await _context.Users
+                .Include(x => x.Role)
+                .Where(x => x.IsActive == true 
+                    && x.Role.RoleName.ToLower() != RoleAdmin
+                    && ((x.FullName != null && x.FullName.ToLower().Contains(keyword))
+                        || (x.Email != null && x.Email.ToLower().Contains(keyword))
+                        || (x.Phone != null && x.Phone.Contains(keyword))))
+                .Take(20)
+                .Select(x => new
+                {
+                    userId = x.UserId,
+                    fullName = x.FullName,
+                    email = x.Email ?? "",
+                    phone = x.Phone ?? ""
+                })
+                .ToListAsync();
+
+            return Json(users);
+        }
+
+        // Trang soạn và gửi thông báo
+        [HttpGet("notifications/send")]
+        public async Task<IActionResult> SendNotification(long? targetUserId)
+        {
+            ViewData["Title"] = "Gửi thông báo thủ công";
+            ViewBag.TargetUserId = targetUserId;
+            if (targetUserId.HasValue)
+            {
+                var targetUser = await _context.Users.FirstOrDefaultAsync(x => x.UserId == targetUserId.Value);
+                if (targetUser != null)
+                {
+                    ViewBag.TargetUserFullName = targetUser.FullName;
+                    ViewBag.TargetUserEmail = targetUser.Email;
+                }
+            }
+            return View();
+        }
+
+        // Xử lý gửi thông báo thủ công
+        [HttpPost("notifications/send")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SendNotification(string targetType, long? userId, string title, string body)
+        {
+            if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(body))
+            {
+                TempData["AdminError"] = "Vui lòng nhập đầy đủ cả tiêu đề và nội dung thông báo.";
+                return RedirectToAction(nameof(SendNotification), new { targetUserId = userId });
+            }
+
+            // Tập hợp ID các user cần gửi
+            var recipientIds = new List<long>();
+
+            if (targetType == "single")
+            {
+                if (!userId.HasValue)
+                {
+                    TempData["AdminError"] = "Vui lòng chọn người nhận cụ thể.";
+                    return RedirectToAction(nameof(SendNotification));
+                }
+                var userExists = await _context.Users.AnyAsync(x => x.UserId == userId.Value && x.IsActive == true);
+                if (!userExists)
+                {
+                    TempData["AdminError"] = "Người dùng được chọn không tồn tại hoặc tài khoản đã bị khóa.";
+                    return RedirectToAction(nameof(SendNotification));
+                }
+                recipientIds.Add(userId.Value);
+            }
+            else if (targetType == "all")
+            {
+                recipientIds = await _context.Users
+                    .Where(x => x.IsActive == true && x.Role.RoleName.ToLower() != RoleAdmin)
+                    .Select(x => x.UserId)
+                    .ToListAsync();
+            }
+            else if (targetType == "landlords")
+            {
+                recipientIds = await _context.Users
+                    .Where(x => x.IsActive == true && x.Role.RoleName.ToLower() == RoleLandlord)
+                    .Select(x => x.UserId)
+                    .ToListAsync();
+            }
+            else if (targetType == "tenants")
+            {
+                recipientIds = await _context.Users
+                    .Where(x => x.IsActive == true && x.Role.RoleName.ToLower() == RoleTenant)
+                    .Select(x => x.UserId)
+                    .ToListAsync();
+            }
+            else
+            {
+                TempData["AdminError"] = "Đối tượng nhận thông báo không hợp lệ.";
+                return RedirectToAction(nameof(SendNotification));
+            }
+
+            if (!recipientIds.Any())
+            {
+                TempData["AdminError"] = "Không tìm thấy người dùng nào khớp với bộ lọc.";
+                return RedirectToAction(nameof(SendNotification));
+            }
+
+            // Thực hiện lưu DB và gửi push notification qua service
+            int successCount = 0;
+            foreach (var id in recipientIds)
+            {
+                // Gửi và lưu DB (sử dụng loại thông báo 'system_announcement')
+                var result = await _notificationService.CreateAndSendAsync(
+                    id,
+                    title.Trim(),
+                    body.Trim(),
+                    "system_announcement",
+                    refId: null,
+                    refType: "admin"
+                );
+                if (result) successCount++;
+            }
+
+            TempData["AdminSuccess"] = $"Đã gửi thông báo thành công tới {successCount}/{recipientIds.Count} tài khoản.";
+            return RedirectToAction(nameof(SendNotification));
+        }
+
         private async Task BackfillListingStorageFilesAsync()
         {
             var listings = await _context.Listings
