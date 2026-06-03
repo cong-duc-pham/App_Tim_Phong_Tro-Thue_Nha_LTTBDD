@@ -1,0 +1,257 @@
+@model List<Backend_API.Models.Entities.Amenity>
+@{
+    ViewData["Title"] = "Quản lý Tiện ích";
+}
+
+@if (TempData["AdminSuccess"] is string successMessage)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-1"></i>
+        @successMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["AdminError"] is string errorMessage)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+        @errorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white d-flex align-items-center justify-content-between py-3">
+        <div>
+            <h5 class="card-title fw-bold mb-0">Quản lý tiện ích & dịch vụ</h5>
+            <small class="text-muted">Thêm, sửa, xóa các tiện ích hiển thị trên Mobile App của người dùng</small>
+        </div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAmenityModal">
+            <i class="bi bi-plus-lg me-1"></i> Thêm tiện ích mới
+        </button>
+    </div>
+    
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 80px;">ID</th>
+                        <th>Biểu tượng</th>
+                        <th>Tên tiện ích</th>
+                        <th>Phân loại (Category)</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end" style="width: 200px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model == null || !Model.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                Chưa có tiện ích nào được tạo.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@item.AmenityId</td>
+                                <td>
+                                    <div class="d-flex align-items-center justify-content-center bg-light border rounded" style="width: 48px; height: 48px; overflow: hidden;">
+                                        @if (string.IsNullOrWhiteSpace(item.IconUrl))
+                                        {
+                                            <i class="bi bi-app text-muted fs-4"></i>
+                                        }
+                                        else if (item.IconUrl.StartsWith("http") || item.IconUrl.StartsWith("/"))
+                                        {
+                                            <img src="@item.IconUrl" alt="@item.Name" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/uploads/default-icon.png';" />
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary font-monospace small" style="font-size: 10px;">@item.IconUrl</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td><span class="fw-semibold text-dark">@item.Name</span></td>
+                                <td>
+                                    @if (string.IsNullOrWhiteSpace(item.Category))
+                                    {
+                                        <span class="text-muted small"><em>Chưa phân loại</em></span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle px-2.5 py-1">@item.Category</span>
+                                    }
+                                </td>
+                                <td>
+                                    <form method="post" action="/admin/amenities/@item.AmenityId/toggle-active" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        @if (item.IsActive == true)
+                                        {
+                                            <button type="submit" class="badge bg-success border-0 px-2.5 py-1 text-white" title="Click để tắt hoạt động">
+                                                Hoạt động
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="badge bg-danger border-0 px-2.5 py-1 text-white" title="Click để kích hoạt">
+                                                Tạm ngưng
+                                            </button>
+                                        }
+                                    </form>
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-primary edit-amenity-btn" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#editAmenityModal"
+                                                data-id="@item.AmenityId"
+                                                data-name="@item.Name"
+                                                data-category="@item.Category"
+                                                data-icon="@item.IconUrl"
+                                                data-active="@(item.IsActive == true ? "True" : "False")">
+                                            <i class="bi bi-pencil-fill me-1"></i> Sửa
+                                        </button>
+                                        
+                                        <form method="post" action="/admin/amenities/@item.AmenityId/delete" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa tiện ích \'' + '@Html.Raw(item.Name)' + '\'?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash-fill me-1"></i> Xóa
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Thêm Tiện Ích Mới -->
+<div class="modal fade" id="addAmenityModal" tabindex="-1" aria-labelledby="addAmenityModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <form method="post" action="/admin/amenities/create" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold" id="addAmenityModalLabel">Thêm Tiện Ích Mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tên tiện ích <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" placeholder="Ví dụ: Wifi tốc độ cao, Máy giặt riêng..." required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Phân loại (Category)</label>
+                        <select name="category" class="form-select">
+                            <option value="Tiện ích phòng">Tiện ích phòng</option>
+                            <option value="Tiện ích chung">Tiện ích chung</option>
+                            <option value="Dịch vụ">Dịch vụ</option>
+                            <option value="An ninh">An ninh</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Định danh Icon Flutter (Nếu dùng icon App)</label>
+                        <input type="text" name="iconUrl" class="form-control" placeholder="Ví dụ: wifi, local_laundry_service..." />
+                        <small class="text-muted">Nhập tên icon Flutter tương ứng giúp hiển thị nhanh trên app.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Hoặc Tải ảnh Icon mới lên</label>
+                        <input type="file" name="iconFile" class="form-control" accept="image/*" />
+                        <small class="text-muted">Chấp nhận file ảnh định dạng jpg, png, webp...</small>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Thêm tiện ích</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Sửa Tiện Ích -->
+<div class="modal fade" id="editAmenityModal" tabindex="-1" aria-labelledby="editAmenityModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <form method="post" action="/admin/amenities/edit" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="edit-id" />
+                
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold" id="editAmenityModalLabel">Cập Nhật Tiện Ích</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tên tiện ích <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="edit-name" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Phân loại (Category)</label>
+                        <select name="category" id="edit-category" class="form-select">
+                            <option value="Tiện ích phòng">Tiện ích phòng</option>
+                            <option value="Tiện ích chung">Tiện ích chung</option>
+                            <option value="Dịch vụ">Dịch vụ</option>
+                            <option value="An ninh">An ninh</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Định danh Icon Flutter (Nếu dùng icon App)</label>
+                        <input type="text" name="iconUrl" id="edit-iconUrl" class="form-control" />
+                        <small class="text-muted">Nhập tên icon Flutter hoặc URL để hiển thị.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Thay đổi ảnh Icon</label>
+                        <input type="file" name="iconFile" class="form-control" accept="image/*" />
+                        <small class="text-muted">Bỏ trống nếu muốn giữ nguyên biểu tượng cũ.</small>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="isActive" id="edit-isActive" value="true">
+                            <label class="form-check-label fw-semibold" for="edit-isActive">Trạng thái Hoạt động</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Khi nhấn nút Sửa tiện ích, gán dữ liệu từ thuộc tính data-* của nút vào Form Modal Sửa
+            const editButtons = document.querySelectorAll('.edit-amenity-btn');
+            editButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    const id = this.getAttribute('data-id');
+                    const name = this.getAttribute('data-name');
+                    const category = this.getAttribute('data-category');
+                    const icon = this.getAttribute('data-icon');
+                    const active = this.getAttribute('data-active') === 'True';
+
+                    document.getElementById('edit-id').value = id;
+                    document.getElementById('edit-name').value = name;
+                    document.getElementById('edit-category').value = category;
+                    document.getElementById('edit-iconUrl').value = icon;
+                    document.getElementById('edit-isActive').checked = active;
+                });
+            });
+        });
+    </script>
+}
