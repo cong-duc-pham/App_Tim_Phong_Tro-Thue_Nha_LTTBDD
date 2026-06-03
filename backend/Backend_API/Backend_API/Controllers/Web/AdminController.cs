@@ -753,6 +753,50 @@ namespace Backend_API.Controllers.MVC
         [HttpGet("amenities")]
         public async Task<IActionResult> Amenities()
         {
+            // Tự động cập nhật tiếng Việt có dấu cho các tiện ích mặc định nếu chưa có dấu
+            var defaultAmenities = new Dictionary<string, (string Name, string Category)>
+            {
+                { "wifi", ("Wifi", "basic") },
+                { "dieu hoa", ("Điều hòa", "comfort") },
+                { "may giat", ("Máy giặt", "basic") },
+                { "tu lanh", ("Tủ lạnh", "basic") },
+                { "bep", ("Bếp", "basic") },
+                { "bai xe", ("Bãi xe", "basic") },
+                { "camera an ninh", ("Camera an ninh", "security") },
+                { "thang may", ("Thang máy", "comfort") },
+                { "ho boi", ("Hồ bơi", "comfort") },
+                { "gym", ("Gym", "comfort") },
+                { "ban cong", ("Ban công", "comfort") },
+                { "noi that day du", ("Nội thất đầy đủ", "comfort") },
+                { "cua tu", ("Cửa từ", "security") },
+                { "bao ve 24/7", ("Bảo vệ 24/7", "security") },
+                { "cho nuoi thu cung", ("Cho nuôi thú cưng", "basic") }
+            };
+
+            bool isUpdated = false;
+            foreach (var item in defaultAmenities)
+            {
+                // Tìm tiện ích theo tên không dấu cũ (hoặc gần giống)
+                var amenity = await _context.Amenities
+                    .FirstOrDefaultAsync(x => x.Name.ToLower() == item.Key || x.Name.ToLower() == item.Value.Name.ToLower());
+                
+                if (amenity != null)
+                {
+                    // Nếu tên chưa đúng có dấu hoặc Category chưa chuẩn, cập nhật lại
+                    if (amenity.Name != item.Value.Name || amenity.Category != item.Value.Category)
+                    {
+                        amenity.Name = item.Value.Name;
+                        amenity.Category = item.Value.Category;
+                        isUpdated = true;
+                    }
+                }
+            }
+
+            if (isUpdated)
+            {
+                await _context.SaveChangesAsync();
+            }
+
             // Query toàn bộ tiện ích sắp xếp theo ID giảm dần để tiện ích mới thêm hiển thị lên đầu
             var amenities = await _context.Amenities
                 .OrderByDescending(x => x.AmenityId)
