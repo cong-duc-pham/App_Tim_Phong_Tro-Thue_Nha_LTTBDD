@@ -124,7 +124,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
         myListings.where((item) => item.listingId == widget.listingId);
     if (matches.isNotEmpty) return matches.first;
     if (widget.initialListing != null) return widget.initialListing!;
-    throw Exception('Không tìm thấy tin đăng thuộc tài khoản của bạn.');
+    throw Exception('mylistings_not_found'.tr);
   }
 
   Future<void> _refresh() async {
@@ -139,7 +139,7 @@ class _ListingAnalyticsScreenState extends State<ListingAnalyticsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        title: Text('Thống kê tin đăng'),
+        title: Text('mylistings_analytics_title'.tr),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
           onPressed: () => context.pop(),
@@ -216,13 +216,13 @@ class _MyListingCard extends StatelessWidget {
     try {
       final repository = ListingRepository();
       final updated = await repository.toggleListingStatus(listing.listingId);
-      
+
       if (context.mounted) Navigator.of(context).pop();
 
       if (context.mounted) {
         final message = updated.statusName.toLowerCase() == 'hidden'
-            ? 'Đã tạm ẩn tin đăng (đánh dấu đã thuê) thành công.'
-            : 'Đã hiển thị lại tin đăng thành công.';
+            ? 'mylistings_hide_success'.tr
+            : 'mylistings_show_success'.tr;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
@@ -259,27 +259,29 @@ class _MyListingCard extends StatelessWidget {
     switch (listing.statusName.toLowerCase()) {
       case 'active':
         statusColor = AppColors.success;
-        statusLabel = 'Hoạt động';
+        statusLabel = 'mylistings_status_active'.tr;
         break;
       case 'hidden':
         statusColor = Colors.orange;
-        statusLabel = 'Đã thuê / Tạm ẩn';
+        statusLabel = 'mylistings_status_hidden'.tr;
         break;
       case 'pending':
         statusColor = AppColors.warning;
-        statusLabel = 'Chờ duyệt';
+        statusLabel = 'mylistings_tab_pending'.tr;
         break;
       case 'rejected':
         statusColor = AppColors.error;
-        statusLabel = 'Bị từ chối';
+        statusLabel = 'mylistings_tab_rejected'.tr;
         break;
       case 'expired':
-        statusColor = AppColors.textSecondary;
-        statusLabel = 'Hết hạn';
+        statusColor = context.profileTextSecondary;
+        statusLabel = 'mylistings_status_expired'.tr;
         break;
       default:
-        statusColor = AppColors.textSecondary;
-        statusLabel = listing.statusName.isEmpty ? 'Đang xử lý' : listing.statusName;
+        statusColor = context.profileTextSecondary;
+        statusLabel = listing.statusName.isEmpty
+            ? 'mylistings_status_processing'.tr
+            : listing.statusName;
     }
 
     return Container(
@@ -340,7 +342,7 @@ class _MyListingCard extends StatelessWidget {
                             label: listing.packageName!,
                             color: listing.hasAnalytics
                                 ? AppColors.primary
-                                : AppColors.textSecondary,
+                                : context.profileTextSecondary,
                           ),
                       ],
                     ),
@@ -355,21 +357,21 @@ class _MyListingCard extends StatelessWidget {
               Expanded(
                 child: _InlineMetric(
                   icon: Icons.visibility_outlined,
-                  label: 'Lượt xem',
+                  label: 'mylistings_views_label'.tr,
                   value: '${listing.viewCount ?? 0}',
                 ),
               ),
               Expanded(
                 child: _InlineMetric(
                   icon: Icons.bookmark_border_rounded,
-                  label: 'Lưu',
+                  label: 'mylistings_saved_label'.tr,
                   value: '${listing.saveCount ?? 0}',
                 ),
               ),
               Expanded(
                 child: _InlineMetric(
                   icon: Icons.rate_review_outlined,
-                  label: 'Đánh giá',
+                  label: 'mylistings_reviews_label'.tr,
                   value: '${listing.reviewCount}',
                 ),
               ),
@@ -389,7 +391,9 @@ class _MyListingCard extends StatelessWidget {
                       : null,
                   icon: const Icon(Icons.analytics_outlined, size: 16),
                   label: Text(
-                    canViewAnalytics ? 'Thống kê' : 'Không có thống kê',
+                    canViewAnalytics
+                        ? 'mylistings_analytics'.tr
+                        : 'mylistings_no_analytics'.tr,
                     style: const TextStyle(fontSize: 12),
                   ),
                 ),
@@ -410,14 +414,15 @@ class _MyListingCard extends StatelessWidget {
                   ),
                   label: Text(
                     listing.statusName.toLowerCase() == 'active'
-                        ? 'Ẩn tin (Đã thuê)'
-                        : 'Hiện tin (Còn phòng)',
+                        ? 'mylistings_hide_listing'.tr
+                        : 'mylistings_show_listing'.tr,
                     style: const TextStyle(fontSize: 12),
                   ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: listing.statusName.toLowerCase() == 'active'
-                        ? Colors.orange
-                        : AppColors.success,
+                    foregroundColor:
+                        listing.statusName.toLowerCase() == 'active'
+                            ? Colors.orange
+                            : AppColors.success,
                     side: BorderSide(
                       color: listing.statusName.toLowerCase() == 'active'
                           ? Colors.orange
@@ -468,7 +473,7 @@ class _AnalyticsHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  listing.packageName ?? 'Gói thường',
+                  listing.packageName ?? 'mylistings_normal_package'.tr,
                   style: const TextStyle(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w700,
@@ -511,19 +516,19 @@ class _MetricGrid extends StatelessWidget {
       children: [
         _MetricCard(
           icon: Icons.visibility_outlined,
-          label: 'Lượt xem',
+          label: 'mylistings_views_label'.tr,
           value: '${listing.viewCount ?? 0}',
           color: AppColors.primary,
         ),
         _MetricCard(
           icon: Icons.bookmark_border_rounded,
-          label: 'Lượt lưu',
+          label: 'mylistings_saved_count'.tr,
           value: '${listing.saveCount ?? 0}',
           color: AppColors.success,
         ),
         _MetricCard(
           icon: Icons.star_border_rounded,
-          label: 'Điểm đánh giá',
+          label: 'mylistings_rating_score'.tr,
           value: listing.averageRating > 0
               ? listing.averageRating.toStringAsFixed(1)
               : '0.0',
@@ -531,7 +536,7 @@ class _MetricGrid extends StatelessWidget {
         ),
         _MetricCard(
           icon: Icons.rate_review_outlined,
-          label: 'Số đánh giá',
+          label: 'mylistings_reviews_count'.tr,
           value: '${listing.reviewCount}',
           color: AppColors.info,
         ),
@@ -553,13 +558,13 @@ class _EngagementCard extends StatelessWidget {
     final engagement = views == 0 ? 0.0 : ((saves + reviews) / views) * 100;
 
     return _Panel(
-      title: 'Tương tác',
+      title: 'mylistings_engagement'.tr,
       icon: Icons.trending_up_rounded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _ProgressMetric(
-            label: 'Tỷ lệ lưu tin',
+            label: 'mylistings_save_rate'.tr,
             value: views == 0 ? 0 : saves / views,
             valueLabel: views == 0
                 ? '0%'
@@ -567,7 +572,7 @@ class _EngagementCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           _ProgressMetric(
-            label: 'Tỷ lệ đánh giá',
+            label: 'mylistings_review_rate'.tr,
             value: views == 0 ? 0 : reviews / views,
             valueLabel: views == 0
                 ? '0%'
@@ -575,7 +580,7 @@ class _EngagementCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           _ProgressMetric(
-            label: 'Tổng tương tác',
+            label: 'mylistings_total_engagement'.tr,
             value: (engagement / 100).clamp(0, 1),
             valueLabel: '${engagement.toStringAsFixed(1)}%',
           ),
@@ -598,26 +603,30 @@ class _ListingHealthCard extends StatelessWidget {
     final locationScore = listing.hasLocation ? 1.0 : 0.0;
 
     return _Panel(
-      title: 'Chất lượng tin',
+      title: 'mylistings_listing_quality'.tr,
       icon: Icons.insights_rounded,
       child: Column(
         children: [
           _ProgressMetric(
-            label: 'Độ đầy đủ ảnh',
+            label: 'mylistings_photo_completeness'.tr,
             value: imageScore,
             valueLabel: '${listing.allImages.length}/6',
           ),
           const SizedBox(height: 14),
           _ProgressMetric(
-            label: 'Thông tin liên hệ',
+            label: 'mylistings_contact_info'.tr,
             value: contactScore,
-            valueLabel: contactScore == 1 ? 'Đã có' : 'Thiếu',
+            valueLabel: contactScore == 1
+                ? 'mylistings_available'.tr
+                : 'mylistings_missing'.tr,
           ),
           const SizedBox(height: 14),
           _ProgressMetric(
-            label: 'Vị trí bản đồ',
+            label: 'mylistings_map_location'.tr,
             value: locationScore,
-            valueLabel: locationScore == 1 ? 'Đã có' : 'Thiếu',
+            valueLabel: locationScore == 1
+                ? 'mylistings_available'.tr
+                : 'mylistings_missing'.tr,
           ),
         ],
       ),
@@ -641,22 +650,24 @@ class _AnalyticsLocked extends StatelessWidget {
             const Icon(Icons.lock_outline_rounded,
                 size: 46, color: AppColors.textMuted),
             const SizedBox(height: 12),
-            const Text(
-              'Tin này chưa có thống kê chi tiết',
+            Text(
+              'mylistings_locked_title'.tr,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
+                color: context.profileText,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               listing.packageName == null
-                  ? 'Hãy mua gói VIP có thống kê để xem thêm chỉ số.'
-                  : 'Gói ${listing.packageName} chưa bật quyền thống kê.',
+                  ? 'mylistings_locked_buy_vip'.tr
+                  : 'mylistings_locked_package'
+                      .tr
+                      .replaceAll('{package}', listing.packageName!),
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: context.profileTextSecondary),
             ),
           ],
         ),
@@ -749,8 +760,7 @@ class _MetricCard extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style:
-                const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            style: TextStyle(color: context.profileTextSecondary, fontSize: 12),
           ),
         ],
       ),
@@ -779,8 +789,8 @@ class _ProgressMetric extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: context.profileText,
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
                 ),
@@ -788,8 +798,8 @@ class _ProgressMetric extends StatelessWidget {
             ),
             Text(
               valueLabel,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                color: context.profileTextSecondary,
                 fontWeight: FontWeight.w700,
                 fontSize: 12,
               ),
@@ -802,7 +812,7 @@ class _ProgressMetric extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 8,
-            backgroundColor: AppColors.borderLight,
+            backgroundColor: context.profileBorder,
             color: AppColors.primary,
           ),
         ),
@@ -830,15 +840,15 @@ class _InlineMetric extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style: TextStyle(
+            color: context.profileText,
             fontWeight: FontWeight.w800,
             fontSize: 14,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(color: AppColors.textMuted, fontSize: 10),
+          style: TextStyle(color: context.profileTextMuted, fontSize: 10),
         ),
       ],
     );
@@ -921,13 +931,13 @@ class _ErrorState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: context.profileTextSecondary),
             ),
             const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Thử lại'),
+              label: Text('common_retry'.tr),
             ),
           ],
         ),
@@ -941,28 +951,28 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.home_work_outlined,
+            const Icon(Icons.home_work_outlined,
                 size: 46, color: AppColors.textMuted),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
-              'Bạn chưa có tin đăng nào',
+              'mylistings_empty'.tr,
               style: TextStyle(
-                color: AppColors.textPrimary,
+                color: context.profileText,
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
               ),
             ),
-            SizedBox(height: 6),
+            const SizedBox(height: 6),
             Text(
-              'Các tin đã đăng sẽ xuất hiện tại đây.',
+              'mylistings_empty_posted_desc'.tr,
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: context.profileTextSecondary),
             ),
           ],
         ),

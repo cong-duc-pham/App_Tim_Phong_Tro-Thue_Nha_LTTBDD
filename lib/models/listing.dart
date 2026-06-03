@@ -192,11 +192,9 @@ class Listing {
       amenityNames: amenitiesRaw is List
           ? amenitiesRaw.map((e) => e.toString()).toList()
           : const [],
-      createdAt: createdRaw == null
-          ? null
-          : DateTime.tryParse(createdRaw.toString()),
-      packageInfo:
-          packageRaw is Map<String, dynamic> ? packageRaw : null,
+      createdAt:
+          createdRaw == null ? null : DateTime.tryParse(createdRaw.toString()),
+      packageInfo: packageRaw is Map<String, dynamic> ? packageRaw : null,
     );
   }
 
@@ -220,4 +218,60 @@ class Listing {
   }
 
   bool get hasLocation => latitude != null && longitude != null;
+
+  Listing copyWith({
+    String? title,
+    String? description,
+    String? typeName,
+    String? provinceName,
+    String? districtName,
+    String? wardName,
+    String? streetAddress,
+    List<String>? amenityNames,
+  }) {
+    return Listing(
+      listingId: listingId,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      price: price,
+      area: area,
+      typeId: typeId,
+      typeName: typeName ?? this.typeName,
+      provinceName: provinceName ?? this.provinceName,
+      districtName: districtName ?? this.districtName,
+      wardName: wardName ?? this.wardName,
+      streetAddress: streetAddress ?? this.streetAddress,
+      latitude: latitude,
+      longitude: longitude,
+      image0: image0,
+      image1: image1,
+      image2: image2,
+      image3: image3,
+      image4: image4,
+      image5: image5,
+      landlordId: landlordId,
+      landlordName: landlordName,
+      landlordAvatar: landlordAvatar,
+      landlordPhone: landlordPhone,
+      electricPrice: electricPrice,
+      waterPrice: waterPrice,
+      internetPrice: internetPrice,
+      parkingPrice: parkingPrice,
+      floor: floor,
+      totalFloors: totalFloors,
+      maxOccupants: maxOccupants,
+      allowPet: allowPet,
+      availableFrom: availableFrom,
+      isVerified: isVerified,
+      isFeatured: isFeatured,
+      statusName: statusName,
+      viewCount: viewCount,
+      saveCount: saveCount,
+      averageRating: averageRating,
+      reviewCount: reviewCount,
+      amenityNames: amenityNames ?? this.amenityNames,
+      createdAt: createdAt,
+      packageInfo: packageInfo,
+    );
+  }
 }

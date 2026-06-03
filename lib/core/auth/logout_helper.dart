@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../repositories/auth_repository.dart';
@@ -7,7 +8,13 @@ class LogoutHelper {
   const LogoutHelper._();
 
   static Future<void> signOutAndGoToLogin(GoRouter router) async {
-    await AuthRepository().signOut();
-    router.go(AppConstants.routeLogin);
+    try {
+      await AuthRepository().signOut();
+    } catch (e, stackTrace) {
+      debugPrint('Logout failed: $e');
+      debugPrintStack(stackTrace: stackTrace);
+    } finally {
+      router.go(AppConstants.routeLogin);
+    }
   }
 }
