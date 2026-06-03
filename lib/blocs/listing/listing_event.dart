@@ -2,6 +2,8 @@
 
 import 'package:equatable/equatable.dart';
 
+import '../../models/listing.dart';
+
 abstract class ListingDetailEvent extends Equatable {
   const ListingDetailEvent();
 
@@ -11,10 +13,17 @@ abstract class ListingDetailEvent extends Equatable {
 
 class LoadListingDetail extends ListingDetailEvent {
   final int listingId;
-  const LoadListingDetail(this.listingId);
+  final Listing? initialListing;
+  final String? targetLanguage;
+
+  const LoadListingDetail(
+    this.listingId, {
+    this.initialListing,
+    this.targetLanguage,
+  });
 
   @override
-  List<Object?> get props => [listingId];
+  List<Object?> get props => [listingId, initialListing, targetLanguage];
 }
 
 class ToggleListingFavorite extends ListingDetailEvent {

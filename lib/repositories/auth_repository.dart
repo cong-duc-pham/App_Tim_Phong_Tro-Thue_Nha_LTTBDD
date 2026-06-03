@@ -1,5 +1,4 @@
-﻿// lib/repositories/auth_repository.dart
-
+// lib/repositories/auth_repository.dart
 
 import 'dart:async';
 
@@ -253,7 +252,7 @@ class AuthRepository {
         },
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-      
+
       // Cập nhật lại SharedPreferences nội bộ
       await prefs.setString('user_full_name', fullName.trim());
     } on DioException catch (e) {
@@ -263,10 +262,19 @@ class AuthRepository {
 
   /// Đăng xuất.
   Future<void> signOut() async {
-    await GoogleSignIn.instance.signOut();
-    await FacebookAuth.instance.logOut();
-    await _auth.signOut();
-    await clearBackendSession();
+    try {
+      await GoogleSignIn.instance.signOut();
+    } catch (_) {}
+
+    try {
+      await FacebookAuth.instance.logOut();
+    } catch (_) {}
+
+    try {
+      await _auth.signOut();
+    } finally {
+      await clearBackendSession();
+    }
   }
 
   /// Gửi email đặt lại mật khẩu.

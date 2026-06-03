@@ -27,7 +27,8 @@ class ListingRepository {
         'pageSize': pageSize,
         'sortBy': sortBy,
         if (isFeatured != null) 'isFeatured': isFeatured,
-        if (keyword != null && keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
+        if (keyword != null && keyword.trim().isNotEmpty)
+          'keyword': keyword.trim(),
       },
     );
 
@@ -110,6 +111,46 @@ class ListingRepository {
       // Bỏ qua lỗi — không ảnh hưởng trải nghiệm người dùng
     }
   }
+
+  Future<Listing> translateListing(
+    Listing listing, {
+    String targetLanguage = 'English',
+  }) async {
+    try {
+      final response = await _apiService.dio.post<Map<String, dynamic>>(
+        '/translations/listing',
+        data: {
+          'targetLanguage': targetLanguage,
+          'title': listing.title,
+          'description': listing.description,
+          'streetAddress': listing.streetAddress,
+          'typeName': listing.typeName,
+          'amenityNames': listing.amenityNames,
+        },
+      );
+
+      final body = response.data ?? {};
+      if (body['isTranslated'] != true && body['IsTranslated'] != true) {
+        return listing;
+      }
+
+      final amenitiesRaw = body['amenityNames'] ?? body['AmenityNames'];
+      return listing.copyWith(
+        title: _readString(body, 'title', 'Title') ?? listing.title,
+        description: _readString(body, 'description', 'Description') ??
+            listing.description,
+        streetAddress: _readString(body, 'streetAddress', 'StreetAddress') ??
+            listing.streetAddress,
+        typeName: _readString(body, 'typeName', 'TypeName') ?? listing.typeName,
+        amenityNames: amenitiesRaw is List
+            ? amenitiesRaw.map((item) => item.toString()).toList()
+            : listing.amenityNames,
+      );
+    } catch (_) {
+      return listing;
+    }
+  }
+
   Future<Listing> createListing(Map<String, dynamic> payload) async {
     try {
       final response = await _authorizedRequest<Map<String, dynamic>>(
@@ -132,7 +173,8 @@ class ListingRepository {
     }
   }
 
-  Future<Listing> updateListing(int listingId, Map<String, dynamic> payload) async {
+  Future<Listing> updateListing(
+      int listingId, Map<String, dynamic> payload) async {
     try {
       final response = await _authorizedRequest<Map<String, dynamic>>(
         (accessToken) => _apiService.dio.put<Map<String, dynamic>>(
@@ -340,9 +382,15 @@ class ListingRepository {
       if (newRefreshToken is String && newRefreshToken.isNotEmpty) {
         await prefs.setString('refresh_token', newRefreshToken);
       }
-      if (userId != null) await prefs.setString(AppConstants.keyUserId, userId.toString());
-      if (fullName != null) await prefs.setString('user_full_name', fullName.toString());
-      if (role != null) await prefs.setString(AppConstants.keyUserRole, role.toString());
+      if (userId != null) {
+        await prefs.setString(AppConstants.keyUserId, userId.toString());
+      }
+      if (fullName != null) {
+        await prefs.setString('user_full_name', fullName.toString());
+      }
+      if (role != null) {
+        await prefs.setString(AppConstants.keyUserRole, role.toString());
+      }
 
       return accessToken;
     } on DioException {
@@ -362,6 +410,11 @@ class ListingRepository {
       return data;
     }
     return e.message ?? 'Không kết nối được backend.';
+  }
+
+  String? _readString(Map<String, dynamic> json, String camel, String pascal) {
+    final value = json[camel] ?? json[pascal];
+    return value is String && value.trim().isNotEmpty ? value : null;
   }
 
   Future<List<Amenity>> getAmenities() async {

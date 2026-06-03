@@ -28,72 +28,70 @@ class AboutAppScreen extends StatelessWidget {
                 _buildIntroCard(context),
                 const SizedBox(height: 14),
                 _buildSection(
-                  title: 'Tính năng chính',
-                  children: const [
+                  context: context,
+                  title: 'about_features_title'.tr,
+                  children: [
                     _InfoRow(
                       icon: Icons.search_rounded,
-                      title: 'Tìm phòng nhanh',
-                      description:
-                          'Lọc phòng theo khu vực, mức giá, diện tích và tiện ích.',
+                      title: 'about_feature_search_title'.tr,
+                      description: 'about_feature_search_desc'.tr,
                     ),
                     _InfoRow(
                       icon: Icons.favorite_border_rounded,
-                      title: 'Lưu phòng yêu thích',
-                      description:
-                          'Giữ lại các phòng phù hợp để xem lại khi cần so sánh.',
+                      title: 'about_feature_favorite_title'.tr,
+                      description: 'about_feature_favorite_desc'.tr,
                     ),
                     _InfoRow(
                       icon: Icons.verified_user_outlined,
-                      title: 'Thông tin minh bạch',
-                      description:
-                          'Hỗ trợ trạng thái xác thực, đánh giá và thông tin liên hệ.',
+                      title: 'about_feature_verified_title'.tr,
+                      description: 'about_feature_verified_desc'.tr,
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
                 _buildSection(
-                  title: 'Công nghệ sử dụng',
-                  children: const [
+                  context: context,
+                  title: 'about_tech_title'.tr,
+                  children: [
                     _InfoRow(
                       icon: Icons.phone_android_rounded,
                       title: 'Flutter',
-                      description: 'Xây dựng giao diện ứng dụng di động.',
+                      description: 'about_tech_flutter_desc'.tr,
                     ),
                     _InfoRow(
                       icon: Icons.local_fire_department_outlined,
                       title: 'Firebase',
-                      description:
-                          'Xác thực tài khoản và lưu thông tin người dùng cơ bản.',
+                      description: 'about_tech_firebase_desc'.tr,
                     ),
                     _InfoRow(
                       icon: Icons.storage_rounded,
                       title: 'SQL Server',
-                      description:
-                          'Lưu dữ liệu chính như phòng trọ, người dùng và giao dịch.',
+                      description: 'about_tech_sql_desc'.tr,
                     ),
                     _InfoRow(
                       icon: Icons.cloud_upload_outlined,
                       title: 'Cloudinary',
-                      description: 'Quản lý ảnh phòng trọ và ảnh đại diện.',
+                      description: 'about_tech_cloudinary_desc'.tr,
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
                 _buildSection(
-                  title: 'Thông tin dự án',
+                  context: context,
+                  title: 'about_project_title'.tr,
                   children: [
-                    const _MetaRow(
-                      label: 'Tên ứng dụng',
+                    _MetaRow(
+                      label: 'about_app_name'.tr,
                       value: 'SWING HOUSE',
                     ),
-                    const _MetaRow(label: 'Phiên bản', value: 'v$_version'),
-                    const _MetaRow(
-                      label: 'Mục đích',
-                      value: 'Hỗ trợ tìm kiếm và đăng tin phòng trọ',
+                    _MetaRow(label: 'about_version'.tr, value: 'v$_version'),
+                    _MetaRow(
+                      label: 'about_purpose'.tr,
+                      value: 'about_purpose_value'.tr,
                     ),
                     _ActionRow(
                       icon: Icons.email_outlined,
-                      title: 'Liên hệ hỗ trợ',
+                      title: 'about_support_contact'.tr,
                       value: _supportEmail,
                       onTap: () => _openSupportEmail(context),
                     ),
@@ -211,7 +209,7 @@ class AboutAppScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Ứng dụng tìm kiếm phòng trọ',
+                      'about_subtitle'.tr,
                       style: TextStyle(
                         fontSize: 13,
                         color: context.profileTextSecondary,
@@ -239,12 +237,12 @@ class AboutAppScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          const Text(
-            'SWING HOUSE giúp người thuê tìm phòng phù hợp nhanh hơn, đồng thời hỗ trợ chủ trọ quản lý tin đăng, hình ảnh và trạng thái phòng một cách rõ ràng.',
+          Text(
+            'about_intro'.tr,
             style: TextStyle(
               fontSize: 14,
               height: 1.6,
-              color: AppColors.textSecondary,
+              color: context.profileTextSecondary,
             ),
           ),
         ],
@@ -253,6 +251,7 @@ class AboutAppScreen extends StatelessWidget {
   }
 
   Widget _buildSection({
+    required BuildContext context,
     required String title,
     required List<Widget> children,
   }) {
@@ -263,35 +262,35 @@ class AboutAppScreen extends StatelessWidget {
           padding: const EdgeInsets.only(left: 2, bottom: 8),
           child: Text(
             title.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: AppColors.textMuted,
+              color: context.profileTextMuted,
               letterSpacing: 0.8,
             ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.profileCard,
             borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-            border: Border.all(color: AppColors.borderLight),
+            border: Border.all(color: context.profileBorder),
           ),
-          child: Column(children: _withDividers(children)),
+          child: Column(children: _withDividers(context, children)),
         ),
       ],
     );
   }
 
-  List<Widget> _withDividers(List<Widget> children) {
+  List<Widget> _withDividers(BuildContext context, List<Widget> children) {
     final items = <Widget>[];
     for (var i = 0; i < children.length; i++) {
       items.add(children[i]);
       if (i != children.length - 1) {
-        items.add(const Divider(
+        items.add(Divider(
           height: 1,
           indent: 68,
-          color: AppColors.borderLight,
+          color: context.profileBorder,
         ));
       }
     }
@@ -303,7 +302,7 @@ class AboutAppScreen extends StatelessWidget {
       scheme: 'mailto',
       path: _supportEmail,
       queryParameters: {
-        'subject': 'Hỗ trợ ứng dụng SWING HOUSE',
+        'subject': 'about_email_subject'.tr,
       },
     );
 
@@ -311,7 +310,7 @@ class AboutAppScreen extends StatelessWidget {
     if (!opened && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Chưa mở được ứng dụng email trên thiết bị này'),
+          content: Text('about_email_open_failed'.tr),
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppColors.textDark,
           shape: RoundedRectangleBorder(
@@ -358,16 +357,19 @@ class _InfoRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: context.profileText,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   description,
-                  style: AppTextStyles.bodySmall.copyWith(height: 1.45),
+                  style: AppTextStyles.bodySmall.copyWith(
+                    height: 1.45,
+                    color: context.profileTextSecondary,
+                  ),
                 ),
               ],
             ),
@@ -398,9 +400,9 @@ class _MetaRow extends StatelessWidget {
             flex: 4,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: AppColors.textMuted,
+                color: context.profileTextMuted,
               ),
             ),
           ),
@@ -410,10 +412,10 @@ class _MetaRow extends StatelessWidget {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: context.profileText,
               ),
             ),
           ),
@@ -455,27 +457,27 @@ class _ActionRow extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: context.profileText,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     value,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: AppColors.textMuted,
+                      color: context.profileTextMuted,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
               size: 20,
-              color: AppColors.textMuted,
+              color: context.profileTextMuted,
             ),
           ],
         ),

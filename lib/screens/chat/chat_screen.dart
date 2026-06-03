@@ -9,6 +9,8 @@ import '../../models/conversation.dart';
 import '../../models/message.dart';
 import '../../repositories/message_repository.dart';
 import '../../services/chat_unread_service.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/theme/profile_theme.dart';
 
 class ChatScreen extends StatefulWidget {
   final Conversation conversation;
@@ -264,9 +266,9 @@ class _ChatScreenState extends State<ChatScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Không thể gửi tin nhắn: ${_cleanError(e)}'),
+          content: Text('chat_send_error'.tr.replaceAll('{error}', _cleanError(e))),
           action: SnackBarAction(
-            label: 'Thử lại',
+            label: 'common_retry'.tr,
             textColor: Colors.white,
             onPressed: () {
               setState(() {
@@ -282,7 +284,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     _messages.remove(tempMessage);
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Thử lại thất bại: ${_cleanError(err)}')),
+                    SnackBar(content: Text('chat_send_retry_failed'.tr.replaceAll('{error}', _cleanError(err)))),
                   );
                 }
               });
@@ -324,7 +326,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _messages.remove(tempMessage);
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi gửi phương tiện: ${_cleanError(e)}')),
+        SnackBar(content: Text('chat_media_send_error'.tr.replaceAll('{error}', _cleanError(e)))),
       );
     }
   }
@@ -332,7 +334,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       appBar: _buildAppBar(),
       body: SafeArea(
         child: Column(
@@ -342,10 +344,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 color: Colors.amber.shade700,
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SizedBox(
+                    const SizedBox(
                       width: 12,
                       height: 12,
                       child: CircularProgressIndicator(
@@ -353,10 +355,10 @@ class _ChatScreenState extends State<ChatScreen> {
                         color: Colors.white,
                       ),
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Text(
-                      'Đang kết nối lại...',
-                      style: TextStyle(
+                      'chat_connecting'.tr,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -368,9 +370,12 @@ class _ChatScreenState extends State<ChatScreen> {
             if (_isListingUnavailable)
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50.withValues(alpha: 0.9),
+                  color: context.isDarkProfile ? context.profileSubtleCard : Colors.red.shade50.withValues(alpha: 0.9),
                   border: Border(
-                    bottom: BorderSide(color: Colors.red.shade100, width: 1),
+                    bottom: BorderSide(
+                      color: context.isDarkProfile ? Colors.red.withValues(alpha: 0.3) : Colors.red.shade100,
+                      width: 1,
+                    ),
                   ),
                 ),
                 width: double.infinity,
@@ -381,9 +386,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Tin đăng này không còn khả dụng hoặc đã bị xóa.',
+                        'chat_listing_unavailable'.tr,
                         style: TextStyle(
-                          color: Colors.red.shade800,
+                          color: context.isDarkProfile ? Colors.red.shade400 : Colors.red.shade800,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -416,18 +421,18 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.wifi_off_rounded, size: 42, color: AppColors.textMuted),
+            Icon(Icons.wifi_off_rounded, size: 42, color: context.profileTextMuted),
             const SizedBox(height: 12),
             Text(
-              _errorMessage ?? 'Lỗi kết nối máy chủ',
+              _errorMessage ?? 'chat_error_load_failed'.tr,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: context.profileTextSecondary),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: _loadRealMessages,
               icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Thử lại'),
+              label: Text('common_retry'.tr),
             ),
           ],
         ),
@@ -436,8 +441,9 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
+    final appBarBg = context.isDarkProfile ? context.profileCard : AppColors.primary;
     return AppBar(
-      backgroundColor: AppColors.primary,
+      backgroundColor: appBarBg,
       foregroundColor: Colors.white,
       elevation: 0,
       centerTitle: false,
@@ -466,7 +472,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 1.5),
-                  color: AppColors.bgCardLight,
+                  color: context.profileSubtleCard,
                 ),
                 child: widget.conversation.otherUserAvatar != null
                     ? ClipOval(
@@ -486,7 +492,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.success,
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.primary, width: 1.5),
+                  border: Border.all(color: appBarBg, width: 1.5),
                 ),
               ),
             ],
@@ -506,9 +512,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  'Đang hoạt động',
-                  style: TextStyle(
+                Text(
+                  'chat_active'.tr,
+                  style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w400,
                     color: Colors.white70,
@@ -525,14 +531,14 @@ class _ChatScreenState extends State<ChatScreen> {
             _showCallDialog();
           },
           icon: const Icon(Icons.phone_rounded, color: Colors.white),
-          tooltip: 'Gọi điện',
+          tooltip: 'chat_action_call'.tr,
         ),
         IconButton(
           onPressed: () {
             _showMoreOptions();
           },
           icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
-          tooltip: 'Tùy chọn khác',
+          tooltip: 'chat_action_more'.tr,
         ),
       ],
     );
@@ -544,10 +550,10 @@ class _ChatScreenState extends State<ChatScreen> {
     return Center(
       child: Text(
         initials.isNotEmpty ? initials : 'U',
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: AppColors.primary,
+          color: context.isDarkProfile ? context.profileText : AppColors.primary,
         ),
       ),
     );
@@ -557,9 +563,9 @@ class _ChatScreenState extends State<ChatScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: const Border(
-          bottom: BorderSide(color: AppColors.border),
+        color: context.profileCard,
+        border: Border(
+          bottom: BorderSide(color: context.profileBorder),
         ),
         boxShadow: [
           BoxShadow(
@@ -589,21 +595,21 @@ class _ChatScreenState extends State<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.conversation.listingTitle ?? 'Tin đăng phòng trọ',
+                  widget.conversation.listingTitle ?? 'chat_listing_placeholder'.tr,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: context.profileText,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Text(
-                      '4.5 Tr/tháng',
-                      style: TextStyle(
+                    Text(
+                      '4.5 ${'chat_month_suffix'.tr}',
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                         color: AppColors.error,
@@ -614,16 +620,16 @@ class _ChatScreenState extends State<ChatScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
+                        color: context.isDarkProfile ? context.profileSubtleCard : AppColors.primaryLight,
                         borderRadius:
                             BorderRadius.circular(AppConstants.radiusSm),
                       ),
-                      child: const Text(
+                      child: Text(
                         '25 m²',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
+                          color: context.isDarkProfile ? context.profileText : AppColors.primary,
                         ),
                       ),
                     ),
@@ -640,9 +646,9 @@ class _ChatScreenState extends State<ChatScreen> {
               GestureDetector(
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                         content:
-                            Text('Đang chuyển hướng tới chi tiết tin đăng...')),
+                            Text('chat_redirecting_listing'.tr)),
                   );
                 },
                 child: Container(
@@ -652,9 +658,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     color: AppColors.primary,
                     borderRadius: BorderRadius.circular(AppConstants.radiusMd),
                   ),
-                  child: const Text(
-                    'Xem phòng',
-                    style: TextStyle(
+                  child: Text(
+                    'chat_view_room'.tr,
+                    style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -671,14 +677,14 @@ class _ChatScreenState extends State<ChatScreen> {
                 },
                 child: Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: AppColors.bgPage,
+                  decoration: BoxDecoration(
+                    color: context.profileBg,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.close_rounded,
                     size: 14,
-                    color: AppColors.textSecondary,
+                    color: context.profileTextSecondary,
                   ),
                 ),
               ),
@@ -724,7 +730,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ? const EdgeInsets.all(3)
                   : const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: isMe ? AppColors.primary : Colors.white,
+                color: isMe ? AppColors.primary : context.profileCard,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(AppConstants.radiusLg),
                   topRight: const Radius.circular(AppConstants.radiusLg),
@@ -733,7 +739,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   bottomRight: Radius.circular(
                       isMe ? AppConstants.radiusSm : AppConstants.radiusLg),
                 ),
-                border: isMe ? null : Border.all(color: AppColors.borderLight),
+                border: isMe ? null : Border.all(color: context.profileBorder),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.02),
@@ -751,9 +757,9 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 Text(
                   timeStr,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 9,
-                    color: AppColors.textMuted,
+                    color: context.profileTextMuted,
                   ),
                 ),
                 if (isMe) ...[
@@ -763,7 +769,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     size: 12,
                     color: message.isRead
                         ? AppColors.primary
-                        : AppColors.textMuted,
+                        : context.profileTextMuted,
                   ),
                 ],
               ],
@@ -784,9 +790,9 @@ class _ChatScreenState extends State<ChatScreen> {
           errorBuilder: (_, __, ___) => Container(
             width: 150,
             height: 150,
-            color: AppColors.bgPage,
-            child: const Icon(Icons.image_not_supported_rounded,
-                color: AppColors.textMuted),
+            color: context.profileBg,
+            child: Icon(Icons.image_not_supported_rounded,
+                color: context.profileTextMuted),
           ),
         ),
       );
@@ -812,7 +818,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: isMe ? Colors.white : AppColors.textPrimary,
+                    color: isMe ? Colors.white : context.profileText,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -820,7 +826,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   '1.2 MB • PDF',
                   style: TextStyle(
                     fontSize: 10,
-                    color: isMe ? Colors.white70 : AppColors.textSecondary,
+                    color: isMe ? Colors.white70 : context.profileTextSecondary,
                   ),
                 ),
               ],
@@ -837,7 +843,7 @@ class _ChatScreenState extends State<ChatScreen> {
         fontSize: 13,
         height: 1.4,
         fontWeight: FontWeight.w500,
-        color: isMe ? Colors.white : AppColors.textPrimary,
+        color: isMe ? Colors.white : context.profileText,
       ),
     );
   }
@@ -848,11 +854,11 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Row(
         children: [
           Text(
-            '${widget.conversation.otherUserName.split(' (').first} đang nhập',
-            style: const TextStyle(
+            'chat_typing'.tr.replaceAll('{username}', widget.conversation.otherUserName.split(' (').first),
+            style: TextStyle(
                 fontSize: 11,
                 fontStyle: FontStyle.italic,
-                color: AppColors.textSecondary),
+                color: context.profileTextSecondary),
           ),
           const SizedBox(width: 4),
           const SizedBox(
@@ -872,18 +878,18 @@ class _ChatScreenState extends State<ChatScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1)),
+          color: context.profileSubtleCard,
+          border: Border(top: BorderSide(color: context.profileBorder, width: 1)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.lock_outline_rounded, color: Colors.grey.shade600, size: 20),
+            Icon(Icons.lock_outline_rounded, color: context.profileTextSecondary, size: 20),
             const SizedBox(width: 8),
             Text(
-              'Tin đăng đã bị đóng. Bạn không thể gửi tin nhắn.',
+              'chat_listing_closed'.tr,
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: context.profileTextSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -896,7 +902,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.profileCard,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -915,8 +921,8 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Container(
               width: 38,
               height: 38,
-              decoration: const BoxDecoration(
-                color: AppColors.primaryLight,
+              decoration: BoxDecoration(
+                color: context.isDarkProfile ? context.profileSubtleCard : AppColors.primaryLight,
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -932,8 +938,9 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Container(
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.bgPage,
+                color: context.profileInputFill,
                 borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+                border: context.isDarkProfile ? Border.all(color: context.profileBorder) : null,
               ),
               child: TextField(
                 controller: _textCtrl,
@@ -942,12 +949,13 @@ class _ChatScreenState extends State<ChatScreen> {
                   // Trigger rebuilding text vs send icon switch
                   setState(() {});
                 },
-                decoration: const InputDecoration(
-                  hintText: 'Nhập tin nhắn...',
+                style: TextStyle(color: context.profileText),
+                decoration: InputDecoration(
+                  hintText: 'chat_input_hint'.tr,
                   hintStyle:
-                      TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      TextStyle(color: context.profileTextMuted, fontSize: 13),
                   contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
@@ -987,9 +995,9 @@ class _ChatScreenState extends State<ChatScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(
+        decoration: BoxDecoration(
+          color: context.profileCard,
+          borderRadius: const BorderRadius.vertical(
               top: Radius.circular(AppConstants.radiusXxl)),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -1000,17 +1008,17 @@ class _ChatScreenState extends State<ChatScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.border,
+                color: context.profileBorder,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Gửi phương tiện đính kèm',
+            Text(
+              'chat_attachment_title'.tr,
               style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary),
+                  color: context.profileText),
             ),
             const SizedBox(height: 24),
             Row(
@@ -1018,7 +1026,7 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 _buildAttachmentOption(
                   icon: Icons.image_rounded,
-                  label: 'Hình ảnh',
+                  label: 'chat_attachment_image'.tr,
                   color: Colors.teal,
                   onTap: () {
                     Navigator.pop(context);
@@ -1032,7 +1040,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 _buildAttachmentOption(
                   icon: Icons.camera_alt_rounded,
-                  label: 'Máy ảnh',
+                  label: 'chat_attachment_camera'.tr,
                   color: Colors.orange,
                   onTap: () {
                     Navigator.pop(context);
@@ -1046,7 +1054,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 _buildAttachmentOption(
                   icon: Icons.insert_drive_file_rounded,
-                  label: 'Tài liệu',
+                  label: 'chat_attachment_document'.tr,
                   color: Colors.red,
                   onTap: () {
                     Navigator.pop(context);
@@ -1089,10 +1097,10 @@ class _ChatScreenState extends State<ChatScreen> {
           const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+              color: context.profileTextSecondary,
             ),
           ),
         ],
@@ -1104,26 +1112,28 @@ class _ChatScreenState extends State<ChatScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: context.profileCard,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppConstants.radiusLg)),
-        title: const Text('Gọi cho chủ nhà?',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+        title: Text('chat_call_title'.tr,
+            style: TextStyle(fontWeight: FontWeight.w700, color: context.profileText)),
         content: Text(
-            'Bạn có muốn thực hiện cuộc gọi trực tiếp đến ${widget.conversation.otherUserName.split(' (').first} không?'),
+            'chat_call_desc'.tr.replaceAll('{username}', widget.conversation.otherUserName.split(' (').first),
+            style: TextStyle(color: context.profileTextSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
+            child: Text('common_cancel'.tr),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Đang khởi tạo cuộc gọi thoại...')),
+                SnackBar(
+                    content: Text('chat_call_starting'.tr)),
               );
             },
-            child: const Text('Gọi ngay'),
+            child: Text('chat_call_now'.tr),
           ),
         ],
       ),
@@ -1135,9 +1145,9 @@ class _ChatScreenState extends State<ChatScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(
+        decoration: BoxDecoration(
+          color: context.profileCard,
+          borderRadius: const BorderRadius.vertical(
               top: Radius.circular(AppConstants.radiusXxl)),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -1146,24 +1156,24 @@ class _ChatScreenState extends State<ChatScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.bookmark_border_rounded,
-                    color: AppColors.textPrimary),
-                title: const Text('Lưu tin đăng này',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
+                leading: Icon(Icons.bookmark_border_rounded,
+                    color: context.profileText),
+                title: Text('chat_option_save_listing'.tr,
+                    style: TextStyle(fontWeight: FontWeight.w600, color: context.profileText)),
                 onTap: () {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                         content:
-                            Text('Đã lưu tin đăng vào danh sách yêu thích!')),
+                            Text('chat_option_saved_success'.tr)),
                   );
                 },
               ),
               ListTile(
                 leading:
                     const Icon(Icons.block_rounded, color: AppColors.error),
-                title: const Text('Chặn người dùng này',
-                    style: TextStyle(
+                title: Text('chat_option_block'.tr,
+                    style: const TextStyle(
                         color: AppColors.error, fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(context);
@@ -1172,8 +1182,8 @@ class _ChatScreenState extends State<ChatScreen> {
               ListTile(
                 leading: const Icon(Icons.report_problem_outlined,
                     color: AppColors.error),
-                title: const Text('Báo cáo người dùng',
-                    style: TextStyle(
+                title: Text('chat_option_report'.tr,
+                    style: const TextStyle(
                         color: AppColors.error, fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(context);

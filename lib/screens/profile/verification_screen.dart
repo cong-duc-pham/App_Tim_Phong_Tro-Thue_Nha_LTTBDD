@@ -90,10 +90,10 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
 
   String get _trustLevelText {
     final score = _trustScore;
-    if (score == 1.0) return 'Tuyệt đối';
-    if (score >= 0.75) return 'Rất cao';
-    if (score >= 0.5) return 'Trung bình';
-    return 'Thấp';
+    if (score == 1.0) return 'verify_trust_level_absolute'.tr;
+    if (score >= 0.75) return 'verify_trust_level_high'.tr;
+    if (score >= 0.5) return 'verify_trust_level_medium'.tr;
+    return 'verify_trust_level_low'.tr;
   }
 
   Color get _trustColor {
@@ -130,9 +130,8 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Yêu cầu xác minh đã gửi! Đã tự động mô phỏng xác minh Email thành công.'),
+        SnackBar(
+          content: Text('verify_email_sent_mock'.tr),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ),
@@ -148,9 +147,8 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     if (_googleLinked) {
       // Hủy liên kết
       final confirm = await _showConfirmDialog(
-        title: 'Hủy liên kết Google',
-        content:
-            'Bạn có chắc chắn muốn hủy liên kết tài khoản Google này không?',
+        title: 'verify_confirm_unlink_google_title'.tr,
+        content: 'verify_confirm_unlink_google_desc'.tr,
       );
       if (confirm == true) {
         setState(() => _isLoading = true);
@@ -175,7 +173,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
 
       await _loadVerificationStatus();
       HapticFeedback.mediumImpact();
-      _showSuccessSnackBar('Liên kết tài khoản Google thành công!');
+      _showSuccessSnackBar('verify_success_google_link'.tr);
     }
   }
 
@@ -187,9 +185,8 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     if (_facebookLinked) {
       // Hủy liên kết
       final confirm = await _showConfirmDialog(
-        title: 'Hủy liên kết Facebook',
-        content:
-            'Bạn có chắc chắn muốn hủy liên kết tài khoản Facebook này không?',
+        title: 'verify_confirm_unlink_facebook_title'.tr,
+        content: 'verify_confirm_unlink_facebook_desc'.tr,
       );
       if (confirm == true) {
         setState(() => _isLoading = true);
@@ -212,7 +209,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
 
       await _loadVerificationStatus();
       HapticFeedback.mediumImpact();
-      _showSuccessSnackBar('Liên kết tài khoản Facebook thành công!');
+      _showSuccessSnackBar('verify_success_facebook_link'.tr);
     }
   }
 
@@ -233,7 +230,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
           await prefs.setBool('verify_account_main_status', nextScore >= 1.0);
 
           await _loadVerificationStatus();
-          _showSuccessSnackBar('Xác thực số điện thoại thành công!');
+          _showSuccessSnackBar('verify_success_phone_verify'.tr);
         },
       ),
     );
@@ -264,18 +261,24 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: context.profileCard,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppConstants.radiusLg)),
         title: Text(title,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+            style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+                color: context.profileText)),
         content: Text(content,
-            style: const TextStyle(
-                fontSize: 14, color: AppColors.textSecondary, height: 1.45)),
+            style: TextStyle(
+                fontSize: 14,
+                color: context.profileTextSecondary,
+                height: 1.45)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Hủy',
-                style: TextStyle(
+            child: Text('verify_dialog_cancel'.tr,
+                style: const TextStyle(
                     color: AppColors.textMuted, fontWeight: FontWeight.w700)),
           ),
           ElevatedButton(
@@ -287,8 +290,8 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppConstants.radiusMd)),
             ),
-            child: const Text('Hủy liên kết',
-                style: TextStyle(fontWeight: FontWeight.w700)),
+            child: Text('verify_action_unlink'.tr,
+                style: const TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -334,7 +337,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
                   _buildTrustMeterCard(),
                   const SizedBox(height: 28),
                   Text(
-                    'Các cổng liên kết bảo mật',
+                    'verify_gateways_title'.tr,
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
@@ -345,13 +348,14 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
                     icon: Icons.email_rounded,
                     iconBg: const Color(0xFFEFF6FF),
                     iconColor: const Color(0xFF185FA5),
-                    title: 'Xác minh Email',
+                    title: 'verify_email'.tr,
                     subtitle: _emailAddress.isNotEmpty
                         ? _emailAddress
-                        : 'Chưa liên kết Email',
+                        : 'verify_email_unlinked'.tr,
                     isVerified: _emailVerified,
-                    actionText:
-                        _emailVerified ? 'Đã xác minh' : 'Xác minh ngay',
+                    actionText: _emailVerified
+                        ? 'verify_email_verified'.tr
+                        : 'verify_email_verify_now'.tr,
                     onTap: _emailVerified ? null : _verifyEmail,
                   ),
                   const SizedBox(height: 12),
@@ -359,13 +363,14 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
                     icon: Icons.phone_android_rounded,
                     iconBg: const Color(0xFFF0FDF4),
                     iconColor: const Color(0xFF166534),
-                    title: 'Số điện thoại',
+                    title: 'verify_phone'.tr,
                     subtitle: _phoneVerified
                         ? _phoneNumber
-                        : 'Chưa xác thực số điện thoại',
+                        : 'verify_phone_unverified'.tr,
                     isVerified: _phoneVerified,
-                    actionText:
-                        _phoneVerified ? 'Đã xác thực' : 'Xác thực ngay',
+                    actionText: _phoneVerified
+                        ? 'verify_phone_verified'.tr
+                        : 'verify_phone_verify_now'.tr,
                     onTap: _phoneVerified ? null : _openPhoneVerificationSheet,
                   ),
                   const SizedBox(height: 12),
@@ -373,12 +378,13 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
                     icon: Icons.g_mobiledata_rounded,
                     iconBg: const Color(0xFFFEF2F2),
                     iconColor: const Color(0xFFDC2626),
-                    title: 'Tài khoản Google',
-                    subtitle: _googleLinked
-                        ? _googleEmail
-                        : 'Liên kết tài khoản Google để đăng nhập nhanh',
+                    title: 'verify_google'.tr,
+                    subtitle:
+                        _googleLinked ? _googleEmail : 'verify_google_desc'.tr,
                     isVerified: _googleLinked,
-                    actionText: _googleLinked ? 'Hủy liên kết' : 'Liên kết',
+                    actionText: _googleLinked
+                        ? 'verify_action_unlink'.tr
+                        : 'verify_action_link'.tr,
                     actionColor:
                         _googleLinked ? AppColors.textMuted : AppColors.primary,
                     onTap: _toggleGoogle,
@@ -388,12 +394,14 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
                     icon: Icons.facebook_rounded,
                     iconBg: const Color(0xFFF0F9FF),
                     iconColor: const Color(0xFF0284C7),
-                    title: 'Tài khoản Facebook',
+                    title: 'verify_facebook'.tr,
                     subtitle: _facebookLinked
                         ? _facebookName
-                        : 'Liên kết tài khoản Facebook để bảo mật',
+                        : 'verify_facebook_desc'.tr,
                     isVerified: _facebookLinked,
-                    actionText: _facebookLinked ? 'Hủy liên kết' : 'Liên kết',
+                    actionText: _facebookLinked
+                        ? 'verify_action_unlink'.tr
+                        : 'verify_action_link'.tr,
                     actionColor: _facebookLinked
                         ? AppColors.textMuted
                         : AppColors.primary,
@@ -446,7 +454,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Độ tin cậy tài khoản',
+                      'verify_trust_title'.tr,
                       style: TextStyle(
                           fontSize: 13,
                           color: context.profileTextSecondary,
@@ -456,7 +464,9 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
                     Row(
                       children: [
                         Text(
-                          'Mức độ: $_trustLevelText',
+                          'verify_trust_level_label'
+                              .tr
+                              .replaceAll('{level}', _trustLevelText),
                           style: TextStyle(
                               fontSize: 18,
                               color: _trustColor,
@@ -487,15 +497,15 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
             child: LinearProgressIndicator(
               value: score,
               minHeight: 8,
-              backgroundColor: const Color(0xFFF1F5F9),
+              backgroundColor: context.profileBorder,
               valueColor: AlwaysStoppedAnimation<Color>(_trustColor),
             ),
           ),
           const SizedBox(height: 14),
           Text(
             score == 1.0
-                ? 'Tuyệt vời! Tài khoản của bạn đã đạt mức độ tin cậy tuyệt đối và kích hoạt Huy hiệu Xác thực xanh.'
-                : 'Hãy xác thực thêm số điện thoại và liên kết các mạng xã hội để đạt mức độ tin cậy 100%!',
+                ? 'verify_trust_success_desc'.tr
+                : 'verify_trust_warning_desc'.tr,
             style: TextStyle(
                 fontSize: 12,
                 height: 1.45,
@@ -612,22 +622,23 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: context.profileBg,
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
         border: Border.all(color: context.profileBorder),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 18),
-          SizedBox(width: 10),
+          const Icon(Icons.info_outline_rounded,
+              color: AppColors.primary, size: 18),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Swings House cam kết bảo mật 100% dữ liệu liên kết tài khoản của bạn. Việc liên kết này chỉ dùng để tăng tính tin cậy của thông tin hiển thị trên tin đăng trọ của bạn.',
+              'verify_security_commitment'.tr,
               style: TextStyle(
                   fontSize: 12,
                   height: 1.45,
-                  color: AppColors.textSecondary,
+                  color: context.profileTextSecondary,
                   fontWeight: FontWeight.w500),
             ),
           ),
@@ -691,7 +702,7 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
     final phone = _phoneCtrl.text.trim();
     if (phone.length < 9) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập số điện thoại hợp lệ!')),
+        SnackBar(content: Text('verify_otp_invalid_phone'.tr)),
       );
       return;
     }
@@ -710,7 +721,7 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
     final otp = _otpCtrls.map((c) => c.text).join();
     if (otp.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập đủ mã OTP 6 số!')),
+        SnackBar(content: Text('verify_otp_invalid_otp'.tr)),
       );
       return;
     }
@@ -738,9 +749,9 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Container(
       margin: const EdgeInsets.only(top: 80),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: context.profileCard,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       padding: EdgeInsets.fromLTRB(20, 20, 20, bottomInset + 30),
       child: SingleChildScrollView(
@@ -753,28 +764,30 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.borderLight,
+                  color: context.profileBorder,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             const SizedBox(height: 20),
             Text(
-              _otpSent ? 'Nhập mã xác thực OTP' : 'Xác thực số điện thoại',
-              style: const TextStyle(
+              _otpSent ? 'verify_otp_title'.tr : 'verify_phone_verify_now'.tr,
+              style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary),
+                  color: context.profileText),
             ),
             const SizedBox(height: 6),
             Text(
               _otpSent
-                  ? 'Mã OTP đã được gửi đến số ${_phoneCtrl.text}'
-                  : 'Swings House sẽ gửi một mã OTP 6 chữ số đến số điện thoại này.',
-              style: const TextStyle(
+                  ? 'verify_otp_sent_to'
+                      .tr
+                      .replaceAll('{phone}', _phoneCtrl.text)
+                  : 'verify_otp_instruction'.tr,
+              style: TextStyle(
                   fontSize: 13,
                   height: 1.45,
-                  color: AppColors.textSecondary,
+                  color: context.profileTextSecondary,
                   fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 24),
@@ -783,22 +796,24 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
                 controller: _phoneCtrl,
                 keyboardType: TextInputType.phone,
                 maxLength: 11,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: context.profileText),
                 decoration: InputDecoration(
                   counterText: '',
                   prefixIcon: const Icon(Icons.phone_rounded,
                       color: AppColors.primary, size: 20),
-                  hintText: 'Nhập số điện thoại của bạn',
-                  hintStyle: const TextStyle(
+                  hintText: 'verify_phone_input_hint'.tr,
+                  hintStyle: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.textMuted),
+                      color: context.profileTextMuted),
                   filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
+                  fillColor: context.profileBg,
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-                    borderSide: const BorderSide(color: AppColors.borderLight),
+                    borderSide: BorderSide(color: context.profileBorder),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppConstants.radiusLg),
@@ -821,9 +836,9 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
                             BorderRadius.circular(AppConstants.radiusLg)),
                     elevation: 0,
                   ),
-                  child: const Text('Nhận mã OTP',
-                      style:
-                          TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                  child: Text('verify_otp_get_code'.tr,
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w800)),
                 ),
               ),
             ] else ...[
@@ -846,13 +861,12 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
                       decoration: InputDecoration(
                         counterText: '',
                         filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
+                        fillColor: context.profileBg,
                         contentPadding: EdgeInsets.zero,
                         enabledBorder: OutlineInputBorder(
                           borderRadius:
                               BorderRadius.circular(AppConstants.radiusMd),
-                          borderSide:
-                              const BorderSide(color: AppColors.borderLight),
+                          borderSide: BorderSide(color: context.profileBorder),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius:
@@ -884,11 +898,13 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
                 children: [
                   Text(
                     _countdown > 0
-                        ? 'Gửi lại mã sau ${_countdown}s'
-                        : 'Không nhận được mã? ',
-                    style: const TextStyle(
+                        ? 'verify_otp_resend_countdown'
+                            .tr
+                            .replaceAll('{seconds}', '$_countdown')
+                        : 'verify_otp_not_received'.tr,
+                    style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.textSecondary,
+                        color: context.profileTextSecondary,
                         fontWeight: FontWeight.w600),
                   ),
                   if (_countdown == 0)
@@ -897,9 +913,9 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
                         HapticFeedback.lightImpact();
                         _startTimer();
                       },
-                      child: const Text(
-                        'Gửi lại ngay',
-                        style: TextStyle(
+                      child: Text(
+                        'verify_otp_resend_now'.tr,
+                        style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.primary,
                             fontWeight: FontWeight.w800),
@@ -927,8 +943,8 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
                           height: 20,
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2))
-                      : const Text('Xác nhận',
-                          style: TextStyle(
+                      : Text('verify_otp_confirm'.tr,
+                          style: const TextStyle(
                               fontSize: 15, fontWeight: FontWeight.w800)),
                 ),
               ),

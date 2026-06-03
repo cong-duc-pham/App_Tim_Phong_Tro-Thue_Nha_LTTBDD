@@ -420,9 +420,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Cá nhân',
-                    style: TextStyle(
+                  Text(
+                    'nav_profile'.tr,
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -547,7 +547,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        _user.role == 'landlord' ? 'Chủ nhà' : 'Người thuê',
+                        _user.role == 'landlord'
+                            ? 'profile_landlord'.tr
+                            : 'profile_tenant'.tr,
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -569,15 +571,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       border: Border.all(
                           color: AppColors.success.withValues(alpha: 0.5)),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.verified_rounded,
+                        const Icon(Icons.verified_rounded,
                             size: 13, color: Colors.white),
-                        SizedBox(width: 4),
+                        const SizedBox(width: 4),
                         Text(
-                          'Đã xác thực',
-                          style: TextStyle(
+                          'profile_verified'.tr,
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -849,8 +851,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
               final router = GoRouter.of(context);
+              Navigator.pop(context);
               if (!mounted) return;
               await LogoutHelper.signOutAndGoToLogin(router);
             },
@@ -904,7 +906,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Cảm ơn bạn đã đánh giá ứng dụng.'),
+              content: Text('profile_app_rating_thanks'.tr),
               backgroundColor: AppColors.success,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
@@ -1276,6 +1278,8 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                               }
 
                               setState(() => _isSaving = true);
+                              final messenger = ScaffoldMessenger.of(context);
+                              final navigator = Navigator.of(context);
                               try {
                                 await AuthRepository().updateProfile(
                                   fullName: name,
@@ -1283,8 +1287,8 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                                 );
                                 if (!mounted) return;
                                 widget.onSaved();
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                navigator.pop();
+                                messenger.showSnackBar(
                                   SnackBar(
                                     content: Text('profile_update_success'.tr),
                                     backgroundColor: AppColors.success,
@@ -1296,7 +1300,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                                 );
                               } catch (e) {
                                 if (!mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                messenger.showSnackBar(
                                   SnackBar(
                                     content: Text(e
                                         .toString()
