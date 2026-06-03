@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constants/app_constants.dart';
 import '../models/listing.dart';
+import '../models/amenity.dart';
 import '../services/api_service.dart';
 
 class ListingRepository {
@@ -340,5 +341,26 @@ class ListingRepository {
       return data;
     }
     return e.message ?? 'Không kết nối được backend.';
+  }
+
+  Future<List<Amenity>> getAmenities() async {
+    try {
+      final response = await _apiService.dio.get<Map<String, dynamic>>(
+        '/categories/amenities',
+      );
+
+      final body = response.data ?? {};
+      final data = body['data'] ?? body['Data'];
+      if (data is! List) {
+        return const [];
+      }
+
+      return data
+          .whereType<Map>()
+          .map((item) => Amenity.fromJson(Map<String, dynamic>.from(item)))
+          .toList();
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
   }
 }
