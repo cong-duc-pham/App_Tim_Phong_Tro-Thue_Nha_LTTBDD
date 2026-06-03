@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 using Backend_API.Helpers;
 using Backend_API.Models.Entities;
 using Backend_API.Models.ViewModels.Admin;
@@ -742,6 +743,204 @@ namespace Backend_API.Controllers.MVC
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Storage), new { ref_type = refType, user_id = userId });
+        }
+
+        // ==========================================
+        // QUẢN LÝ TIỆN ÍCH (AMENITY CRUD)
+        // ==========================================
+
+        // Lấy danh sách tất cả tiện ích (cả hoạt động và không hoạt động)
+        [HttpGet("amenities")]
+        public async Task<IActionResult> Amenities()
+        {
+            // Query toàn bộ tiện ích sắp xếp theo ID giảm dần để tiện ích mới thêm hiển thị lên đầu
+            var amenities = await _context.Amenities
+                .OrderByDescending(x => x.AmenityId)
+                .ToListAsync();
+
+            ViewData["Title"] = "Quản lý Tiện ích";
+            return View(amenities);
+        }
+
+        // Thêm tiện ích mới
+        [HttpPost("amenities/create")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateAmenity(string name, string? category, string? iconUrl, IFormFile? iconFile)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                TempData["AdminError"] = "Tên tiện ích không được để trống.";
+                return RedirectToAction(nameof(Amenities));
+            }
+
+            // Tránh trùng tên
+            var exists = await _context.Amenities.AnyAsync(x => x.Name.ToLower() == name.Trim().ToLower());
+            if (exists)
+            {
+                TempData["AdminError"] = $"Tiện ích '{name}' đã tồn tại trong hệ thống.";
+                return RedirectToAction(nameof(Amenities));
+            }
+
+            var amenity = new Amenity
+            {
+                Name = name.Trim(),
+                Category = category?.Trim(),
+                IsActive = true
+            };
+
+            // Nếu người dùng chọn file ảnh tải lên
+            if (iconFile != null && iconFile.Length > 0)
+            {
+                try
+                {
+                    var extension = Path.GetExtension(iconFile.FileName).ToLowerInvariant();
+                    var fileName = $"{Guid.NewGuid():N}{extension}";
+                    var webRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                    var dirPath = Path.Combine(webRoot, "uploads", "amenities");
+                    Directory.CreateDirectory(dirPath);
+
+                    var filePath = Path.Combine(dirPath, fileName);
+                    using (var stream = System.IO.File.Create(filePath))
+                    {
+                        await iconFile.CopyToAsync(stream);
+                    }
+
+                    amenity.IconUrl = $"/uploads/amenities/{fileName}";
+                }
+                catch (Exception ex)
+                {
+                    TempData["AdminError"] = $"Không thể tải ảnh tiện ích lên: {ex.Message}";
+                    return RedirectToAction(nameof(Amenities));
+                }
+            }
+            else
+            {
+                // Nếu không có file thì dùng chuỗi text định danh (như ac_unit, wifi...)
+                amenity.IconUrl = iconUrl?.Trim();
+            }
+
+            await _context.Amenities.AddAsync(amenity);
+            await _context.SaveChangesAsync();
+
+            TempData["AdminSuccess"] = $"Đã thêm tiện ích '{name}' thành công.";
+            return RedirectToAction(nameof(Amenities));
+        }
+
+        // Chỉnh sửa tiện ích có sẵn
+        [HttpPost("amenities/edit")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditAmenity(int id, string name, string? category, string? iconUrl, IFormFile? iconFile, bool isActive)
+        {
+            var amenity = await _context.Amenities.FirstOrDefaultAsync(x => x.AmenityId == id);
+            if (amenity == null)
+            {
+                TempData["AdminError"] = "Không tìm thấy tiện ích cần chỉnh sửa.";
+                return RedirectToAction(nameof(Amenities));
+            }
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                TempData["AdminError"] = "Tên tiện ích không được bỏ trống.";
+                return RedirectToAction(nameof(Amenities));
+            }
+
+            // Tránh trùng tên với tiện ích khác
+            var exists = await _context.Amenities.AnyAsync(x => x.AmenityId != id && x.Name.ToLower() == name.Trim().ToLower());
+            if (exists)
+            {
+                TempData["AdminError"] = $"Tên tiện ích '{name}' trùng với một tiện ích khác đã có.";
+                return RedirectToAction(nameof(Amenities));
+            }
+
+            amenity.Name = name.Trim();
+            amenity.Category = category?.Trim();
+            amenity.IsActive = isActive;
+
+            // Xử lý upload ảnh mới
+            if (iconFile != null && iconFile.Length > 0)
+            {
+                try
+                {
+                    var extension = Path.GetExtension(iconFile.FileName).ToLowerInvariant();
+                    var fileName = $"{Guid.NewGuid():N}{extension}";
+                    var webRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                    var dirPath = Path.Combine(webRoot, "uploads", "amenities");
+                    Directory.CreateDirectory(dirPath);
+
+                    var filePath = Path.Combine(dirPath, fileName);
+                    using (var stream = System.IO.File.Create(filePath))
+                    {
+                        await iconFile.CopyToAsync(stream);
+                    }
+
+                    amenity.IconUrl = $"/uploads/amenities/{fileName}";
+                }
+                catch (Exception ex)
+                {
+                    TempData["AdminError"] = $"Lỗi khi cập nhật ảnh mới: {ex.Message}";
+                    return RedirectToAction(nameof(Amenities));
+                }
+            }
+            else
+            {
+                // Cập nhật text icon nếu có nhập mới
+                if (!string.IsNullOrWhiteSpace(iconUrl))
+                {
+                    amenity.IconUrl = iconUrl.Trim();
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            TempData["AdminSuccess"] = $"Đã cập nhật tiện ích '{amenity.Name}' thành công.";
+            return RedirectToAction(nameof(Amenities));
+        }
+
+        // Bật/tắt trạng thái hoạt động nhanh
+        [HttpPost("amenities/{id:int}/toggle-active")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleAmenityActive(int id)
+        {
+            var amenity = await _context.Amenities.FirstOrDefaultAsync(x => x.AmenityId == id);
+            if (amenity == null)
+            {
+                TempData["AdminError"] = "Không tìm thấy tiện ích.";
+                return RedirectToAction(nameof(Amenities));
+            }
+
+            amenity.IsActive = !(amenity.IsActive ?? false);
+            await _context.SaveChangesAsync();
+
+            var trangThai = (amenity.IsActive == true) ? "kích hoạt" : "hủy kích hoạt";
+            TempData["AdminSuccess"] = $"Đã {trangThai} tiện ích '{amenity.Name}' thành công.";
+            return RedirectToAction(nameof(Amenities));
+        }
+
+        // Xóa hẳn tiện ích
+        [HttpPost("amenities/{id:int}/delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteAmenity(int id)
+        {
+            var amenity = await _context.Amenities.FirstOrDefaultAsync(x => x.AmenityId == id);
+            if (amenity == null)
+            {
+                TempData["AdminError"] = "Không tìm thấy tiện ích cần xóa.";
+                return RedirectToAction(nameof(Amenities));
+            }
+
+            // Chặn xóa nếu tiện ích đã được dùng trong phòng trọ (tránh lỗi khóa ngoại DB)
+            var dangSuDung = await _context.ListingAmenities.AnyAsync(x => x.AmenityId == id);
+            if (dangSuDung)
+            {
+                TempData["AdminError"] = $"Không thể xóa tiện ích '{amenity.Name}' vì đã được liên kết với tin đăng phòng. Hãy tắt hoạt động thay vì xóa.";
+                return RedirectToAction(nameof(Amenities));
+            }
+
+            _context.Amenities.Remove(amenity);
+            await _context.SaveChangesAsync();
+
+            TempData["AdminSuccess"] = $"Đã xóa tiện ích '{amenity.Name}' thành công.";
+            return RedirectToAction(nameof(Amenities));
         }
 
         private async Task BackfillListingStorageFilesAsync()
