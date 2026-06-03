@@ -116,8 +116,8 @@ class _PreferenceScreenState extends State<PreferenceScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
-              children: const [
+            content: const Row(
+              children: [
                 Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
                 SizedBox(width: 10),
                 Text(
@@ -237,9 +237,9 @@ class _PreferenceScreenState extends State<PreferenceScreen> {
   }
 
   Widget _buildHeader() {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
+      children: [
         Text(
           'Nhu cầu tìm trọ của bạn',
           style: TextStyle(

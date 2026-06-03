@@ -157,12 +157,15 @@ class NotificationRepository {
       if (newRefreshToken is String && newRefreshToken.isNotEmpty) {
         await prefs.setString('refresh_token', newRefreshToken);
       }
-      if (userId != null)
+      if (userId != null) {
         await prefs.setString(AppConstants.keyUserId, userId.toString());
-      if (fullName != null)
+      }
+      if (fullName != null) {
         await prefs.setString('user_full_name', fullName.toString());
-      if (role != null)
+      }
+      if (role != null) {
         await prefs.setString(AppConstants.keyUserRole, role.toString());
+      }
 
       return accessToken;
     } on DioException {

@@ -1,4 +1,4 @@
-﻿// lib/screens/onboarding/onboarding_screen.dart
+// lib/screens/onboarding/onboarding_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -45,35 +45,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   static const Color _primary = AppColors.primary;
 
   late final List<OnboardingData> _slides = [
-    OnboardingData(
+    const OnboardingData(
       tag: 'Tìm phòng dễ dàng',
       tagIcon: Icons.home_rounded,
-      tagBg: const Color(0xFFEFF6FF),
-      tagText: const Color(0xFF185FA5),
+      tagBg: Color(0xFFEFF6FF),
+      tagText: Color(0xFF185FA5),
       title: 'Hàng nghìn phòng\ncập nhật mỗi ngày',
       description:
       'Tìm ngay phòng trọ ưng ý chỉ trong vài giây — từ sinh viên đến căn hộ cao cấp, tất cả đều có.',
-      illustration: const _Slide1Illustration(),
+      illustration: _Slide1Illustration(),
     ),
-    OnboardingData(
+    const OnboardingData(
       tag: 'Định vị thông minh',
       tagIcon: Icons.location_on_rounded,
-      tagBg: const Color(0xFFF0FDF4),
-      tagText: const Color(0xFF166534),
+      tagBg: Color(0xFFF0FDF4),
+      tagText: Color(0xFF166534),
       title: 'Phòng trọ xịn\nngay gần bạn',
       description:
       'Bật GPS, ứng dụng tự tìm phòng trong bán kính bạn chọn — nhanh, chính xác, không cần gõ địa chỉ.',
-      illustration: const _Slide2Illustration(),
+      illustration: _Slide2Illustration(),
     ),
-    OnboardingData(
+    const OnboardingData(
       tag: 'Kết nối trực tiếp',
       tagIcon: Icons.chat_bubble_rounded,
-      tagBg: const Color(0xFFFFF7ED),
-      tagText: const Color(0xFF9A3412),
+      tagBg: Color(0xFFFFF7ED),
+      tagText: Color(0xFF9A3412),
       title: 'Nhắn tin chủ nhà\nkhông qua trung gian',
       description:
       'Chat trực tiếp, đặt lịch xem phòng, hỏi giá — tất cả trong một ứng dụng, nhanh gọn và miễn phí.',
-      illustration: const _Slide3Illustration(),
+      illustration: _Slide3Illustration(),
     ),
   ];
 
@@ -110,12 +110,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: Stack(
         children: [
           // ── Nền vòng tròn trang trí ──
-          Positioned(
+          const Positioned(
             top: -80,
             left: -60,
             child: _CircleBg(size: 240),
           ),
-          Positioned(
+          const Positioned(
             bottom: -60,
             right: -60,
             child: _CircleBg(size: 200),
@@ -300,36 +300,36 @@ class _Slide1Illustration extends StatelessWidget {
       alignment: Alignment.center,
       children: [
         // Floating card trên phải
-        Positioned(
+        const Positioned(
           top: 40,
           right: 20,
           child: _FloatingCard(
-            iconBg: const Color(0xFFDBEAFE),
+            iconBg: Color(0xFFDBEAFE),
             icon: Icons.home_rounded,
-            iconColor: const Color(0xFF185FA5),
+            iconColor: Color(0xFF185FA5),
             label: 'Phòng trọ',
             value: '12,400+',
           ),
         ),
         // Floating card dưới trái
-        Positioned(
+        const Positioned(
           bottom: 24,
           left: 20,
           child: _FloatingCard(
-            iconBg: const Color(0xFFDCFCE7),
+            iconBg: Color(0xFFDCFCE7),
             icon: Icons.verified_rounded,
-            iconColor: const Color(0xFF166534),
+            iconColor: Color(0xFF166534),
             label: 'Đã xác thực',
             value: '8,200+',
-            valueColor: const Color(0xFF166534),
+            valueColor: Color(0xFF166534),
           ),
         ),
         // Ngôi nhà trung tâm
         Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CustomPaint(
-              size: const Size(110, 55),
+            const CustomPaint(
+              size: Size(110, 55),
               painter: _RoofPainter(),
             ),
             Container(
@@ -503,8 +503,8 @@ class _Slide2Illustration extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
-              Row(
-                children: const [
+              const Row(
+                children: [
                   Text('Giá từ',
                       style: TextStyle(
                           fontSize: 10,
@@ -537,13 +537,13 @@ class _Slide3Illustration extends StatelessWidget {
       alignment: Alignment.center,
       children: [
         // Floating card phản hồi
-        Positioned(
+        const Positioned(
           top: 32,
           left: 20,
           child: _FloatingCard(
-            iconBg: const Color(0xFFDBEAFE),
+            iconBg: Color(0xFFDBEAFE),
             icon: Icons.chat_bubble_rounded,
-            iconColor: const Color(0xFF185FA5),
+            iconColor: Color(0xFF185FA5),
             label: 'Phản hồi',
             value: 'Trong 5 phút',
           ),
