@@ -83,6 +83,18 @@
                                     {
                                         <span class="text-muted small"><em>Chưa phân loại</em></span>
                                     }
+                                    else if (item.Category == "basic")
+                                    {
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1">Tiện ích cơ bản</span>
+                                    }
+                                    else if (item.Category == "comfort")
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1">Tiện ích tiện nghi</span>
+                                    }
+                                    else if (item.Category == "security")
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1">An ninh & Bảo vệ</span>
+                                    }
                                     else
                                     {
                                         <span class="badge bg-info-subtle text-info border border-info-subtle px-2.5 py-1">@item.Category</span>
@@ -154,10 +166,9 @@
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Phân loại (Category)</label>
                         <select name="category" class="form-select">
-                            <option value="Tiện ích phòng">Tiện ích phòng</option>
-                            <option value="Tiện ích chung">Tiện ích chung</option>
-                            <option value="Dịch vụ">Dịch vụ</option>
-                            <option value="An ninh">An ninh</option>
+                            <option value="basic">Tiện ích cơ bản (basic)</option>
+                            <option value="comfort">Tiện ích tiện nghi (comfort)</option>
+                            <option value="security">An ninh & Bảo vệ (security)</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -200,10 +211,9 @@
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Phân loại (Category)</label>
                         <select name="category" id="edit-category" class="form-select">
-                            <option value="Tiện ích phòng">Tiện ích phòng</option>
-                            <option value="Tiện ích chung">Tiện ích chung</option>
-                            <option value="Dịch vụ">Dịch vụ</option>
-                            <option value="An ninh">An ninh</option>
+                            <option value="basic">Tiện ích cơ bản (basic)</option>
+                            <option value="comfort">Tiện ích tiện nghi (comfort)</option>
+                            <option value="security">An ninh & Bảo vệ (security)</option>
                         </select>
                     </div>
                     <div class="mb-3">

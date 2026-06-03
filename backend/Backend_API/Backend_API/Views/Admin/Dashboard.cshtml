@@ -3,55 +3,138 @@
     ViewData["Title"] = "Dashboard";
 }
 
-<div class="row g-3 mb-4">
-    <div class="col-12 col-md-6 col-xl-3">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <div class="text-muted small">Tổng Users / Users Firebase</div>
-                <div class="h4 mb-0">@Model.TotalUsers / @Model.TotalFirebaseUsers</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-12 col-md-6 col-xl-3">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <div class="text-muted small">Tổng Listings đang active</div>
-                <div class="h4 mb-0">@Model.TotalActiveListings</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-12 col-md-6 col-xl-3">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <div class="text-muted small">Doanh thu tháng này</div>
-                <div class="h4 mb-0">@Model.RevenueThisMonth.ToString("N0") đ</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-12 col-md-6 col-xl-3">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <div class="text-muted small">FCM gửi thành công / thất bại</div>
-                <div class="h4 mb-0">@Model.FcmSentCount / @Model.FcmFailedCount</div>
+<!-- Welcome Banner -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm overflow-hidden" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border-radius: 16px;">
+            <div class="card-body p-4 d-flex align-items-center justify-content-between position-relative">
+                <div class="z-1">
+                    <h4 class="fw-bold mb-1">Chào mừng quay trở lại, Admin Swings House! 👋</h4>
+                    <p class="text-white-50 mb-0">Hệ thống đang hoạt động ổn định. Xem báo cáo hoạt động và thống kê 30 ngày qua dưới đây.</p>
+                </div>
+                <div class="d-none d-lg-block position-absolute" style="right: 5%; bottom: -10%; opacity: 0.15; pointer-events: none;">
+                    <i class="bi bi-activity text-white" style="font-size: 160px; line-height: 1;"></i>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row g-3">
-    <div class="col-12 col-xl-6">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white fw-semibold">User mới 30 ngày</div>
-            <div class="card-body">
-                <canvas id="newUsersChart" height="120"></canvas>
+<!-- Modern Stat Cards -->
+<div class="row g-4 mb-4">
+    <!-- Card 1: Users -->
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); color: white; border-radius: 12px;">
+            <div class="card-body p-4 d-flex justify-content-between align-items-start">
+                <div>
+                    <p class="text-white-50 small text-uppercase fw-semibold mb-1">Tổng người dùng</p>
+                    <h3 class="fw-bold mb-1">@Model.TotalUsers</h3>
+                    <small class="text-white-50">Firebase Sync: <span class="fw-semibold text-white">@Model.TotalFirebaseUsers</span></small>
+                </div>
+                <div class="bg-white bg-opacity-20 rounded-3 p-3 text-white">
+                    <i class="bi bi-people-fill fs-3"></i>
+                </div>
+            </div>
+            <div class="position-absolute bottom-0 start-0 end-0 bg-black bg-opacity-10 py-2 px-4 text-white-50 small d-flex justify-content-between align-items-center">
+                <span>Quản lý người dùng</span>
+                <a href="/admin/users" class="text-white text-decoration-none"><i class="bi bi-arrow-right-short fs-5"></i></a>
             </div>
         </div>
     </div>
+
+    <!-- Card 2: Listings -->
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; border-radius: 12px;">
+            <div class="card-body p-4 d-flex justify-content-between align-items-start">
+                <div>
+                    <p class="text-white-50 small text-uppercase fw-semibold mb-1">Tin đăng Active</p>
+                    <h3 class="fw-bold mb-1">@Model.TotalActiveListings</h3>
+                    <small class="text-white-50">Đang hiển thị công khai</small>
+                </div>
+                <div class="bg-white bg-opacity-20 rounded-3 p-3 text-white">
+                    <i class="bi bi-house-heart-fill fs-3"></i>
+                </div>
+            </div>
+            <div class="position-absolute bottom-0 start-0 end-0 bg-black bg-opacity-10 py-2 px-4 text-white-50 small d-flex justify-content-between align-items-center">
+                <span>Quản lý tin đăng</span>
+                <a href="/admin/listing-management" class="text-white text-decoration-none"><i class="bi bi-arrow-right-short fs-5"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Revenue -->
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-radius: 12px;">
+            <div class="card-body p-4 d-flex justify-content-between align-items-start">
+                <div>
+                    <p class="text-white-50 small text-uppercase fw-semibold mb-1">Doanh thu tháng này</p>
+                    <h3 class="fw-bold mb-1">@Model.RevenueThisMonth.ToString("N0") đ</h3>
+                    <small class="text-white-50">Thanh toán hoàn tất</small>
+                </div>
+                <div class="bg-white bg-opacity-20 rounded-3 p-3 text-white">
+                    <i class="bi bi-cash-stack fs-3"></i>
+                </div>
+            </div>
+            <div class="position-absolute bottom-0 start-0 end-0 bg-black bg-opacity-10 py-2 px-4 text-white-50 small d-flex justify-content-between align-items-center">
+                <span>Báo cáo doanh thu</span>
+                <a href="/admin/revenue" class="text-white text-decoration-none"><i class="bi bi-arrow-right-short fs-5"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 4: FCM status -->
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100 position-relative overflow-hidden" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border-radius: 12px;">
+            <div class="card-body p-4 d-flex justify-content-between align-items-start">
+                <div>
+                    <p class="text-white-50 small text-uppercase fw-semibold mb-1">Thông báo (FCM)</p>
+                    <h3 class="fw-bold mb-1">@Model.FcmSentCount <span style="font-size: 1.1rem; font-weight: normal;">gửi</span></h3>
+                    <small class="text-white-50">Thành công / Thất bại: <span class="fw-semibold text-white">@Model.FcmSentCount/@Model.FcmFailedCount</span></small>
+                </div>
+                <div class="bg-white bg-opacity-20 rounded-3 p-3 text-white">
+                    <i class="bi bi-bell-fill fs-3"></i>
+                </div>
+            </div>
+            <div class="position-absolute bottom-0 start-0 end-0 bg-black bg-opacity-10 py-2 px-4 text-white-50 small d-flex justify-content-between align-items-center">
+                <span>Gửi thông báo thủ công</span>
+                <a href="/admin/notifications/send" class="text-white text-decoration-none"><i class="bi bi-arrow-right-short fs-5"></i></a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="row g-4">
+    <!-- Chart 1: New Users -->
     <div class="col-12 col-xl-6">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white fw-semibold">Doanh thu 30 ngày</div>
-            <div class="card-body">
-                <canvas id="revenueChart" height="120"></canvas>
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white py-3 border-0 d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="fw-bold text-dark mb-0"><i class="bi bi-person-plus-fill me-2 text-primary"></i>User mới 30 ngày</h6>
+                    <small class="text-muted">Biến động lượng đăng ký tài khoản mới</small>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div style="height: 320px; width: 100%;">
+                    <canvas id="newUsersChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 2: Revenue -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white py-3 border-0 d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="fw-bold text-dark mb-0"><i class="bi bi-graph-up-arrow me-2 text-success"></i>Doanh thu 30 ngày</h6>
+                    <small class="text-muted">Biểu đồ doanh thu từ thanh toán tin đăng</small>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div style="height: 320px; width: 100%;">
+                    <canvas id="revenueChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -63,30 +146,112 @@
         const newUsersData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.NewUsers30Days));
         const revenueData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Revenue30Days));
 
-        new Chart(document.getElementById("newUsersChart"), {
+        // Chart 1: New Users
+        const newUsersCtx = document.getElementById("newUsersChart").getContext("2d");
+        const usersGradient = newUsersCtx.createLinearGradient(0, 0, 0, 300);
+        usersGradient.addColorStop(0, "rgba(79, 70, 229, 0.35)");
+        usersGradient.addColorStop(1, "rgba(79, 70, 229, 0.00)");
+
+        new Chart(newUsersCtx, {
             type: "line",
             data: {
                 labels: labels,
                 datasets: [{
-                    label: "Users mới",
+                    label: "Người dùng mới",
                     data: newUsersData,
-                    borderColor: "#0d6efd",
-                    backgroundColor: "rgba(13,110,253,0.15)",
-                    tension: 0.3,
-                    fill: true
+                    borderColor: "#4f46e5",
+                    backgroundColor: usersGradient,
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3,
+                    pointBackgroundColor: "#4f46e5",
+                    pointBorderColor: "#ffffff",
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: "#3b82f6"
                 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        padding: 12,
+                        backgroundColor: "rgba(15, 23, 42, 0.9)",
+                        titleFont: { size: 13, weight: "bold" },
+                        bodyFont: { size: 13 }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: "#64748b" }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        min: 0,
+                        grid: { color: "#f1f5f9" },
+                        ticks: {
+                            color: "#64748b",
+                            stepSize: 1,
+                            callback: function(value) {
+                                if (value % 1 === 0) return value;
+                            }
+                        }
+                    }
+                }
             }
         });
 
-        new Chart(document.getElementById("revenueChart"), {
+        // Chart 2: Revenue
+        const revenueCtx = document.getElementById("revenueChart").getContext("2d");
+        new Chart(revenueCtx, {
             type: "bar",
             data: {
                 labels: labels,
                 datasets: [{
                     label: "Doanh thu",
                     data: revenueData,
-                    backgroundColor: "#198754"
+                    backgroundColor: "#10b981",
+                    hoverBackgroundColor: "#059669",
+                    borderRadius: 6,
+                    borderSkipped: false
                 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        padding: 12,
+                        backgroundColor: "rgba(15, 23, 42, 0.9)",
+                        titleFont: { size: 13, weight: "bold" },
+                        bodyFont: { size: 13 },
+                        callbacks: {
+                            label: function(context) {
+                                return "Doanh thu: " + context.raw.toLocaleString("vi-VN") + " đ";
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: "#64748b" }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: "#f1f5f9" },
+                        ticks: {
+                            color: "#64748b",
+                            callback: function(value) {
+                                return value.toLocaleString("vi-VN") + " đ";
+                            }
+                        }
+                    }
+                }
             }
         });
     </script>
