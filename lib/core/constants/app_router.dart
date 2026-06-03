@@ -19,6 +19,7 @@ import '../../screens/profile/my_reviews_screen.dart';
 import '../../screens/profile/my_listings_screen.dart';
 import '../../screens/profile/verification_screen.dart';
 import '../../screens/profile/change_password_screen.dart';
+import '../../screens/profile/settings_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
 import '../../screens/auth/forgot_password_screen.dart';
@@ -117,6 +118,9 @@ final appRouter = GoRouter(
     GoRoute(
         path: '/forgot-password',
         builder: (_, __) => const ForgotPasswordScreen()),
+    GoRoute(
+        path: '/settings',
+        builder: (_, __) => const SettingsScreen()),
     GoRoute(
       path: '/chat/detail',
       builder: (context, state) {

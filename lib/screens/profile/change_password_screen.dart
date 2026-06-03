@@ -141,8 +141,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         // Hiện SnackBar thành công
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
-              children: const [
+            content: const Row(
+              children: [
                 Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
                 SizedBox(width: 8),
                 Text('Đổi mật khẩu thành công!', style: TextStyle(fontWeight: FontWeight.w700)),

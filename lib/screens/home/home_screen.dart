@@ -1153,7 +1153,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary)),
             const SizedBox(height: 6),
-            Text(
+            const Text(
               'Thử tìm với từ khóa khác\nhoặc điều chỉnh bộ lọc',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -2189,10 +2189,11 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                         return GestureDetector(
                           onTap: () => setState(() {
                             final updated = Set<String>.from(_local.types);
-                            if (active)
+                            if (active) {
                               updated.remove(key);
-                            else
+                            } else {
                               updated.add(key);
+                            }
                             _local = _local.copyWith(types: updated);
                           }),
                           child: AnimatedContainer(
@@ -2309,10 +2310,11 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                         return GestureDetector(
                           onTap: () => setState(() {
                             final updated = Set<String>.from(_local.amenities);
-                            if (active)
+                            if (active) {
                               updated.remove(a);
-                            else
+                            } else {
                               updated.add(a);
+                            }
                             _local = _local.copyWith(amenities: updated);
                           }),
                           child: AnimatedContainer(
@@ -2398,16 +2400,18 @@ class _HighlightText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (query.isEmpty)
+    if (query.isEmpty) {
       return Text(text,
           style: style, maxLines: maxLines, overflow: TextOverflow.ellipsis);
+    }
     // Normalize both for diacritic-insensitive matching
     final normalizedText = _removeDiacritics(text.toLowerCase());
     final normalizedQuery = _removeDiacritics(query.toLowerCase());
     final idx = normalizedText.indexOf(normalizedQuery);
-    if (idx == -1)
+    if (idx == -1) {
       return Text(text,
           style: style, maxLines: maxLines, overflow: TextOverflow.ellipsis);
+    }
     // Indices in normalized text map 1:1 to original (each VN char → 1 ASCII char)
     final matchLen = normalizedQuery.length;
     return RichText(
