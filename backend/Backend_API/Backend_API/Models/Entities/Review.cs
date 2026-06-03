@@ -37,5 +37,7 @@ public partial class Review
 
     public virtual ICollection<ReviewImage> ReviewImages { get; set; } = new List<ReviewImage>();
 
+    public virtual ICollection<ReviewLike> ReviewLikes { get; set; } = new List<ReviewLike>();
+
     public virtual User Reviewer { get; set; } = null!;
 }

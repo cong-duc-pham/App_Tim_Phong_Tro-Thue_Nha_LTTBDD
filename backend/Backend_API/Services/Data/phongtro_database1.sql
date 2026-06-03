@@ -738,6 +738,14 @@ CREATE TABLE ReviewImages (
     created_at DATETIME2 DEFAULT GETDATE()
 );
 
+CREATE TABLE ReviewLikes (
+    review_like_id BIGINT PRIMARY KEY IDENTITY(1,1),
+    review_id      BIGINT NOT NULL REFERENCES Reviews(review_id) ON DELETE CASCADE,
+    user_id        BIGINT NOT NULL REFERENCES Users(user_id),
+    created_at     DATETIME2 DEFAULT GETDATE(),
+    UNIQUE (review_id, user_id)
+);
+
 -- ============================================================
 -- 11. THANH TOÁN & HÓA ĐƠN
 -- ============================================================

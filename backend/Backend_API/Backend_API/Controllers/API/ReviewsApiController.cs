@@ -32,7 +32,7 @@ namespace Backend_API.Controllers.API
         {
             try
             {
-                var items = await _reviewService.GetReviewsByListingAsync(listingId);
+                var items = await _reviewService.GetReviewsByListingAsync(listingId, TryGetCurrentUserId());
                 double avg = items.Count > 0 ? Math.Round(items.Average(r => r.Rating), 1) : 0;
                 return Ok(new { success = true, data = items, count = items.Count, averageRating = avg });
             }
@@ -102,12 +102,40 @@ namespace Backend_API.Controllers.API
             }
         }
 
+        [Authorize]
+        [HttpPost("api/reviews/{reviewId:long}/like")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> ToggleLike(long reviewId)
+        {
+            try
+            {
+                long userId = GetCurrentUserId();
+                var result = await _reviewService.ToggleLikeAsync(userId, reviewId);
+                return Ok(new { success = true, data = result });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { success = false, message = "Chưa đăng nhập." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
         private long GetCurrentUserId()
         {
             var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(claim) || !long.TryParse(claim, out long userId))
                 throw new UnauthorizedAccessException();
             return userId;
+        }
+
+        private long? TryGetCurrentUserId()
+        {
+            var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return long.TryParse(claim, out var userId) ? userId : null;
         }
     }
 }

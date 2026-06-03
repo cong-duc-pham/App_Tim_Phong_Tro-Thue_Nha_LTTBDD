@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/theme/profile_theme.dart';
 import '../../repositories/report_repository.dart';
 
 enum _IssueType {
@@ -19,17 +21,17 @@ extension _IssueTypeLabel on _IssueType {
   String get label {
     switch (this) {
       case _IssueType.account:
-        return 'Tài khoản';
+        return 'report_type_account'.tr;
       case _IssueType.listing:
-        return 'Tin đăng/phòng trọ';
+        return 'report_type_listing'.tr;
       case _IssueType.payment:
-        return 'Thanh toán';
+        return 'report_type_payment'.tr;
       case _IssueType.chat:
-        return 'Nhắn tin/liên hệ';
+        return 'report_type_chat'.tr;
       case _IssueType.appError:
-        return 'Lỗi ứng dụng';
+        return 'report_type_app'.tr;
       case _IssueType.other:
-        return 'Khác';
+        return 'report_type_other'.tr;
     }
   }
 
@@ -79,7 +81,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       body: Column(
         children: [
           _buildHeader(),
@@ -136,9 +138,9 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Báo cáo sự cố',
-                    style: TextStyle(
+                  Text(
+                    'profile_report_issue'.tr,
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -150,9 +152,10 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
             const SizedBox(height: 22),
             Container(
               height: 20,
-              decoration: const BoxDecoration(
-                color: AppColors.bgPage,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: BoxDecoration(
+                color: context.profileBg,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
               ),
             ),
           ],
@@ -165,22 +168,23 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.profileCard,
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.profileBorder),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.support_agent_rounded, color: AppColors.primary, size: 24),
-          SizedBox(width: 12),
+          const Icon(Icons.support_agent_rounded,
+              color: AppColors.primary, size: 24),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Hãy mô tả rõ vấn đề bạn gặp phải. SWING HOUSE sẽ dùng thông tin này để kiểm tra và hỗ trợ nhanh hơn.',
+              'report_intro'.tr,
               style: TextStyle(
                 fontSize: 13,
                 height: 1.55,
-                color: AppColors.textSecondary,
+                color: context.profileTextSecondary,
               ),
             ),
           ),
@@ -193,13 +197,13 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionTitle('Loại sự cố'),
+        _SectionTitle('report_issue_type'.tr),
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.profileCard,
             borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-            border: Border.all(color: AppColors.borderLight),
+            border: Border.all(color: context.profileBorder),
           ),
           child: Wrap(
             spacing: 8,
@@ -218,12 +222,12 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                 labelStyle: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: selected ? Colors.white : AppColors.textPrimary,
+                  color: selected ? Colors.white : context.profileText,
                 ),
                 selectedColor: AppColors.primary,
                 backgroundColor: AppColors.primaryLight.withValues(alpha: 0.4),
                 side: BorderSide(
-                  color: selected ? AppColors.primary : AppColors.borderLight,
+                  color: selected ? AppColors.primary : context.profileBorder,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppConstants.radiusFull),
@@ -241,24 +245,24 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionTitle('Nội dung báo cáo'),
+        _SectionTitle('report_content'.tr),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.profileCard,
             borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-            border: Border.all(color: AppColors.borderLight),
+            border: Border.all(color: context.profileBorder),
           ),
           child: Column(
             children: [
               _ReportTextField(
                 controller: _titleCtrl,
-                label: 'Tiêu đề',
-                hint: 'Ví dụ: Không đăng nhập được',
+                label: 'report_title_label'.tr,
+                hint: 'report_title_hint'.tr,
                 icon: Icons.title_rounded,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Vui lòng nhập tiêu đề sự cố';
+                    return 'report_title_required'.tr;
                   }
                   return null;
                 },
@@ -266,14 +270,14 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
               const SizedBox(height: 14),
               _ReportTextField(
                 controller: _descriptionCtrl,
-                label: 'Mô tả chi tiết',
-                hint: 'Bạn đang thao tác ở đâu, lỗi hiện ra như thế nào?',
+                label: 'report_desc_label'.tr,
+                hint: 'report_desc_hint'.tr,
                 icon: Icons.notes_rounded,
                 minLines: 5,
                 maxLines: 7,
                 validator: (value) {
                   if (value == null || value.trim().length < 10) {
-                    return 'Vui lòng mô tả ít nhất 10 ký tự';
+                    return 'report_desc_required'.tr;
                   }
                   return null;
                 },
@@ -281,8 +285,8 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
               const SizedBox(height: 14),
               _ReportTextField(
                 controller: _contactCtrl,
-                label: 'Email hoặc số điện thoại',
-                hint: 'Để đội hỗ trợ liên hệ lại nếu cần',
+                label: 'report_contact_label'.tr,
+                hint: 'report_contact_hint'.tr,
                 icon: Icons.contact_mail_outlined,
                 keyboardType: TextInputType.emailAddress,
               ),
@@ -296,25 +300,27 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   Widget _buildDeviceOption() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.profileCard,
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: context.profileBorder),
       ),
       child: SwitchListTile(
         value: _includeDeviceInfo,
         onChanged: (value) => setState(() => _includeDeviceInfo = value),
         activeThumbColor: AppColors.primary,
-        title: const Text(
-          'Gửi kèm thông tin thiết bị',
+        title: Text(
+          'report_device_title'.tr,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: context.profileText,
           ),
         ),
-        subtitle: const Text(
-          'Giúp xác định lỗi theo phiên bản app và thiết bị đang dùng.',
-          style: AppTextStyles.bodySmall,
+        subtitle: Text(
+          'report_device_desc'.tr,
+          style: AppTextStyles.bodySmall.copyWith(
+            color: context.profileTextMuted,
+          ),
         ),
         secondary: Container(
           width: 36,
@@ -349,7 +355,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                 ),
               )
             : const Icon(Icons.send_rounded, size: 18),
-        label: const Text('Gửi báo cáo'),
+        label: Text('report_submit'.tr),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
@@ -392,7 +398,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Đã ghi nhận báo cáo sự cố của bạn'),
+        content: Text('report_success'.tr),
         backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
@@ -406,17 +412,17 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
   String _buildReportDescription() {
     final lines = <String>[
-      'Tiêu đề: ${_titleCtrl.text.trim()}',
-      'Mô tả: ${_descriptionCtrl.text.trim()}',
+      '${'report_title_label'.tr}: ${_titleCtrl.text.trim()}',
+      '${'report_desc_label'.tr}: ${_descriptionCtrl.text.trim()}',
     ];
 
     final contact = _contactCtrl.text.trim();
     if (contact.isNotEmpty) {
-      lines.add('Liên hệ: $contact');
+      lines.add('${'report_contact_label'.tr}: $contact');
     }
 
     lines.add(
-      'Gửi kèm thông tin thiết bị: ${_includeDeviceInfo ? 'Có' : 'Không'}',
+      '${'report_device_title'.tr}: ${_includeDeviceInfo ? 'yes'.tr : 'no'.tr}',
     );
     return lines.join('\n');
   }
@@ -433,10 +439,10 @@ class _SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.only(left: 2, bottom: 8),
       child: Text(
         text.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: AppColors.textMuted,
+          color: context.profileTextMuted,
           letterSpacing: 0.8,
         ),
       ),
@@ -472,10 +478,10 @@ class _ReportTextField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: AppColors.textSecondary,
+            color: context.profileTextSecondary,
           ),
         ),
         const SizedBox(height: 6),
@@ -485,25 +491,27 @@ class _ReportTextField extends StatelessWidget {
           maxLines: maxLines,
           keyboardType: keyboardType,
           validator: validator,
-          style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+          style: TextStyle(fontSize: 14, color: context.profileText),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: AppTextStyles.inputHint,
+            hintStyle: AppTextStyles.inputHint.copyWith(
+              color: context.profileTextMuted,
+            ),
             prefixIcon: Padding(
               padding: EdgeInsets.only(bottom: maxLines > 1 ? 72 : 0),
               child: Icon(icon, color: AppColors.primary, size: 18),
             ),
             filled: true,
-            fillColor: AppColors.bgPage,
+            fillColor: context.profileInputFill,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderSide: BorderSide(color: context.profileBorder),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderSide: BorderSide(color: context.profileBorder),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusMd),

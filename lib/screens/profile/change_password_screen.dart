@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/localization/app_localizations.dart';
+import '../../core/theme/profile_theme.dart';
 import '../../repositories/auth_repository.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
@@ -15,7 +17,7 @@ class ChangePasswordScreen extends StatefulWidget {
 
 class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   final _currentPwdCtrl = TextEditingController();
   final _newPwdCtrl = TextEditingController();
   final _confirmPwdCtrl = TextEditingController();
@@ -75,10 +77,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   String get _strengthText {
     final count = _satisfiedCriteriaCount;
-    if (count == 3) return 'Mạnh';
-    if (count == 2) return 'Trung bình';
-    if (count == 1) return 'Yếu';
-    return 'Chưa nhập';
+    if (count == 3) return 'password_strong'.tr;
+    if (count == 2) return 'password_medium'.tr;
+    if (count == 1) return 'password_weak'.tr;
+    return 'password_empty_strength'.tr;
   }
 
   // Giả lập đổi mật khẩu thực tế hoặc qua Firebase Auth
@@ -91,8 +93,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (_satisfiedCriteriaCount < 3) {
       HapticFeedback.vibrate();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Mật khẩu mới chưa đạt yêu cầu bảo mật!'),
+        SnackBar(
+          content: Text('password_weak_warning'.tr),
           backgroundColor: AppColors.error,
         ),
       );
@@ -137,20 +139,23 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
       if (success) {
         HapticFeedback.mediumImpact();
-        
+
         // Hiện SnackBar thành công
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Row(
+            content: Row(
               children: [
-                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text('Đổi mật khẩu thành công!', style: TextStyle(fontWeight: FontWeight.w700)),
+                const Icon(Icons.check_circle_rounded,
+                    color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text('password_success'.tr,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
               ],
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppConstants.radiusMd)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppConstants.radiusMd)),
           ),
         );
 
@@ -173,25 +178,29 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     final count = _satisfiedCriteriaCount;
     return Scaffold(
-      backgroundColor: AppColors.bgPage,
+      backgroundColor: context.profileBg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: context.profileCard,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded,
+              color: context.profileText, size: 18),
           onPressed: () {
             HapticFeedback.lightImpact();
             context.pop();
           },
         ),
-        title: const Text(
-          'Đổi mật khẩu',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w800),
+        title: Text(
+          'profile_change_password'.tr,
+          style: TextStyle(
+              color: context.profileText,
+              fontSize: 18,
+              fontWeight: FontWeight.w800),
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(color: AppColors.borderLight, height: 1),
+          child: Container(color: context.profileBorder, height: 1),
         ),
       ),
       body: SingleChildScrollView(
@@ -202,23 +211,27 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Mật khẩu hiện tại
-              const Text(
-                'Mật khẩu hiện tại',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              Text(
+                'password_current'.tr,
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: context.profileText),
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _currentPwdCtrl,
                 obscureText: _obscureCurrent,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                style:
+                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) {
-                    return 'Vui lòng nhập mật khẩu hiện tại';
+                    return 'password_current_required'.tr;
                   }
                   return null;
                 },
                 decoration: _buildInputDecoration(
-                  hintText: 'Nhập mật khẩu hiện tại',
+                  hintText: 'password_current_hint'.tr,
                   obscureText: _obscureCurrent,
                   onToggleObscure: () {
                     setState(() => _obscureCurrent = !_obscureCurrent);
@@ -228,26 +241,30 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               const SizedBox(height: 20),
 
               // Mật khẩu mới
-              const Text(
-                'Mật khẩu mới',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              Text(
+                'password_new'.tr,
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: context.profileText),
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _newPwdCtrl,
                 obscureText: _obscureNew,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                style:
+                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 validator: (val) {
                   if (val == null || val.isEmpty) {
-                    return 'Vui lòng nhập mật khẩu mới';
+                    return 'password_new_required'.tr;
                   }
                   if (val == _currentPwdCtrl.text) {
-                    return 'Mật khẩu mới không được giống mật khẩu cũ';
+                    return 'password_same_old'.tr;
                   }
                   return null;
                 },
                 decoration: _buildInputDecoration(
-                  hintText: 'Nhập mật khẩu mới',
+                  hintText: 'password_new_hint'.tr,
                   obscureText: _obscureNew,
                   onToggleObscure: () {
                     setState(() => _obscureNew = !_obscureNew);
@@ -259,13 +276,19 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               // Thanh hiển thị độ mạnh mật khẩu
               Row(
                 children: [
-                  const Text(
-                    'Độ mạnh mật khẩu: ',
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                  Text(
+                    'password_strength'.tr,
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: context.profileTextSecondary,
+                        fontWeight: FontWeight.w600),
                   ),
                   Text(
                     _strengthText,
-                    style: TextStyle(fontSize: 12, color: _strengthColor, fontWeight: FontWeight.w800),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: _strengthColor,
+                        fontWeight: FontWeight.w800),
                   ),
                 ],
               ),
@@ -281,8 +304,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         right: index < 2 ? 6 : 0,
                       ),
                       decoration: BoxDecoration(
-                        color: active ? _strengthColor : const Color(0xFFE2E8F0),
-                        borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                        color:
+                            active ? _strengthColor : const Color(0xFFE2E8F0),
+                        borderRadius:
+                            BorderRadius.circular(AppConstants.radiusFull),
                       ),
                     ),
                   );
@@ -291,42 +316,49 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               const SizedBox(height: 14),
 
               // Danh sách tiêu chuẩn bảo mật mật khẩu
-              _buildCriteriaItem(label: 'Tối thiểu 8 ký tự', satisfied: _hasMinLength),
+              _buildCriteriaItem(
+                  label: 'password_min_length'.tr, satisfied: _hasMinLength),
               const SizedBox(height: 6),
-              _buildCriteriaItem(label: 'Chứa ít nhất 1 chữ số (0-9)', satisfied: _hasNumber),
+              _buildCriteriaItem(
+                  label: 'password_has_number'.tr, satisfied: _hasNumber),
               const SizedBox(height: 6),
-              _buildCriteriaItem(label: 'Chứa ít nhất 1 chữ cái viết hoa (A-Z)', satisfied: _hasCapital),
-              
+              _buildCriteriaItem(
+                  label: 'password_has_capital'.tr, satisfied: _hasCapital),
+
               const SizedBox(height: 24),
 
               // Xác nhận mật khẩu mới
-              const Text(
-                'Xác nhận mật khẩu mới',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              Text(
+                'password_confirm'.tr,
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: context.profileText),
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _confirmPwdCtrl,
                 obscureText: _obscureConfirm,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                style:
+                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 validator: (val) {
                   if (val == null || val.isEmpty) {
-                    return 'Vui lòng xác nhận mật khẩu mới';
+                    return 'password_confirm_required'.tr;
                   }
                   if (val != _newPwdCtrl.text) {
-                    return 'Mật khẩu xác nhận không trùng khớp';
+                    return 'password_confirm_mismatch'.tr;
                   }
                   return null;
                 },
                 decoration: _buildInputDecoration(
-                  hintText: 'Nhập lại mật khẩu mới',
+                  hintText: 'password_confirm_hint'.tr,
                   obscureText: _obscureConfirm,
                   onToggleObscure: () {
                     setState(() => _obscureConfirm = !_obscureConfirm);
                   },
                 ),
               ),
-              
+
               const SizedBox(height: 40),
 
               // Nút Submit
@@ -338,19 +370,24 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.6),
+                    disabledBackgroundColor:
+                        AppColors.primary.withValues(alpha: 0.6),
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppConstants.radiusLg)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppConstants.radiusLg)),
                   ),
                   child: _isSubmitting
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
                         )
-                      : const Text(
-                          'Cập nhật mật khẩu',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                      : Text(
+                          'password_update'.tr,
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w800),
                         ),
                 ),
               ),
@@ -368,13 +405,16 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   }) {
     return InputDecoration(
       hintText: hintText,
-      hintStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textMuted),
+      hintStyle: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: context.profileTextMuted),
       filled: true,
-      fillColor: Colors.white,
+      fillColor: context.profileInputFill,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        borderSide: const BorderSide(color: AppColors.borderLight),
+        borderSide: BorderSide(color: context.profileBorder),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
@@ -390,8 +430,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       ),
       suffixIcon: IconButton(
         icon: Icon(
-          obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-          color: AppColors.textMuted,
+          obscureText
+              ? Icons.visibility_off_outlined
+              : Icons.visibility_outlined,
+          color: context.profileTextMuted,
           size: 20,
         ),
         onPressed: () {
@@ -406,8 +448,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     return Row(
       children: [
         Icon(
-          satisfied ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-          color: satisfied ? AppColors.success : AppColors.textMuted.withValues(alpha: 0.5),
+          satisfied
+              ? Icons.check_circle_rounded
+              : Icons.radio_button_unchecked_rounded,
+          color: satisfied
+              ? AppColors.success
+              : context.profileTextMuted.withValues(alpha: 0.5),
           size: 15,
         ),
         const SizedBox(width: 8),
@@ -416,7 +462,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: satisfied ? FontWeight.w700 : FontWeight.w500,
-            color: satisfied ? AppColors.textPrimary : AppColors.textSecondary,
+            color:
+                satisfied ? context.profileText : context.profileTextSecondary,
           ),
         ),
       ],

@@ -46,6 +46,8 @@ namespace Backend_API.Models.DTOs.Reviews
         public string? LandlordReply   { get; set; }
         public DateTime? RepliedAt     { get; set; }
         public DateTime? CreatedAt     { get; set; }
+        public int LikeCount           { get; set; }
+        public bool IsLiked            { get; set; }
 
         public List<string> ImageUrls  { get; set; } = new();
     }
