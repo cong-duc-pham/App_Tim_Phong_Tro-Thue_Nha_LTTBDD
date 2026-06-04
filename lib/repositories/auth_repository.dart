@@ -153,9 +153,14 @@ class AuthRepository {
   ) async {
     final userCredential = await _auth.signInWithCredential(credential);
     unawaited(_syncSocialProfile(userCredential.user));
-    final session = await _loginBackendWithFirebase(userCredential.user);
-    await _saveBackendSession(session);
-    return session;
+    try {
+      final session = await _loginBackendWithFirebase(userCredential.user);
+      await _saveBackendSession(session);
+      return session;
+    } catch (_) {
+      await signOut();
+      rethrow;
+    }
   }
 
   Future<void> _syncSocialProfile(User? user) async {
@@ -261,6 +266,23 @@ class AuthRepository {
   }
 
   /// Đăng xuất.
+  Future<void> deactivateAccount() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AppConstants.keyUserToken);
+    if (token == null || token.isEmpty) {
+      throw Exception('Bạn cần đăng nhập để vô hiệu hóa tài khoản.');
+    }
+
+    try {
+      await _apiService.dio.post(
+        '/auth/deactivate-account',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } on DioException catch (e) {
+      throw Exception(readBackendMessage(e));
+    }
+  }
+
   Future<void> signOut() async {
     try {
       await GoogleSignIn.instance.signOut();
