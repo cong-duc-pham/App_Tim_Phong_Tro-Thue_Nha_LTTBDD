@@ -74,7 +74,7 @@ namespace Backend_API.Services.Implementations
         public async Task<ConversationDto> GetOrCreateConversationAsync(long senderId, long landlordId, long listingId)
         {
             if (senderId == landlordId)
-                throw new Exception("You cannot start a chat with yourself.");
+                throw new Exception("Bạn không thể nhắn tin với chính mình.");
 
             var conv = await _context.Conversations
                 .FirstOrDefaultAsync(c => c.ListingId == listingId && c.TenantId == senderId && c.LandlordId == landlordId);
@@ -99,9 +99,9 @@ namespace Backend_API.Services.Implementations
         public async Task<MessageDto> SendMessageAsync(long senderId, SendMessageDto dto)
         {
             var conv = await _context.Conversations.FindAsync(dto.ConvId)
-                ?? throw new Exception("Conversation not found.");
+                ?? throw new Exception("Không tìm thấy cuộc trò chuyện.");
             if (conv.TenantId != senderId && conv.LandlordId != senderId)
-                throw new Exception("You are not a participant of this conversation.");
+                throw new Exception("Bạn không phải là thành viên của cuộc trò chuyện này.");
 
             var message = new Message
             {
