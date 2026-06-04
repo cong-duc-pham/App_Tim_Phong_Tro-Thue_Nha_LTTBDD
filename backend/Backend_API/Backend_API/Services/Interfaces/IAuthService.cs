@@ -23,6 +23,16 @@ namespace Backend_API.Services.Interfaces
 
         Task UpdateProfileAsync(long userId, UpdateProfileRequestDto dto);
 
+<<<<<<< HEAD
         Task DeactivateAccountAsync(long userId);
+=======
+        Task SendPhoneOtpAsync(long userId, string phone);
+
+        Task VerifyPhoneOtpAsync(long userId, string phone, string otpCode);
+
+        Task SendEmailOtpAsync(long userId, string email);
+
+        Task VerifyEmailOtpAsync(long userId, string email, string otpCode);
+>>>>>>> minhtrong
     }
 }

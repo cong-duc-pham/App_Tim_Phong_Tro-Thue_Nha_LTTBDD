@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Backend_API.Models.Entities;
@@ -24,6 +24,8 @@ public partial class User
     public int RoleId { get; set; }
 
     public bool? IsVerified { get; set; }
+
+    public bool? IsEmailVerified { get; set; }
 
     public bool? IsActive { get; set; }
 
