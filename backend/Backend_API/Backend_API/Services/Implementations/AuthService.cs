@@ -94,6 +94,7 @@ namespace Backend_API.Services.Implementations
                 throw new Exception("Thông tin đăng nhập không hợp lệ.");
             }
 
+            EnsureUserIsActive(user);
             user.LastLogin = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
@@ -115,6 +116,15 @@ namespace Backend_API.Services.Implementations
         {
             // 1. Xác thực Firebase Token
             var (uid, email, name, picture, provider) = await _firebaseHelper.VerifyIdToken(firebaseToken);
+
+            var normalizedEmail = string.IsNullOrWhiteSpace(email) ? null : NormalizeEmail(email);
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u =>
+                u.FirebaseUid == uid ||
+                (normalizedEmail != null && u.Email != null && u.Email.ToLower() == normalizedEmail));
+            if (existingUser?.IsActive == false)
+            {
+                throw new Exception("Tai khoan nay da bi khoa hoac vo hieu hoa.");
+            }
             
             // Theo như yêu cầu: gọi SP upsert
             // Đối số của SP thường theo thứ tự: uid, email, name, picture
@@ -132,6 +142,7 @@ namespace Backend_API.Services.Implementations
                 throw new Exception("Không thể đồng bộ người dùng từ Firebase.");
             }
 
+            EnsureUserIsActive(user);
             user.LastLogin = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
@@ -446,6 +457,39 @@ namespace Backend_API.Services.Implementations
             user.Phone = dto.Phone?.Trim();
             user.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
+        }
+
+        public async Task DeactivateAccountAsync(long userId)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                throw new Exception("Khong tim thay nguoi dung.");
+            }
+
+            user.IsActive = false;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            var nowUtc = DateTime.UtcNow;
+            var refreshTokens = await _context.SocialAuthProviders
+                .Where(p => p.UserId == userId && p.Provider == RefreshProvider)
+                .ToListAsync();
+
+            foreach (var refreshToken in refreshTokens)
+            {
+                refreshToken.TokenExpiresAt = nowUtc.AddSeconds(-1);
+                refreshToken.UpdatedAt = nowUtc;
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        private static void EnsureUserIsActive(User user)
+        {
+            if (user.IsActive == false)
+            {
+                throw new Exception("Tai khoan nay da bi khoa hoac vo hieu hoa.");
+            }
         }
     }
 }
