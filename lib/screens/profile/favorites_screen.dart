@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
@@ -29,6 +30,7 @@ class FavoriteListing {
   final Color bgColor;
   final String emoji;
   final String? imageUrl;
+  final String? landlordPhone;
   final DateTime savedAt;
 
   const FavoriteListing({
@@ -44,6 +46,7 @@ class FavoriteListing {
     required this.bgColor,
     required this.emoji,
     this.imageUrl,
+    this.landlordPhone,
     required this.savedAt,
   });
 }
@@ -175,6 +178,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
       ListingRealtimeRepository();
   final List<FavoriteListing> _favorites = [];
   final Set<String> _removingIds = {};
+  final Set<String> _contactingIds = {};
   _SortOption _sort = _SortOption.newest;
   String _searchQuery = '';
   bool _isLoading = true;
@@ -258,6 +262,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
       bgColor: _colorForType(listing.typeId),
       emoji: _emojiForType(listing.typeName),
       imageUrl: _resolveImageUrl(listing.image0),
+      landlordPhone: listing.landlordPhone,
       savedAt: listing.createdAt ?? DateTime.now(),
     );
   }
@@ -411,6 +416,61 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         ),
       ));
     });
+  }
+
+  Future<void> _contactLandlord(FavoriteListing item) async {
+    final phone = item.landlordPhone?.trim() ?? '';
+    if (phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Tin đăng này chưa có số điện thoại chủ trọ.'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (_contactingIds.contains(item.id)) return;
+
+    setState(() => _contactingIds.add(item.id));
+    try {
+      final cleanPhone = phone.replaceAll(RegExp(r'\s+'), '');
+      final uri = Uri(scheme: 'tel', path: cleanPhone);
+      final launched = await launchUrl(uri);
+      if (!mounted) return;
+      if (!launched) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Không thể mở trình gọi điện. Số điện thoại: $phone'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_cleanError(e)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _contactingIds.remove(item.id));
+      }
+    }
   }
 
   void _showSortSheet() {
@@ -619,6 +679,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
       itemBuilder: (_, i) {
         final item = list[i];
         final removing = _removingIds.contains(item.id);
+        final contacting = _contactingIds.contains(item.id);
         return AnimatedOpacity(
           duration: const Duration(milliseconds: 300),
           opacity: removing ? 0.0 : 1.0,
@@ -629,6 +690,8 @@ class _FavoritesScreenState extends State<FavoritesScreen>
               item: item,
               savedLabel: _formatSavedDate(item.savedAt),
               priceLabel: _formatPrice(item.price),
+              isContacting: contacting,
+              onContact: () => _contactLandlord(item),
               onRemove: () {
                 _removeFavorite(item.id);
               },
@@ -796,12 +859,16 @@ class _FavoriteCard extends StatelessWidget {
   final FavoriteListing item;
   final String savedLabel;
   final String priceLabel;
+  final bool isContacting;
+  final VoidCallback onContact;
   final VoidCallback onRemove;
 
   const _FavoriteCard({
     required this.item,
     required this.savedLabel,
     required this.priceLabel,
+    required this.isContacting,
+    required this.onContact,
     required this.onRemove,
   });
 
@@ -1023,7 +1090,7 @@ class _FavoriteCard extends StatelessWidget {
                       const SizedBox(width: 8),
                     ],
                     GestureDetector(
-                      onTap: () {},
+                      onTap: isContacting ? null : onContact,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 7),
@@ -1033,8 +1100,17 @@ class _FavoriteCard extends StatelessWidget {
                               BorderRadius.circular(AppConstants.radiusMd),
                         ),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Icons.phone_rounded,
-                              size: 13, color: Colors.white),
+                          isContacting
+                              ? const SizedBox(
+                                  width: 13,
+                                  height: 13,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.phone_rounded,
+                                  size: 13, color: Colors.white),
                           const SizedBox(width: 5),
                           Text('favorites_contact'.tr,
                               style: const TextStyle(
