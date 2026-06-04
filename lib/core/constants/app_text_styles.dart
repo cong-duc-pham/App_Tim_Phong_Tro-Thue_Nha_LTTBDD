@@ -192,7 +192,7 @@ class AppTextStyles {
   static const TextStyle splashLogo = TextStyle(
     fontSize: 32,
     fontWeight: FontWeight.w800,
-    color: AppColors.primary,
+    color: Colors.white,
     letterSpacing: 1,
   );
 }
