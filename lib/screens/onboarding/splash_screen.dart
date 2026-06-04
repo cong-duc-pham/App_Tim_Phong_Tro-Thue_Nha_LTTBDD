@@ -97,7 +97,11 @@ class _SplashScreenState extends State<SplashScreen>
                     Container(
                       width: 90, height: 90,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.primary,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.28),
+                          width: 1.5,
+                        ),
                         borderRadius: BorderRadius.circular(AppConstants.radiusXl),
                       ),
                       alignment: Alignment.center,
