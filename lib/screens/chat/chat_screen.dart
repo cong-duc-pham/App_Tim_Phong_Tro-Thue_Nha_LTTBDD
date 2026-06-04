@@ -645,11 +645,14 @@ class _ChatScreenState extends State<ChatScreen> {
             children: [
               GestureDetector(
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content:
-                            Text('chat_redirecting_listing'.tr)),
-                  );
+                  final listingId = widget.conversation.listingId;
+                  if (listingId != null && listingId != 0) {
+                    context.push('/listing/$listingId');
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Không có thông tin phòng trọ này.')),
+                    );
+                  }
                 },
                 child: Container(
                   padding:
