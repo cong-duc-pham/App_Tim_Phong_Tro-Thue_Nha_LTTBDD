@@ -15,21 +15,26 @@ namespace Backend_API.Services.Implementations
     {
         private const string RefreshProvider = "internal_refresh";
         private const string PasswordResetOtpType = "forgot_password";
+        private const string PhoneVerificationOtpType = "phone_verification";
+        private const string EmailVerificationOtpType = "email_verification";
         private readonly PhongTroDbContext _context;
         private readonly JwtTokenHelper _jwtHelper;
         private readonly FirebaseHelper _firebaseHelper;
         private readonly IEmailService _emailService;
+        private readonly ISmsService _smsService;
 
         public AuthService(
             PhongTroDbContext context,
             JwtTokenHelper jwtHelper,
             FirebaseHelper firebaseHelper,
-            IEmailService emailService)
+            IEmailService emailService,
+            ISmsService smsService)
         {
             _context = context;
             _jwtHelper = jwtHelper;
             _firebaseHelper = firebaseHelper;
             _emailService = emailService;
+            _smsService = smsService;
         }
 
         public async Task<LoginResponseDto> RegisterAsync(RegisterRequestDto dto)
@@ -77,7 +82,11 @@ namespace Backend_API.Services.Implementations
                 UserId = newUser.UserId,
                 FullName = newUser.FullName,
                 Role = userWithRole?.Role?.RoleName ?? "Tenant",
-                IsNewUser = true
+                IsNewUser = true,
+                IsPhoneVerified = false,
+                IsEmailVerified = false,
+                PhoneNumber = newUser.Phone,
+                FirebaseProvider = null
             };
         }
 
@@ -96,6 +105,10 @@ namespace Backend_API.Services.Implementations
 
             EnsureUserIsActive(user);
             user.LastLogin = DateTime.UtcNow;
+            if (user.FirebaseProvider == "google.com" && user.IsEmailVerified != true)
+            {
+                user.IsEmailVerified = true;
+            }
             await _context.SaveChangesAsync();
 
             var token = _jwtHelper.GenerateToken(user);
@@ -108,7 +121,11 @@ namespace Backend_API.Services.Implementations
                 UserId = user.UserId,
                 FullName = user.FullName,
                 Role = user.Role?.RoleName ?? "Tenant",
-                IsNewUser = false
+                IsNewUser = false,
+                IsPhoneVerified = user.IsVerified == true,
+                IsEmailVerified = user.IsEmailVerified == true,
+                PhoneNumber = user.Phone,
+                FirebaseProvider = user.FirebaseProvider
             };
         }
 
@@ -144,6 +161,10 @@ namespace Backend_API.Services.Implementations
 
             EnsureUserIsActive(user);
             user.LastLogin = DateTime.UtcNow;
+            if (user.FirebaseProvider == "google.com" && user.IsEmailVerified != true)
+            {
+                user.IsEmailVerified = true;
+            }
             await _context.SaveChangesAsync();
 
             var token = _jwtHelper.GenerateToken(user);
@@ -159,7 +180,11 @@ namespace Backend_API.Services.Implementations
                 UserId = user.UserId,
                 FullName = user.FullName,
                 Role = user.Role?.RoleName ?? "Tenant",
-                IsNewUser = isNewUser
+                IsNewUser = isNewUser,
+                IsPhoneVerified = user.IsVerified == true,
+                IsEmailVerified = user.IsEmailVerified == true,
+                PhoneNumber = user.Phone,
+                FirebaseProvider = user.FirebaseProvider
             };
         }
 
@@ -217,7 +242,11 @@ namespace Backend_API.Services.Implementations
                 UserId = user.UserId,
                 FullName = user.FullName,
                 Role = user.Role?.RoleName ?? "Tenant",
-                IsNewUser = user.UserPreference == null || user.UserPreference.OnboardingDone != true
+                IsNewUser = user.UserPreference == null || user.UserPreference.OnboardingDone != true,
+                IsPhoneVerified = user.IsVerified == true,
+                IsEmailVerified = user.IsEmailVerified == true,
+                PhoneNumber = user.Phone,
+                FirebaseProvider = user.FirebaseProvider
             };
         }
 
@@ -228,12 +257,12 @@ namespace Backend_API.Services.Implementations
 
             if (user == null)
             {
-                throw new Exception("Email kh?ng t?n t?i trong h? th?ng.");
+                throw new Exception("Email không tồn tại trong hệ thống.");
             }
 
             if (string.IsNullOrWhiteSpace(user.PasswordHash) && !IsFirebasePasswordUser(user))
             {
-                throw new Exception("T?i kho?n n?y ??ng nh?p b?ng Google/Facebook, kh?ng c?n ??t l?i m?t kh?u t?i ??y.");
+                throw new Exception("Tài khoản này đăng nhập bằng Google/Facebook, không cần đặt lại mật khẩu tại đây.");
             }
 
             var oldOtps = await _context.OtpCodes
@@ -277,7 +306,7 @@ namespace Backend_API.Services.Implementations
 
             if (user == null || (string.IsNullOrWhiteSpace(user.PasswordHash) && !IsFirebasePasswordUser(user)))
             {
-                throw new Exception("T?i kho?n kh?ng h?p l? ?? ??t l?i m?t kh?u.");
+                throw new Exception("Tài khoản không hợp lệ để đặt lại mật khẩu.");
             }
 
             var otp = await _context.OtpCodes
@@ -292,7 +321,7 @@ namespace Backend_API.Services.Implementations
 
             if (otp == null)
             {
-                throw new Exception("OTP kh?ng ??ng ho?c ?? h?t h?n.");
+                throw new Exception("Mã OTP không đúng hoặc đã hết hạn.");
             }
 
             otp.IsUsed = true;
@@ -491,5 +520,184 @@ namespace Backend_API.Services.Implementations
                 throw new Exception("Tai khoan nay da bi khoa hoac vo hieu hoa.");
             }
         }
+
+        public async Task SendPhoneOtpAsync(long userId, string phone)
+        {
+            if (string.IsNullOrWhiteSpace(phone))
+            {
+                throw new Exception("Số điện thoại không được để trống.");
+            }
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                throw new Exception("Không tìm thấy người dùng.");
+            }
+
+            // Hủy các OTP cũ chưa sử dụng của số điện thoại này
+            var oldOtps = await _context.OtpCodes
+                .Where(o => o.Contact == phone
+                    && o.OtpType == PhoneVerificationOtpType
+                    && o.IsUsed != true)
+                .ToListAsync();
+
+            foreach (var oldOtp in oldOtps)
+            {
+                oldOtp.IsUsed = true;
+            }
+
+            var nowUtc = DateTime.UtcNow;
+            var code = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+            var otp = new OtpCode
+            {
+                UserId = userId,
+                Contact = phone,
+                OtpType = PhoneVerificationOtpType,
+                Code = code,
+                IsUsed = false,
+                CreatedAt = nowUtc,
+                ExpiresAt = nowUtc.AddMinutes(5)
+            };
+
+            await _context.OtpCodes.AddAsync(otp);
+            await _context.SaveChangesAsync();
+
+            // Gửi tin nhắn SMS thật qua SmsService
+            var message = $"Swings House: Ma OTP xac minh so dien thoai cua ban la {code}. Ma co hieu luc trong 5 phut.";
+            await _smsService.SendSmsAsync(phone, message);
+        }
+
+        public async Task VerifyPhoneOtpAsync(long userId, string phone, string otpCode)
+        {
+            if (string.IsNullOrWhiteSpace(phone) || string.IsNullOrWhiteSpace(otpCode))
+            {
+                throw new Exception("Số điện thoại và mã OTP không được để trống.");
+            }
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                throw new Exception("Không tìm thấy người dùng.");
+            }
+
+            var code = otpCode.Trim();
+            var nowUtc = DateTime.UtcNow;
+
+            var otp = await _context.OtpCodes
+                .Where(o => o.UserId == userId
+                    && o.Contact == phone
+                    && o.OtpType == PhoneVerificationOtpType
+                    && o.Code == code
+                    && o.IsUsed != true
+                    && o.ExpiresAt > nowUtc)
+                .OrderByDescending(o => o.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (otp == null)
+            {
+                throw new Exception("Mã OTP không đúng hoặc đã hết hạn.");
+            }
+
+            otp.IsUsed = true;
+            user.Phone = phone.Trim();
+            user.IsVerified = true; // Đánh dấu đã xác thực số điện thoại
+            user.UpdatedAt = nowUtc;
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task SendEmailOtpAsync(long userId, string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                throw new Exception("Email không được để trống.");
+            }
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                throw new Exception("Không tìm thấy người dùng.");
+            }
+
+            var normalizedEmail = email.Trim().ToLower();
+
+            // Kiểm tra email đã được sử dụng bởi tài khoản khác chưa
+            var isEmailUsed = await _context.Users
+                .AnyAsync(u => u.UserId != userId && u.Email != null && u.Email.ToLower() == normalizedEmail);
+            if (isEmailUsed)
+            {
+                throw new Exception("Email này đã được sử dụng bởi một tài khoản khác.");
+            }
+
+            // Hủy các OTP cũ chưa sử dụng của email này
+            var oldOtps = await _context.OtpCodes
+                .Where(o => o.Contact == email
+                    && o.OtpType == EmailVerificationOtpType
+                    && o.IsUsed != true)
+                .ToListAsync();
+
+            foreach (var oldOtp in oldOtps)
+            {
+                oldOtp.IsUsed = true;
+            }
+
+            var nowUtc = DateTime.UtcNow;
+            var code = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+            var otp = new OtpCode
+            {
+                UserId = userId,
+                Contact = email,
+                OtpType = EmailVerificationOtpType,
+                Code = code,
+                IsUsed = false,
+                CreatedAt = nowUtc,
+                ExpiresAt = nowUtc.AddMinutes(5)
+            };
+
+            await _context.OtpCodes.AddAsync(otp);
+            await _context.SaveChangesAsync();
+
+            // Gửi email thật qua EmailService
+            await _emailService.SendEmailVerificationOtpAsync(email, code);
+        }
+
+        public async Task VerifyEmailOtpAsync(long userId, string email, string otpCode)
+        {
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(otpCode))
+            {
+                throw new Exception("Email và mã OTP không được để trống.");
+            }
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                throw new Exception("Không tìm thấy người dùng.");
+            }
+
+            var normalizedEmail = email.Trim().ToLower();
+            var code = otpCode.Trim();
+            var nowUtc = DateTime.UtcNow;
+
+            var otp = await _context.OtpCodes
+                .Where(o => o.UserId == userId
+                    && o.Contact == email
+                    && o.OtpType == EmailVerificationOtpType
+                    && o.Code == code
+                    && o.IsUsed != true
+                    && o.ExpiresAt > nowUtc)
+                .OrderByDescending(o => o.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (otp == null)
+            {
+                throw new Exception("Mã OTP không đúng hoặc đã hết hạn.");
+            }
+
+            otp.IsUsed = true;
+            user.Email = normalizedEmail;
+            user.IsEmailVerified = true; // Đánh dấu đã xác thực email
+            user.UpdatedAt = nowUtc;
+            await _context.SaveChangesAsync();
+        }
+
     }
 }

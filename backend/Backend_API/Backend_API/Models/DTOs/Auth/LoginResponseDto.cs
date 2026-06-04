@@ -8,5 +8,9 @@ namespace Backend_API.Models.DTOs.Auth
         public string FullName { get; set; } = null!;
         public string Role { get; set; } = null!;
         public bool IsNewUser { get; set; }
+        public bool IsPhoneVerified { get; set; }
+        public bool IsEmailVerified { get; set; }
+        public string? PhoneNumber { get; set; }
+        public string? FirebaseProvider { get; set; }
     }
 }

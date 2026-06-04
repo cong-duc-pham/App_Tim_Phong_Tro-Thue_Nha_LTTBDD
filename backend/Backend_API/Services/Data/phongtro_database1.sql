@@ -76,8 +76,10 @@ CREATE TABLE Users (
     -- 0 = Nam | 1 = Nữ | 2 = Khác
     role_id       INT           NOT NULL REFERENCES Roles(role_id),
     is_verified   BIT           DEFAULT 0,
+    is_email_verified BIT       DEFAULT 0,
     is_active     BIT           DEFAULT 1,
     last_login    DATETIME2     NULL,
+
 
     -- ── FIREBASE AUTH FIELDS (giữ nguyên) ───────────────────
     firebase_uid      NVARCHAR(128) NULL UNIQUE,

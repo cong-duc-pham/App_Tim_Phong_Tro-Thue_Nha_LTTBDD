@@ -851,8 +851,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
+<<<<<<< HEAD
               Navigator.pop(dialogContext);
               await LogoutHelper.signOutAndGoToLogin();
+=======
+              final router = GoRouter.of(context);
+              Navigator.pop(dialogContext);
+              if (!mounted) return;
+              await LogoutHelper.signOutAndGoToLogin(router);
+>>>>>>> minhtrong
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,

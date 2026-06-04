@@ -276,5 +276,113 @@ namespace Backend_API.Controllers
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Gửi mã OTP xác minh số điện thoại về số điện thoại thực.
+        /// </summary>
+        [Authorize]
+        [HttpPost("send-phone-otp")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> SendPhoneOtp([FromBody] SendPhoneOtpRequestDto request)
+        {
+            try
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdStr) || !long.TryParse(userIdStr, out long userId))
+                {
+                    return Unauthorized(new { success = false, message = "Không xác định được danh tính người dùng." });
+                }
+
+                await _authService.SendPhoneOtpAsync(userId, request.Phone);
+                return Ok(new { success = true, message = "Mã OTP đã được gửi về số điện thoại của bạn." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Xác minh mã OTP số điện thoại.
+        /// </summary>
+        [Authorize]
+        [HttpPost("verify-phone-otp")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> VerifyPhoneOtp([FromBody] VerifyPhoneOtpRequestDto request)
+        {
+            try
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdStr) || !long.TryParse(userIdStr, out long userId))
+                {
+                    return Unauthorized(new { success = false, message = "Không xác định được danh tính người dùng." });
+                }
+
+                await _authService.VerifyPhoneOtpAsync(userId, request.Phone, request.OtpCode);
+                return Ok(new { success = true, message = "Xác thực số điện thoại thành công." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Gửi mã OTP xác minh Email.
+        /// </summary>
+        [Authorize]
+        [HttpPost("send-email-otp")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> SendEmailOtp([FromBody] SendEmailOtpRequestDto request)
+        {
+            try
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdStr) || !long.TryParse(userIdStr, out long userId))
+                {
+                    return Unauthorized(new { success = false, message = "Không xác định được danh tính người dùng." });
+                }
+
+                await _authService.SendEmailOtpAsync(userId, request.Email);
+                return Ok(new { success = true, message = "Mã OTP đã được gửi về email của bạn." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Xác minh mã OTP Email.
+        /// </summary>
+        [Authorize]
+        [HttpPost("verify-email-otp")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> VerifyEmailOtp([FromBody] VerifyEmailOtpRequestDto request)
+        {
+            try
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdStr) || !long.TryParse(userIdStr, out long userId))
+                {
+                    return Unauthorized(new { success = false, message = "Không xác định được danh tính người dùng." });
+                }
+
+                await _authService.VerifyEmailOtpAsync(userId, request.Email, request.OtpCode);
+                return Ok(new { success = true, message = "Xác thực email thành công." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
     }
 }

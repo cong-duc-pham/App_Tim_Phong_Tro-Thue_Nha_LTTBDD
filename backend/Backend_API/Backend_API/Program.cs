@@ -143,9 +143,15 @@ builder.Services.AddScoped<IPreferenceService, PreferenceService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+<<<<<<< HEAD
 builder.Services.AddScoped<IListingRealtimeNotifier, ListingRealtimeNotifier>();
 builder.Services.AddHttpClient<IPayOsService, PayOsService>();
 builder.Services.AddHttpClient<ITranslationService, GeminiTranslationService>();
+=======
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<ISmsService, SmsService>();
+builder.Services.AddHttpClient<ITranslationService, XaiTranslationService>();
+>>>>>>> minhtrong
 
 // ── Firebase (hỗ trợ env var FIREBASE_CREDENTIALS_JSON cho Docker)
 var firebaseConfig = builder.Configuration.GetSection("Firebase");
