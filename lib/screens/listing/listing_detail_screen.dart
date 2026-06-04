@@ -17,6 +17,7 @@ import '../../blocs/listing/listing_state.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../models/amenity.dart';
 import '../../models/listing.dart';
 import '../../repositories/conversation_repository.dart';
 import '../../repositories/review_repository.dart';
@@ -194,7 +195,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   }
 
   String _localizedAmenityName(String name) {
-    if (!_isEnglish) return name;
+    if (!_isEnglish) return Amenity.displayName(name);
     final normalized = _foldVietnamese(name);
     if (normalized.contains('wifi')) return 'Wi-Fi';
     if (normalized.contains('dieu hoa') || normalized.contains('may lanh')) {

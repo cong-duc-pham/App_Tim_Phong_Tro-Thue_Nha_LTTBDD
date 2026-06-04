@@ -460,6 +460,9 @@ public partial class PhongTroDbContext : DbContext
         {
             entity.HasKey(e => e.ListingId).HasName("PK__Listings__89D8177461A03BBE");
 
+            entity.ToTable("Listings", tb =>
+                tb.HasTrigger("trg_Listings_ForcePendingOnInsert"));
+
             entity.HasIndex(e => e.DistrictId, "IX_Listings_District");
 
             entity.HasIndex(e => e.LandlordId, "IX_Listings_Landlord");

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/theme/profile_theme.dart';
+import '../../models/payment.dart';
 import '../../models/post_package.dart';
 import '../../repositories/package_repository.dart';
+import 'widgets/payos_payment_dialog.dart';
 
 class PackageScreen extends StatefulWidget {
   const PackageScreen({super.key, this.listingId, this.initialPackageId});
@@ -23,7 +26,6 @@ class _PackageScreenState extends State<PackageScreen> {
   List<PostPackage> _packages = [];
   bool _isLoading = true;
   int? _purchasingPackageId;
-  bool _isSimulatingPayment = false;
   String? _errorMessage;
 
   @override
@@ -88,15 +90,19 @@ class _PackageScreenState extends State<PackageScreen> {
         packageId: package.packageId,
       );
       if (!mounted) return;
-      final shouldSimulate = await _showInvoiceDialog(
-        invoiceCode: invoice.invoiceCode,
-        amount: invoice.totalAmount,
+      final paymentResult = await _showInvoiceDialog(
+        invoice: invoice,
         packageName: package.packageName,
       );
       if (!mounted) return;
 
-      if (shouldSimulate == true) {
-        await _simulatePayment(invoice.invoiceCode);
+      if (paymentResult == PayOsPaymentDialogResult.paid) {
+        _showPaymentSuccess();
+        _goAfterCurrentFrame(AppConstants.routeInvoices);
+      } else if (paymentResult == PayOsPaymentDialogResult.openCheckout &&
+          invoice.paymentUrl?.isNotEmpty == true) {
+        await _openPaymentUrl(invoice.paymentUrl!);
+        _goAfterCurrentFrame(AppConstants.routeInvoices);
       } else {
         _goAfterCurrentFrame(AppConstants.routeHome);
       }
@@ -114,58 +120,37 @@ class _PackageScreenState extends State<PackageScreen> {
     }
   }
 
-  Future<bool?> _showInvoiceDialog({
-    required String invoiceCode,
-    required double amount,
+  Future<PayOsPaymentDialogResult?> _showInvoiceDialog({
+    required Invoice invoice,
     required String packageName,
   }) {
-    return showDialog<bool>(
+    return showDialog<PayOsPaymentDialogResult>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('invoice_dialog_created_title'.tr),
-        content: Text(
-          'invoice_dialog_code'.tr.replaceAll('{code}', invoiceCode) + '\n' +
-          'invoice_dialog_amount'.tr.replaceAll('{amount}', _formatPrice(amount)) + '\n\n' +
-          'invoice_dialog_success_desc'.tr.replaceAll('{package}', packageName),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text('invoice_dialog_btn_later'.tr),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text('invoice_dialog_btn_simulate'.tr),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (context) => PayOsPaymentDialog(
+        invoice: invoice,
+        packageName: packageName,
+        amountLabel: _formatPrice(invoice.totalAmount),
+        repository: _repository,
       ),
     );
   }
 
-  Future<void> _simulatePayment(String invoiceCode) async {
-    setState(() => _isSimulatingPayment = true);
-    try {
-      await _repository.simulateMomoPayment(invoiceCode);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('invoice_pay_success'.tr),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      _goAfterCurrentFrame(AppConstants.routeHome);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_cleanError(e)),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _isSimulatingPayment = false);
+  void _showPaymentSuccess() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('invoice_pay_success'.tr),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _openPaymentUrl(String url) async {
+    final uri = Uri.parse(url);
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened) {
+      throw Exception('invoice_open_checkout_failed'.tr);
     }
   }
 
@@ -267,9 +252,7 @@ class _PackageScreenState extends State<PackageScreen> {
                 package.durationDays >= 30 &&
                 !package.isFeatured,
             isSelected: package.packageId == widget.initialPackageId,
-            isPurchasing:
-                _purchasingPackageId == package.packageId ||
-                _isSimulatingPayment,
+            isPurchasing: _purchasingPackageId == package.packageId,
             onPressed: () => _purchase(package),
           );
         },
@@ -322,7 +305,8 @@ class _PackagePlanCard extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: context.isDarkProfile ? 0.2 : 0.03),
+                color: Colors.black
+                    .withValues(alpha: context.isDarkProfile ? 0.2 : 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -364,7 +348,9 @@ class _PackagePlanCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'post_package_days'.tr.replaceAll('{days}', '${package.durationDays}'),
+                'post_package_days'
+                    .tr
+                    .replaceAll('{days}', '${package.durationDays}'),
                 style: TextStyle(
                   color: context.profileTextSecondary,
                   fontWeight: FontWeight.w600,
@@ -382,7 +368,8 @@ class _PackagePlanCard extends StatelessWidget {
                             ? Icons.check_rounded
                             : Icons.close_rounded,
                         size: 18,
-                        color: feature.enabled ? accent : context.profileTextMuted,
+                        color:
+                            feature.enabled ? accent : context.profileTextMuted,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -412,7 +399,8 @@ class _PackagePlanCard extends StatelessWidget {
                     backgroundColor: accent,
                     padding: const EdgeInsets.symmetric(vertical: 13),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.radiusMd),
                     ),
                   ),
                   child: isPurchasing
@@ -424,7 +412,9 @@ class _PackagePlanCard extends StatelessWidget {
                             color: Colors.white,
                           ),
                         )
-                      : Text(package.isFree ? 'post_package_use_free'.tr : 'post_package_choose'.tr),
+                      : Text(package.isFree
+                          ? 'post_package_use_free'.tr
+                          : 'post_package_choose'.tr),
                 ),
               ),
             ],
@@ -469,7 +459,9 @@ class _PackagePlanCard extends StatelessWidget {
       _PlanFeature(
         package.maxImages >= 99
             ? 'post_feature_unlimited_images'.tr
-            : 'post_feature_max_images'.tr.replaceAll('{max}', '${package.maxImages}'),
+            : 'post_feature_max_images'
+                .tr
+                .replaceAll('{max}', '${package.maxImages}'),
         true,
       ),
       _PlanFeature(
@@ -480,11 +472,15 @@ class _PackagePlanCard extends StatelessWidget {
       ),
       _PlanFeature('post_feature_banner'.tr, package.allowBanner),
       _PlanFeature(
-        'post_feature_max_videos'.tr.replaceAll('{max}', '${package.maxVideos}'),
+        'post_feature_max_videos'
+            .tr
+            .replaceAll('{max}', '${package.maxVideos}'),
         package.maxVideos > 0,
       ),
       _PlanFeature(
-        package.isFeatured ? 'post_feature_analytics_detailed'.tr : 'post_feature_analytics_views'.tr,
+        package.isFeatured
+            ? 'post_feature_analytics_detailed'.tr
+            : 'post_feature_analytics_views'.tr,
         package.hasAnalytics,
       ),
     ];

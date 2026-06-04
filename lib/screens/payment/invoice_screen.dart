@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
@@ -7,6 +8,7 @@ import '../../core/localization/app_localizations.dart';
 import '../../core/theme/profile_theme.dart';
 import '../../models/payment.dart';
 import '../../repositories/package_repository.dart';
+import 'widgets/payos_qr_card.dart';
 
 class InvoiceScreen extends StatefulWidget {
   const InvoiceScreen({super.key});
@@ -55,15 +57,18 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
 
     setState(() => _payingInvoiceCode = invoice.invoiceCode);
     try {
-      await _repository.simulateMomoPayment(invoice.invoiceCode);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('invoice_pay_success'.tr),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-        ),
+      final paymentUrl = invoice.paymentUrl;
+      if (paymentUrl == null || paymentUrl.isEmpty) {
+        throw Exception('Hóa đơn này chưa có link thanh toán PayOS.');
+      }
+      final opened = await launchUrl(
+        Uri.parse(paymentUrl),
+        mode: LaunchMode.externalApplication,
       );
+      if (!opened) {
+        throw Exception('Không mở được trang thanh toán PayOS.');
+      }
+      if (!mounted) return;
       await _loadInvoices();
     } catch (e) {
       if (!mounted) return;
@@ -211,7 +216,10 @@ class _InvoiceSummary extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _SummaryItem(label: 'invoice_summary_total'.tr, value: '$total', color: AppColors.info),
+          _SummaryItem(
+              label: 'invoice_summary_total'.tr,
+              value: '$total',
+              color: AppColors.info),
           _SummaryItem(
             label: 'invoice_summary_paid'.tr,
             value: '$paid',
@@ -295,7 +303,8 @@ class _InvoiceCard extends StatelessWidget {
         border: Border.all(color: context.profileBorder),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: context.isDarkProfile ? 0.2 : 0.035),
+            color: Colors.black
+                .withValues(alpha: context.isDarkProfile ? 0.2 : 0.035),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -344,12 +353,26 @@ class _InvoiceCard extends StatelessWidget {
             ],
           ),
           Divider(height: 24, color: context.profileBorder),
-          _InfoRow(label: 'invoice_card_amount'.tr, value: amountLabel, strong: true),
+          _InfoRow(
+              label: 'invoice_card_amount'.tr,
+              value: amountLabel,
+              strong: true),
           const SizedBox(height: 8),
           _InfoRow(label: 'invoice_card_created'.tr, value: createdLabel),
           if (invoice.note != null && invoice.note!.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
-            _InfoRow(label: 'invoice_card_note'.tr, value: invoice.note!.trim()),
+            _InfoRow(
+                label: 'invoice_card_note'.tr, value: invoice.note!.trim()),
+          ],
+          if (invoice.isPending &&
+              invoice.paymentQrCode?.trim().isNotEmpty == true) ...[
+            const SizedBox(height: 14),
+            PayOsQrCard(
+              qrCode: invoice.paymentQrCode!,
+              invoiceCode: invoice.invoiceCode,
+              amountLabel: amountLabel,
+              onOpenCheckout: onPay,
+            ),
           ],
           const SizedBox(height: 14),
           Row(
@@ -378,7 +401,9 @@ class _InvoiceCard extends StatelessWidget {
                             ),
                           )
                         : const Icon(Icons.payments_outlined, size: 18),
-                    label: Text(isPaying ? 'invoice_btn_processing'.tr : 'invoice_btn_pay'.tr),
+                    label: Text(isPaying
+                        ? 'invoice_btn_processing'.tr
+                        : 'invoice_btn_pay'.tr),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
@@ -458,7 +483,8 @@ class _InfoRow extends StatelessWidget {
             style: TextStyle(
               fontSize: strong ? 14 : 12.5,
               fontWeight: strong ? FontWeight.w800 : FontWeight.w600,
-              color: strong ? context.profileText : context.profileTextSecondary,
+              color:
+                  strong ? context.profileText : context.profileTextSecondary,
               height: 1.35,
             ),
           ),

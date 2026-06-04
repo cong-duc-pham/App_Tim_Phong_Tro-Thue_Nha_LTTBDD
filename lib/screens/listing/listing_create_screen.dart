@@ -50,6 +50,28 @@ class VideoSlot {
       file == null ? '' : file!.path.split(RegExp(r'[\\/]')).last;
 }
 
+class _OsmSearchResult {
+  final String displayName;
+  final LatLng point;
+
+  const _OsmSearchResult({
+    required this.displayName,
+    required this.point,
+  });
+
+  factory _OsmSearchResult.fromJson(Map<String, dynamic> json) {
+    return _OsmSearchResult(
+      displayName: json['display_name']?.toString() ?? '',
+      point: LatLng(
+        double.tryParse(json['lat']?.toString() ?? '') ??
+            AppConstants.defaultLat,
+        double.tryParse(json['lon']?.toString() ?? '') ??
+            AppConstants.defaultLng,
+      ),
+    );
+  }
+}
+
 const _mapTileUrlTemplate =
     'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
 
@@ -1036,12 +1058,13 @@ class _PostListingScreenState extends State<PostListingScreen> {
       final address = Map<String, dynamic>.from(addressRaw);
 
       final province = _normalizeProvince(_firstNonEmpty([
-        address['city'],
         address['state'],
         address['province'],
+        address['city'],
       ]));
       final district = _firstNonEmpty([
         address['city_district'],
+        address['city'],
         address['district'],
         address['county'],
         address['suburb'],
@@ -3066,14 +3089,95 @@ class _LocationPickerScreen extends StatefulWidget {
 
 class _LocationPickerScreenState extends State<_LocationPickerScreen> {
   late final MapController _mapController;
+  final TextEditingController _mapSearchCtrl = TextEditingController();
   late LatLng _selectedPoint;
+  Timer? _mapSearchDebounce;
   bool _isLocating = false;
+  bool _isSearchingAddress = false;
+  bool _hasAddressSearchCompleted = false;
+  List<_OsmSearchResult> _addressResults = [];
 
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
     _selectedPoint = widget.initialPoint;
+  }
+
+  @override
+  void dispose() {
+    _mapSearchDebounce?.cancel();
+    _mapSearchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onMapSearchChanged(String value) {
+    _mapSearchDebounce?.cancel();
+    final query = value.trim();
+    if (query.length < 3) {
+      setState(() {
+        _addressResults = [];
+        _hasAddressSearchCompleted = false;
+      });
+      return;
+    }
+
+    setState(() => _hasAddressSearchCompleted = false);
+
+    _mapSearchDebounce = Timer(
+      const Duration(milliseconds: 550),
+      () => _searchAddress(query),
+    );
+  }
+
+  Future<void> _searchAddress(String query) async {
+    setState(() => _isSearchingAddress = true);
+
+    try {
+      final response = await Dio().get<List<dynamic>>(
+        'https://nominatim.openstreetmap.org/search',
+        queryParameters: {
+          'format': 'jsonv2',
+          'q': query,
+          'countrycodes': 'vn',
+          'addressdetails': 1,
+          'limit': 5,
+          'accept-language': Localizations.localeOf(context).languageCode,
+        },
+        options: Options(headers: {
+          'User-Agent': 'SwingsHouse/1.0 (development)',
+        }),
+      );
+
+      final results = (response.data ?? [])
+          .whereType<Map>()
+          .map((item) =>
+              _OsmSearchResult.fromJson(Map<String, dynamic>.from(item)))
+          .where((item) => item.displayName.trim().isNotEmpty)
+          .toList();
+
+      if (!mounted) return;
+      setState(() {
+        _addressResults = results;
+        _hasAddressSearchCompleted = true;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      _showMessage('post_map_search_error'.tr);
+    } finally {
+      if (mounted) setState(() => _isSearchingAddress = false);
+    }
+  }
+
+  void _selectAddressResult(_OsmSearchResult result) {
+    setState(() {
+      _selectedPoint = result.point;
+      _addressResults = [];
+      _hasAddressSearchCompleted = false;
+      _mapSearchCtrl.text = result.displayName;
+    });
+    FocusScope.of(context).unfocus();
+    _mapController.move(result.point, 16);
   }
 
   Future<void> _useCurrentLocation() async {
@@ -3155,47 +3259,70 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _MapRoundButton(
-                    icon: Icons.close_rounded,
-                    onTap: () => Navigator.of(context).pop(),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
+                  Row(
+                    children: [
+                      _MapRoundButton(
+                        icon: Icons.close_rounded,
+                        onTap: () => Navigator.of(context).pop(),
                       ),
-                      decoration: BoxDecoration(
-                        color: context.profileCard,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(
-                                alpha: context.isDarkProfile ? 0.2 : 0.12),
-                            blurRadius: 14,
-                            offset: const Offset(0, 3),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
                           ),
-                        ],
-                      ),
-                      child: Text(
-                        'post_map_tap_instruction'.tr,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: context.profileText,
+                          decoration: BoxDecoration(
+                            color: context.profileCard,
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(
+                                    alpha: context.isDarkProfile ? 0.2 : 0.12),
+                                blurRadius: 14,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            'post_map_tap_instruction'.tr,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: context.profileText,
+                            ),
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      _MapRoundButton(
+                        icon: Icons.my_location_rounded,
+                        isLoading: _isLocating,
+                        onTap: _useCurrentLocation,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _MapSearchBox(
+                    controller: _mapSearchCtrl,
+                    isLoading: _isSearchingAddress,
+                    onChanged: _onMapSearchChanged,
+                  ),
+                  if (_addressResults.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _MapSearchResults(
+                      results: _addressResults,
+                      onTap: _selectAddressResult,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  _MapRoundButton(
-                    icon: Icons.my_location_rounded,
-                    isLoading: _isLocating,
-                    onTap: _useCurrentLocation,
-                  ),
+                  ] else if (_mapSearchCtrl.text.trim().length >= 3 &&
+                      _hasAddressSearchCompleted &&
+                      !_isSearchingAddress) ...[
+                    const SizedBox(height: 8),
+                    _MapSearchEmpty(),
+                  ],
                 ],
               ),
             ),
@@ -3260,6 +3387,167 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MapSearchBox extends StatelessWidget {
+  final TextEditingController controller;
+  final bool isLoading;
+  final ValueChanged<String> onChanged;
+
+  const _MapSearchBox({
+    required this.controller,
+    required this.isLoading,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: context.profileCard,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black
+                .withValues(alpha: context.isDarkProfile ? 0.2 : 0.12),
+            blurRadius: 14,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        textInputAction: TextInputAction.search,
+        style: TextStyle(
+          color: context.profileText,
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
+        decoration: InputDecoration(
+          hintText: 'post_map_search_hint'.tr,
+          hintStyle: TextStyle(
+            color: context.profileTextSecondary,
+            fontSize: 13,
+          ),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: AppColors.primary,
+          ),
+          suffixIcon: isLoading
+              ? const Padding(
+                  padding: EdgeInsets.all(14),
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : controller.text.isEmpty
+                  ? null
+                  : IconButton(
+                      onPressed: () {
+                        controller.clear();
+                        onChanged('');
+                      },
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        ),
+      ),
+    );
+  }
+}
+
+class _MapSearchResults extends StatelessWidget {
+  final List<_OsmSearchResult> results;
+  final ValueChanged<_OsmSearchResult> onTap;
+
+  const _MapSearchResults({
+    required this.results,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 250),
+      decoration: BoxDecoration(
+        color: context.profileCard,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black
+                .withValues(alpha: context.isDarkProfile ? 0.2 : 0.12),
+            blurRadius: 14,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ListView.separated(
+        shrinkWrap: true,
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        itemCount: results.length,
+        separatorBuilder: (_, __) => Divider(
+          height: 1,
+          color: context.profileBorder,
+        ),
+        itemBuilder: (context, index) {
+          final result = results[index];
+          return ListTile(
+            dense: true,
+            leading: const Icon(
+              Icons.place_outlined,
+              color: AppColors.primary,
+            ),
+            title: Text(
+              result.displayName,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: context.profileText,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+            onTap: () => onTap(result),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _MapSearchEmpty extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: context.profileCard,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black
+                .withValues(alpha: context.isDarkProfile ? 0.2 : 0.12),
+            blurRadius: 14,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Text(
+        'post_map_search_empty'.tr,
+        style: TextStyle(
+          color: context.profileTextSecondary,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
       ),
     );
   }

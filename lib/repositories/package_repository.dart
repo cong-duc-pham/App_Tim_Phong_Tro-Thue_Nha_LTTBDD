@@ -5,6 +5,10 @@ import 'base_repository.dart';
 import '../models/post_package.dart';
 import '../models/payment.dart';
 
+class PayOsSyncUnavailableException implements Exception {
+  const PayOsSyncUnavailableException();
+}
+
 class PackageRepository extends BaseRepository {
   PackageRepository({super.apiService});
 
@@ -28,6 +32,9 @@ class PackageRepository extends BaseRepository {
       packages.sort((a, b) => a.price.compareTo(b.price));
       return packages;
     } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        throw const PayOsSyncUnavailableException();
+      }
       throw Exception(_readBackendMessage(e));
     }
   }
@@ -89,10 +96,58 @@ class PackageRepository extends BaseRepository {
         return const [];
       }
 
-      return data
+      final invoices = data
           .whereType<Map>()
           .map((item) => Invoice.fromJson(Map<String, dynamic>.from(item)))
           .toList();
+      return _syncPendingPayOsInvoices(invoices);
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
+  Future<List<Invoice>> _syncPendingPayOsInvoices(
+      List<Invoice> invoices) async {
+    if (invoices.isEmpty) return invoices;
+
+    final result = <Invoice>[];
+    for (final invoice in invoices) {
+      if (_shouldSyncPayOs(invoice)) {
+        try {
+          result.add(await syncPayOsInvoice(invoice.invoiceCode));
+          continue;
+        } catch (_) {
+          // Keep the cached invoice if PayOS is temporarily unreachable.
+        }
+      }
+      result.add(invoice);
+    }
+    return result;
+  }
+
+  bool _shouldSyncPayOs(Invoice invoice) {
+    final method = invoice.paymentMethod?.toLowerCase().trim();
+    return invoice.statusId == 1 &&
+        (method == 'payos' ||
+            invoice.paymentUrl?.isNotEmpty == true ||
+            invoice.paymentQrCode?.isNotEmpty == true);
+  }
+
+  Future<Invoice> syncPayOsInvoice(String invoiceCode) async {
+    try {
+      final options = await getOptionsWithToken();
+      final response = await dio.post<Map<String, dynamic>>(
+        '/packages/invoices/$invoiceCode/sync-payos',
+        options: options,
+      );
+
+      final body = response.data ?? {};
+      final data = body['data'] ?? body['Data'];
+      if (data is! Map) {
+        throw Exception('Không thể đồng bộ trạng thái thanh toán PayOS.');
+      }
+
+      return Invoice.fromJson(Map<String, dynamic>.from(data));
     } on DioException catch (e) {
       throw Exception(_readBackendMessage(e));
     }

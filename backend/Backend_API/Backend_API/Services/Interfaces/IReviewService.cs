@@ -13,6 +13,10 @@ namespace Backend_API.Services.Interfaces
         /// <summary>Lấy toàn bộ đánh giá (đã được duyệt) của 1 tin đăng.</summary>
         Task<List<ReviewResponseDto>> GetReviewsByListingAsync(long listingId, long? currentUserId = null);
 
+        Task<List<ReviewResponseDto>> GetMyReviewsAsync(long reviewerId);
+
+        Task DeleteReviewAsync(long reviewerId, long reviewId);
+
         /// <summary>
         /// Chủ nhà phản hồi đánh giá.
         /// Validate: chỉ landlord của listing đó mới được reply.
