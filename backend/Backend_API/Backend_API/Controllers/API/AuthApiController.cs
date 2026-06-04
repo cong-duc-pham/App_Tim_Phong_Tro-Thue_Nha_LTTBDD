@@ -252,5 +252,29 @@ namespace Backend_API.Controllers
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
+
+        [Authorize]
+        [HttpPost("deactivate-account")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> DeactivateAccount()
+        {
+            try
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdStr) || !long.TryParse(userIdStr, out long userId))
+                {
+                    return Unauthorized(new { success = false, message = "Khong xac dinh duoc danh tinh nguoi dung." });
+                }
+
+                await _authService.DeactivateAccountAsync(userId);
+                return Ok(new { success = true, message = "Tai khoan da duoc vo hieu hoa." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
     }
 }

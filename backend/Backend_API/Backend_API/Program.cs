@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
+using System.Security.Claims;
 using System.Text;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
@@ -93,6 +94,27 @@ builder.Services.AddAuthentication(options =>
             ValidAudience = jwtConfig["Audience"],
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var userIdValue = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!long.TryParse(userIdValue, out var userId))
+                {
+                    context.Fail("Invalid user id.");
+                    return;
+                }
+
+                var db = context.HttpContext.RequestServices.GetRequiredService<PhongTroDbContext>();
+                var isActive = await db.Users
+                    .AnyAsync(user => user.UserId == userId && user.IsActive == true);
+
+                if (!isActive)
+                {
+                    context.Fail("User account is disabled.");
+                }
+            }
         };
     })
     .AddCookie(options =>

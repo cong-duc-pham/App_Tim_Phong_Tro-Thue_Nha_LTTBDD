@@ -22,5 +22,7 @@ namespace Backend_API.Services.Interfaces
         Task ChangePasswordAsync(long userId, ChangePasswordRequestDto dto);
 
         Task UpdateProfileAsync(long userId, UpdateProfileRequestDto dto);
+
+        Task DeactivateAccountAsync(long userId);
     }
 }
