@@ -11,6 +11,7 @@ import '../../core/auth/logout_helper.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/settings/app_settings_controller.dart';
+import '../../repositories/auth_repository.dart';
 import '../../services/search_history_service.dart';
 import '../../core/localization/app_localizations.dart';
 
@@ -22,6 +23,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  final AuthRepository _authRepository = AuthRepository();
   // Trạng thái các cài đặt
   ThemeMode _themeMode = ThemeMode.light;
   bool _notificationsEnabled = true;
@@ -268,7 +270,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
-              await LogoutHelper.signOutAndGoToLogin();
+              try {
+                await _authRepository.deactivateAccount();
+                await LogoutHelper.signOutAndGoToLogin();
+              } catch (e) {
+                if (!mounted) return;
+                final message = _authRepository.readBackendMessage(e);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(message),
+                    backgroundColor: AppColors.error,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,

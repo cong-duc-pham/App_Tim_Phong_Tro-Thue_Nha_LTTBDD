@@ -173,6 +173,35 @@ namespace Backend_API.Controllers.MVC
 
             user.IsActive = !(user.IsActive ?? true);
             user.UpdatedAt = DateTime.UtcNow;
+
+            if (user.IsActive != true)
+            {
+                var refreshTokens = await _context.SocialAuthProviders
+                    .Where(x => x.UserId == user.UserId && x.Provider == "internal_refresh")
+                    .ToListAsync();
+                foreach (var refreshToken in refreshTokens)
+                {
+                    refreshToken.TokenExpiresAt = DateTime.UtcNow.AddSeconds(-1);
+                    refreshToken.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(user.FirebaseUid))
+            {
+                try
+                {
+                    await FirebaseAuth.DefaultInstance.UpdateUserAsync(new UserRecordArgs
+                    {
+                        Uid = user.FirebaseUid,
+                        Disabled = user.IsActive != true
+                    });
+                }
+                catch
+                {
+                    // SQL is the source of truth for API access; Firebase sync is best-effort.
+                }
+            }
+
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Users));
