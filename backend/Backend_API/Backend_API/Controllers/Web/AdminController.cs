@@ -58,16 +58,24 @@ namespace Backend_API.Controllers.MVC
             var startDate = today.AddDays(-29);
             var monthStart = new DateTime(today.Year, today.Month, 1);
 
-            var dailyStats = await _context.DailyStats
-                .Where(x => x.StatDate >= DateOnly.FromDateTime(startDate) && x.StatDate <= DateOnly.FromDateTime(today))
-                .OrderBy(x => x.StatDate)
-                .ToListAsync();
-
             var labels = Enumerable.Range(0, 30)
                 .Select(i => startDate.AddDays(i))
                 .ToList();
 
-            var statByDate = dailyStats.ToDictionary(x => x.StatDate);
+            var newUsersByDate = await _context.Users
+                .AsNoTracking()
+                .Where(x =>
+                    x.CreatedAt != null &&
+                    x.CreatedAt >= startDate &&
+                    x.CreatedAt < today.AddDays(1))
+                .GroupBy(x => DateOnly.FromDateTime(x.CreatedAt!.Value))
+                .Select(x => new
+                {
+                    Date = x.Key,
+                    Count = x.Count()
+                })
+                .ToDictionaryAsync(x => x.Date, x => x.Count);
+
             var revenueByDate = await _context.Payments
                 .Include(x => x.Status)
                 .Where(x =>
@@ -100,7 +108,7 @@ namespace Backend_API.Controllers.MVC
                 NewUsers30Days = labels.Select(day =>
                 {
                     var key = DateOnly.FromDateTime(day);
-                    return statByDate.TryGetValue(key, out var stat) ? (stat.NewUsers ?? 0) : 0;
+                    return newUsersByDate.TryGetValue(key, out var count) ? count : 0;
                 }).ToList(),
                 Revenue30Days = labels.Select(day =>
                 {
