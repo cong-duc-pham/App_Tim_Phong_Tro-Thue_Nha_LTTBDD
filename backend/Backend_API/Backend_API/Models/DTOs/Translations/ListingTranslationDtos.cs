@@ -18,6 +18,6 @@ namespace Backend_API.Models.DTOs.Translations
         public string? TypeName { get; set; }
         public List<string> AmenityNames { get; set; } = new();
         public bool IsTranslated { get; set; }
-        public string Provider { get; set; } = "xAI";
+        public string Provider { get; set; } = "Google Gemini";
     }
 }

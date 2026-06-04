@@ -333,6 +333,8 @@ class AppLocalizations {
       'post_step_title_5': 'Giá & Tiện ích',
       'post_success': 'Đăng tin thành công! Đang chờ xét duyệt.',
       'post_failed': 'Đăng tin thất bại',
+      'post_header_title': 'Đăng tin',
+      'post_header_step': 'Bước {step}/{total} · {title}',
       'post_img_cover': 'Ảnh bìa',
       'post_img_extra': 'Ảnh phụ',
       'post_img_add': 'Thêm ảnh',
@@ -444,6 +446,9 @@ class AppLocalizations {
       'post_map_no_service': 'Vui lòng bật dịch vụ vị trí trên thiết bị.',
       'post_map_no_permission': 'Ứng dụng chưa được cấp quyền vị trí.',
       'post_map_err_get_pos': 'Không lấy được vị trí hiện tại.',
+      'post_map_search_hint': 'Tìm địa chỉ trên OpenStreetMap',
+      'post_map_search_empty': 'Không tìm thấy địa chỉ phù hợp.',
+      'post_map_search_error': 'Không tìm được địa chỉ. Vui lòng thử lại.',
       'post_details_area_section': 'Diện tích & Tầng',
       'post_details_area_label': 'Diện tích (m2)',
       'post_details_occupants_label': 'Số người tối đa',
@@ -548,6 +553,21 @@ class AppLocalizations {
           'Sau khi thanh toán thành công, gói {package} sẽ được kích hoạt cho tin đăng.',
       'invoice_dialog_btn_later': 'Thanh toán sau',
       'invoice_dialog_btn_simulate': 'Mô phỏng đã thanh toán',
+      'invoice_pay_now': 'Thanh toán PayOS',
+      'invoice_qr_title': 'Quét mã QR PayOS',
+      'invoice_qr_desc':
+          'Dùng ứng dụng ngân hàng để quét mã và hoàn tất thanh toán.',
+      'invoice_qr_unavailable':
+          'Hóa đơn này chưa có mã QR. Hãy mở trang PayOS để thanh toán.',
+      'invoice_open_checkout': 'Mở trang PayOS',
+      'invoice_open_checkout_failed': 'Không mở được trang thanh toán PayOS.',
+      'invoice_payment_link_missing':
+          'Hóa đơn này chưa có link thanh toán PayOS.',
+      'invoice_checking_payment': 'Đang kiểm tra thanh toán...',
+      'invoice_waiting_payment':
+          'Sau khi thanh toán, màn hình sẽ tự chuyển trạng thái.',
+      'invoice_sync_payment_failed':
+          'Chưa kiểm tra được trạng thái thanh toán. Vui lòng chờ hoặc mở lại hóa đơn.',
       'post_package_popular': 'Phổ biến nhất',
       'post_package_use_free': 'Dùng gói thường',
       'post_package_choose': 'Chọn gói',
@@ -1067,6 +1087,8 @@ class AppLocalizations {
       'post_step_title_5': 'Price & Amenities',
       'post_success': 'Listing submitted successfully! Awaiting approval.',
       'post_failed': 'Failed to submit listing',
+      'post_header_title': 'Post listing',
+      'post_header_step': 'Step {step}/{total} · {title}',
       'post_img_cover': 'Cover photo',
       'post_img_extra': 'Extra photo',
       'post_img_add': 'Add photo',
@@ -1178,6 +1200,9 @@ class AppLocalizations {
       'post_map_no_service': 'Please enable location services on your device.',
       'post_map_no_permission': 'Location permission has not been granted.',
       'post_map_err_get_pos': 'Failed to retrieve current location.',
+      'post_map_search_hint': 'Search address on OpenStreetMap',
+      'post_map_search_empty': 'No matching address found.',
+      'post_map_search_error': 'Could not search address. Please try again.',
       'post_details_area_section': 'Area & Floor',
       'post_details_area_label': 'Area (m2)',
       'post_details_occupants_label': 'Max Occupants',
@@ -1282,6 +1307,21 @@ class AppLocalizations {
           'Upon successful payment, package {package} will be activated for the listing.',
       'invoice_dialog_btn_later': 'Pay later',
       'invoice_dialog_btn_simulate': 'Simulate payment',
+      'invoice_pay_now': 'Pay with PayOS',
+      'invoice_qr_title': 'Scan PayOS QR',
+      'invoice_qr_desc':
+          'Use your banking app to scan this QR code and complete payment.',
+      'invoice_qr_unavailable':
+          'This invoice does not have a QR code yet. Open PayOS checkout to pay.',
+      'invoice_open_checkout': 'Open PayOS checkout',
+      'invoice_open_checkout_failed': 'Could not open PayOS checkout.',
+      'invoice_payment_link_missing':
+          'This invoice does not have a PayOS payment link.',
+      'invoice_checking_payment': 'Checking payment...',
+      'invoice_waiting_payment':
+          'After payment, this screen will update automatically.',
+      'invoice_sync_payment_failed':
+          'Could not check payment status yet. Please wait or reopen the invoice.',
       'post_package_popular': 'Most popular',
       'post_package_use_free': 'Use free package',
       'post_package_choose': 'Select package',

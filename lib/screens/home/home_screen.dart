@@ -1,5 +1,7 @@
 // lib/screens/home/home_screen.dart
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -12,6 +14,7 @@ import '../../core/settings/app_settings_controller.dart';
 import '../../models/listing.dart';
 import '../../repositories/favorite_repository.dart';
 import '../../repositories/listing_repository.dart';
+import '../../repositories/listing_realtime_repository.dart';
 import '../../repositories/notification_repository.dart';
 import '../../services/api_service.dart';
 import '../../services/search_history_service.dart';
@@ -228,6 +231,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final ListingRepository _listingRepository = ListingRepository();
+  final ListingRealtimeRepository _listingRealtimeRepository =
+      ListingRealtimeRepository();
   final FavoriteRepository _favoriteRepository = FavoriteRepository();
   final NotificationRepository _notificationRepository =
       NotificationRepository();
@@ -259,6 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Set<String> _preferredAmenities = {};
   double? _preferredMaxBudget;
   String? _lastLanguageCode;
+  Timer? _listingRealtimeReloadTimer;
 
   @override
   void initState() {
@@ -266,6 +272,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadPreferences();
     _loadSelectedLocation();
     _loadListingsFromSql();
+    _connectListingRealtime();
     _loadFavoriteIds();
     _loadUnreadNotificationCount();
     notificationsEnabledNotifier.addListener(_handleNotificationSettingChanged);
@@ -355,6 +362,21 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _connectListingRealtime() async {
+    await _listingRealtimeRepository.connect(
+      onListingsChanged: (_) {
+        if (!mounted) return;
+        _listingRealtimeReloadTimer?.cancel();
+        _listingRealtimeReloadTimer =
+            Timer(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _loadListingsFromSql();
+          }
+        });
+      },
+    );
+  }
+
   Future<void> _loadFavoriteIds() async {
     try {
       final favorites = await _favoriteRepository.getFavorites();
@@ -394,11 +416,46 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool _matchesLocation(String value, String selected) {
     if (selected == 'ho chi minh') {
-      return value.contains('ho chi minh') ||
-          value.contains('hcm') ||
-          value.contains('sai gon');
+      return _isHoChiMinhLocation(value);
     }
     return value == selected || value.contains(selected);
+  }
+
+  bool _isHoChiMinhLocation(String value) {
+    if (value.contains('ho chi minh') ||
+        value.contains('hcm') ||
+        value.contains('sai gon')) {
+      return true;
+    }
+
+    const hcmDistricts = [
+      'thu duc',
+      'binh thanh',
+      'go vap',
+      'tan binh',
+      'tan phu',
+      'phu nhuan',
+      'binh tan',
+      'binh chanh',
+      'hoc mon',
+      'cu chi',
+      'nha be',
+      'can gio',
+      'quan 1',
+      'quan 2',
+      'quan 3',
+      'quan 4',
+      'quan 5',
+      'quan 6',
+      'quan 7',
+      'quan 8',
+      'quan 9',
+      'quan 10',
+      'quan 11',
+      'quan 12',
+    ];
+
+    return hcmDistricts.any(value.contains);
   }
 
   List<String> get _locationOptions {
@@ -583,6 +640,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _listingRealtimeReloadTimer?.cancel();
+    unawaited(_listingRealtimeRepository.disconnect());
     notificationsEnabledNotifier
         .removeListener(_handleNotificationSettingChanged);
     _searchCtrl.dispose();

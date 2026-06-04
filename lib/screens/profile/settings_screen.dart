@@ -267,11 +267,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              final router = GoRouter.of(context);
               Navigator.pop(dialogContext);
-
-              if (!mounted) return;
-              await LogoutHelper.signOutAndGoToLogin(router);
+              await LogoutHelper.signOutAndGoToLogin();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,

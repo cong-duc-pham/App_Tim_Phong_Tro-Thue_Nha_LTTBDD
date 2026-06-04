@@ -84,6 +84,12 @@ namespace Backend_API.Services.Implementations
 
             var reviews = await _context.Reviews
                 .Include(r => r.Reviewer)
+                .Include(r => r.Listing)
+                    .ThenInclude(l => l.Province)
+                .Include(r => r.Listing)
+                    .ThenInclude(l => l.District)
+                .Include(r => r.Listing)
+                    .ThenInclude(l => l.Ward)
                 .Include(r => r.ReviewImages)
                 .Include(r => r.ReviewLikes)
                 .Where(r => r.ListingId == listingId && r.IsApproved == true)
@@ -91,6 +97,54 @@ namespace Backend_API.Services.Implementations
                 .ToListAsync();
 
             return reviews.Select(r => MapToDto(r, currentUserId)).ToList();
+        }
+
+        public async Task<List<ReviewResponseDto>> GetMyReviewsAsync(long reviewerId)
+        {
+            await EnsureReviewLikesTableAsync();
+
+            var reviews = await _context.Reviews
+                .Include(r => r.Reviewer)
+                .Include(r => r.Listing)
+                    .ThenInclude(l => l.Province)
+                .Include(r => r.Listing)
+                    .ThenInclude(l => l.District)
+                .Include(r => r.Listing)
+                    .ThenInclude(l => l.Ward)
+                .Include(r => r.ReviewImages)
+                .Include(r => r.ReviewLikes)
+                .Where(r => r.ReviewerId == reviewerId)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            return reviews.Select(r => MapToDto(r, reviewerId)).ToList();
+        }
+
+        public async Task DeleteReviewAsync(long reviewerId, long reviewId)
+        {
+            var review = await _context.Reviews
+                .Include(r => r.ReviewImages)
+                .Include(r => r.ReviewLikes)
+                .FirstOrDefaultAsync(r => r.ReviewId == reviewId)
+                ?? throw new Exception("Khong tim thay danh gia.");
+
+            if (review.ReviewerId != reviewerId)
+            {
+                throw new UnauthorizedAccessException();
+            }
+
+            if (review.ReviewImages.Count > 0)
+            {
+                _context.ReviewImages.RemoveRange(review.ReviewImages);
+            }
+
+            if (review.ReviewLikes.Count > 0)
+            {
+                _context.ReviewLikes.RemoveRange(review.ReviewLikes);
+            }
+
+            _context.Reviews.Remove(review);
+            await _context.SaveChangesAsync();
         }
 
         public async Task<ReviewResponseDto> ReplyReviewAsync(long landlordId, long reviewId, ReviewReplyDto dto)
@@ -157,6 +211,12 @@ namespace Backend_API.Services.Implementations
         private async Task<ReviewResponseDto?> BuildResponseDto(long reviewId, long? currentUserId = null)
         {
             var review = await _context.Reviews
+                .Include(r => r.Listing)
+                    .ThenInclude(l => l.Province)
+                .Include(r => r.Listing)
+                    .ThenInclude(l => l.District)
+                .Include(r => r.Listing)
+                    .ThenInclude(l => l.Ward)
                 .Include(r => r.Reviewer)
                 .Include(r => r.ReviewImages)
                 .Include(r => r.ReviewLikes)
@@ -203,6 +263,11 @@ namespace Backend_API.Services.Implementations
             ReviewerId     = r.ReviewerId,
             ReviewerName   = r.Reviewer?.FullName ?? string.Empty,
             ReviewerAvatar = r.Reviewer?.AvatarUrl,
+            ListingId      = r.ListingId,
+            ListingTitle   = r.Listing?.Title,
+            ListingAddress = BuildListingAddress(r.Listing),
+            ListingPrice   = r.Listing?.Price,
+            ListingImage   = r.Listing?.Image0,
             Rating         = r.Rating,
             Comment        = r.Comment,
             RatingLocation  = r.RatingLocation,
@@ -217,6 +282,23 @@ namespace Backend_API.Services.Implementations
             IsLiked         = currentUserId.HasValue && r.ReviewLikes.Any(x => x.UserId == currentUserId.Value),
             ImageUrls       = r.ReviewImages.Select(img => img.ImageUrl).ToList()
         };
+
+        private static string? BuildListingAddress(Listing? listing)
+        {
+            if (listing == null) return null;
+
+            var parts = new[]
+            {
+                listing.StreetAddress,
+                listing.Ward?.WardName,
+                listing.District?.DistrictName,
+                listing.Province?.ProvinceName
+            }
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!.Trim());
+
+            return string.Join(", ", parts);
+        }
 
         private async Task EnsureReviewLikesTableAsync()
         {

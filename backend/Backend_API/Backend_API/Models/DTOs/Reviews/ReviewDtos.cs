@@ -33,6 +33,11 @@ namespace Backend_API.Models.DTOs.Reviews
         public long   ReviewerId       { get; set; }
         public string ReviewerName     { get; set; } = null!;
         public string? ReviewerAvatar  { get; set; }
+        public long ListingId          { get; set; }
+        public string? ListingTitle    { get; set; }
+        public string? ListingAddress  { get; set; }
+        public decimal? ListingPrice   { get; set; }
+        public string? ListingImage    { get; set; }
 
         public byte  Rating            { get; set; }
         public string? Comment         { get; set; }

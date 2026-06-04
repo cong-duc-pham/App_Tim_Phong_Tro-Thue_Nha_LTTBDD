@@ -217,12 +217,12 @@ namespace Backend_API.Services.Implementations
 
             if (user == null)
             {
-                throw new Exception("Email khong ton tai trong he thong.");
+                throw new Exception("Email kh?ng t?n t?i trong h? th?ng.");
             }
 
             if (string.IsNullOrWhiteSpace(user.PasswordHash) && !IsFirebasePasswordUser(user))
             {
-                throw new Exception("Tai khoan nay dang nhap bang Google/Facebook, khong can dat lai mat khau tai day.");
+                throw new Exception("T?i kho?n n?y ??ng nh?p b?ng Google/Facebook, kh?ng c?n ??t l?i m?t kh?u t?i ??y.");
             }
 
             var oldOtps = await _context.OtpCodes
@@ -266,7 +266,7 @@ namespace Backend_API.Services.Implementations
 
             if (user == null || (string.IsNullOrWhiteSpace(user.PasswordHash) && !IsFirebasePasswordUser(user)))
             {
-                throw new Exception("Tai khoan khong hop le de dat lai mat khau.");
+                throw new Exception("T?i kho?n kh?ng h?p l? ?? ??t l?i m?t kh?u.");
             }
 
             var otp = await _context.OtpCodes
@@ -281,7 +281,7 @@ namespace Backend_API.Services.Implementations
 
             if (otp == null)
             {
-                throw new Exception("OTP khong dung hoac da het han.");
+                throw new Exception("OTP kh?ng ??ng ho?c ?? h?t h?n.");
             }
 
             otp.IsUsed = true;

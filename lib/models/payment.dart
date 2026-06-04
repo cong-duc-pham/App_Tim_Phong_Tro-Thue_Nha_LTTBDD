@@ -23,10 +23,15 @@ class Payment {
 
   factory Payment.fromJson(Map<String, dynamic> json) {
     return Payment(
-      id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? '') ?? 0,
-      invoiceId: json['invoiceId'] is int ? json['invoiceId'] : int.tryParse(json['invoiceId']?.toString() ?? '') ?? 0,
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse(json['id']?.toString() ?? '') ?? 0,
+      invoiceId: json['invoiceId'] is int
+          ? json['invoiceId']
+          : int.tryParse(json['invoiceId']?.toString() ?? '') ?? 0,
       transactionRef: json['transactionRef'] ?? json['TransactionRef'] ?? '',
-      paymentGateway: json['paymentGateway'] ?? json['PaymentGateway'] ?? 'momo',
+      paymentGateway:
+          json['paymentGateway'] ?? json['PaymentGateway'] ?? 'momo',
       amount: (json['amount'] ?? json['Amount'] ?? 0.0) is int
           ? (json['amount'] ?? json['Amount'] ?? 0).toDouble()
           : (json['amount'] ?? json['Amount'] ?? 0.0).toDouble(),
@@ -68,6 +73,10 @@ class Invoice {
   final String? dueDate;
   final String? note;
   final int statusId;
+  final String? paymentStatus;
+  final String? paymentMethod;
+  final String? paymentUrl;
+  final String? paymentQrCode;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -81,6 +90,10 @@ class Invoice {
     required this.dueDate,
     required this.note,
     required this.statusId,
+    this.paymentStatus,
+    this.paymentMethod,
+    this.paymentUrl,
+    this.paymentQrCode,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -119,6 +132,10 @@ class Invoice {
       dueDate: text('dueDate', 'DueDate'),
       note: text('note', 'Note'),
       statusId: integer('statusId', 'StatusId'),
+      paymentStatus: text('paymentStatus', 'PaymentStatus'),
+      paymentMethod: text('paymentMethod', 'PaymentMethod'),
+      paymentUrl: text('paymentUrl', 'PaymentUrl'),
+      paymentQrCode: text('paymentQrCode', 'PaymentQrCode'),
       createdAt: dateTime('createdAt', 'CreatedAt'),
       updatedAt: dateTime('updatedAt', 'UpdatedAt'),
     );

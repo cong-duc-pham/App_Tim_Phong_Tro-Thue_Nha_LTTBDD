@@ -38,30 +38,47 @@ class Review {
   });
 
   factory Review.fromJson(Map<String, dynamic> json) {
+    int integer(String camel, String pascal,
+        [String? fallbackCamel, String? fallbackPascal]) {
+      final value = json[camel] ??
+          json[pascal] ??
+          json[fallbackCamel] ??
+          json[fallbackPascal];
+      if (value is num) return value.toInt();
+      return int.tryParse(value?.toString() ?? '') ?? 0;
+    }
+
+    double number(String camel, String pascal) {
+      final value = json[camel] ?? json[pascal];
+      if (value is num) return value.toDouble();
+      return double.tryParse(value?.toString() ?? '') ?? 0;
+    }
+
+    String text(String camel, String pascal, [String? fallback]) {
+      final value = json[camel] ?? json[pascal] ?? json[fallback];
+      return value?.toString() ?? '';
+    }
+
+    DateTime? date(String camel, String pascal) {
+      final value = json[camel] ?? json[pascal];
+      return value == null ? null : DateTime.tryParse(value.toString());
+    }
+
     return Review(
-      id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? '') ?? 0,
-      listingId: json['listingId']?.toString() ?? json['ListingId']?.toString() ?? '',
-      listingTitle: json['listingTitle'] ?? json['ListingTitle'] ?? '',
-      listingAddress: json['listingAddress'] ?? json['ListingAddress'] ?? '',
-      listingPrice: (json['listingPrice'] ?? json['ListingPrice'] ?? 0.0) is int
-          ? (json['listingPrice'] ?? json['ListingPrice'] ?? 0).toDouble()
-          : (json['listingPrice'] ?? json['ListingPrice'] ?? 0.0).toDouble(),
+      id: integer('id', 'Id', 'reviewId', 'ReviewId'),
+      listingId: text('listingId', 'ListingId'),
+      listingTitle: text('listingTitle', 'ListingTitle'),
+      listingAddress: text('listingAddress', 'ListingAddress'),
+      listingPrice: number('listingPrice', 'ListingPrice'),
       listingImage: json['listingImage'] ?? json['ListingImage'],
-      rating: (json['rating'] ?? json['Rating'] ?? 0.0) is int
-          ? (json['rating'] ?? json['Rating'] ?? 0).toDouble()
-          : (json['rating'] ?? json['Rating'] ?? 0.0).toDouble(),
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : (json['CreatedAt'] != null
-              ? DateTime.parse(json['CreatedAt'])
-              : DateTime.now()),
-      content: json['content'] ?? json['Content'] ?? '',
-      replyContent: json['replyContent'] ?? json['ReplyContent'],
-      repliedAt: json['repliedAt'] != null
-          ? DateTime.parse(json['repliedAt'])
-          : (json['RepliedAt'] != null
-              ? DateTime.parse(json['RepliedAt'])
-              : null),
+      rating: number('rating', 'Rating'),
+      createdAt: date('createdAt', 'CreatedAt') ?? DateTime.now(),
+      content: text('content', 'Content', 'comment'),
+      replyContent: json['replyContent'] ??
+          json['ReplyContent'] ??
+          json['landlordReply'] ??
+          json['LandlordReply'],
+      repliedAt: date('repliedAt', 'RepliedAt'),
     );
   }
 

@@ -82,7 +82,7 @@ namespace Backend_API.Controllers
             try
             {
                 await _authService.RequestPasswordResetOtpAsync(request);
-                return Ok(new { success = true, message = "Da gui OTP dat lai mat khau. Vui long kiem tra email." });
+                return Ok(new { success = true, message = "?? g?i OTP ??t l?i m?t kh?u. Vui l?ng ki?m tra email." });
             }
             catch (Exception ex)
             {
@@ -98,7 +98,7 @@ namespace Backend_API.Controllers
             try
             {
                 await _authService.ResetPasswordWithOtpAsync(request);
-                return Ok(new { success = true, message = "Dat lai mat khau thanh cong." });
+                return Ok(new { success = true, message = "??t l?i m?t kh?u th?nh c?ng." });
             }
             catch (Exception ex)
             {

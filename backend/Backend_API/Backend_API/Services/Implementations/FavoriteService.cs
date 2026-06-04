@@ -8,6 +8,7 @@ namespace Backend_API.Services.Implementations
     public class FavoriteService : IFavoriteService
     {
         private readonly PhongTroDbContext _context;
+        private const int STATUS_ACTIVE = 1;
 
         public FavoriteService(PhongTroDbContext context)
         {
@@ -34,6 +35,13 @@ namespace Backend_API.Services.Implementations
             else
             {
                 // Chưa yêu thích → thêm + save_count++
+                var canFavorite = await _context.Listings
+                    .AnyAsync(l => l.ListingId == listingId && l.StatusId == STATUS_ACTIVE);
+                if (!canFavorite)
+                {
+                    throw new InvalidOperationException("Chỉ có thể lưu tin đang hiển thị.");
+                }
+
                 await _context.Favorites.AddAsync(new Favorite
                 {
                     UserId    = userId,
@@ -54,6 +62,7 @@ namespace Backend_API.Services.Implementations
         {
             var listings = await _context.Favorites
                 .Where(f => f.UserId == userId)
+                .Where(f => f.Listing.StatusId == STATUS_ACTIVE)
                 .OrderByDescending(f => f.CreatedAt)
                 .Include(f => f.Listing).ThenInclude(l => l.Type)
                 .Include(f => f.Listing).ThenInclude(l => l.Status)
@@ -75,7 +84,10 @@ namespace Backend_API.Services.Implementations
         public async Task<bool> IsFavoriteAsync(long userId, long listingId)
         {
             return await _context.Favorites
-                .AnyAsync(f => f.UserId == userId && f.ListingId == listingId);
+                .AnyAsync(f =>
+                    f.UserId == userId &&
+                    f.ListingId == listingId &&
+                    f.Listing.StatusId == STATUS_ACTIVE);
         }
 
         // ── Reuse mapper (tương đương ListingService.MapToResponseDto)
