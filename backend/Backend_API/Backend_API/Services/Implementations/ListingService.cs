@@ -25,6 +25,12 @@ namespace Backend_API.Services.Implementations
         // ─────────────────────────────────────────────
         public async Task<ListingResponseDto> CreateListingAsync(long landlordId, ListingCreateDto dto)
         {
+            var user = await _context.Users.FindAsync(landlordId);
+            if (user == null || user.IsVerified != true)
+            {
+                throw new Exception("Tài khoản chưa được xác thực số điện thoại. Vui lòng xác thực số điện thoại để đăng tin.");
+            }
+
             // Tạo Listing mới
             await PromoteUserToLandlordIfNeeded(landlordId);
 
