@@ -1243,6 +1243,11 @@ public partial class PhongTroDbContext : DbContext
             entity.Property(e => e.IsVerified)
                 .HasDefaultValue(false)
                 .HasColumnName("is_verified");
+
+            entity.Property(e => e.IsEmailVerified)
+                .HasDefaultValue(false)
+                .HasColumnName("is_email_verified");
+
             entity.Property(e => e.LastLogin).HasColumnName("last_login");
             entity.Property(e => e.PasswordHash)
                 .HasMaxLength(255)

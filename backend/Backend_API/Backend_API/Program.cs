@@ -121,6 +121,8 @@ builder.Services.AddScoped<IPreferenceService, PreferenceService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<ISmsService, SmsService>();
 builder.Services.AddHttpClient<ITranslationService, XaiTranslationService>();
 
 // ── Firebase (hỗ trợ env var FIREBASE_CREDENTIALS_JSON cho Docker)

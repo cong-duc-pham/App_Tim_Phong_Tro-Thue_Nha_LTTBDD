@@ -110,8 +110,13 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
-        path: '/verify-account',
-        builder: (_, __) => const AccountVerificationScreen()),
+      path: '/verify-account',
+      builder: (context, state) {
+        final isFromPostListing =
+            state.uri.queryParameters['isFromPostListing'] == 'true';
+        return AccountVerificationScreen(isFromPostListing: isFromPostListing);
+      },
+    ),
     GoRoute(
         path: '/change-password',
         builder: (_, __) => const ChangePasswordScreen()),
