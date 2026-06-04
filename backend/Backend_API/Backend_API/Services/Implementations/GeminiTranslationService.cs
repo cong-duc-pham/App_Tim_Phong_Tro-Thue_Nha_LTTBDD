@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Backend_API.Models.DTOs.Translations;
@@ -6,16 +5,16 @@ using Backend_API.Services.Interfaces;
 
 namespace Backend_API.Services.Implementations
 {
-    public class XaiTranslationService : ITranslationService
+    public class GeminiTranslationService : ITranslationService
     {
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
-        private readonly ILogger<XaiTranslationService> _logger;
+        private readonly ILogger<GeminiTranslationService> _logger;
 
-        public XaiTranslationService(
+        public GeminiTranslationService(
             HttpClient httpClient,
             IConfiguration configuration,
-            ILogger<XaiTranslationService> logger)
+            ILogger<GeminiTranslationService> logger)
         {
             _httpClient = httpClient;
             _configuration = configuration;
@@ -36,25 +35,26 @@ namespace Backend_API.Services.Implementations
                 return Original(request, isTranslated: false);
             }
 
-            var apiKey = Environment.GetEnvironmentVariable("XAI_API_KEY")
-                         ?? _configuration["Translation:Xai:ApiKey"];
+            var apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY")
+                         ?? _configuration["Translation:Gemini:ApiKey"];
             if (string.IsNullOrWhiteSpace(apiKey))
             {
                 return Original(request, isTranslated: false);
             }
 
-            var baseUrl = _configuration["Translation:Xai:BaseUrl"] ?? "https://api.x.ai/v1";
-            var model = _configuration["Translation:Xai:Model"] ?? "grok-4.3";
+            var baseUrl = _configuration["Translation:Gemini:BaseUrl"]
+                          ?? "https://generativelanguage.googleapis.com/v1beta";
+            var model = _configuration["Translation:Gemini:Model"] ?? "gemini-2.5-flash";
             var timeoutSeconds = int.TryParse(
-                _configuration["Translation:Xai:TimeoutSeconds"],
+                _configuration["Translation:Gemini:TimeoutSeconds"],
                 out var parsedTimeout)
                 ? parsedTimeout
                 : 30;
 
             _httpClient.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
             _httpClient.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", apiKey);
+            _httpClient.DefaultRequestHeaders.Remove("x-goog-api-key");
+            _httpClient.DefaultRequestHeaders.Add("x-goog-api-key", apiKey);
 
             var sourceJson = JsonSerializer.Serialize(new
             {
@@ -67,38 +67,42 @@ namespace Backend_API.Services.Implementations
 
             var payload = new
             {
-                model,
-                stream = false,
-                temperature = 0,
-                messages = new[]
+                contents = new[]
                 {
                     new
                     {
-                        role = "system",
-                        content =
-                            "You translate Vietnamese rental listing data into natural English. " +
-                            "Keep numbers, addresses, place names, units, and brand names recognizable. " +
-                            "Return only compact JSON with keys: title, description, streetAddress, typeName, amenityNames."
-                    },
-                    new
-                    {
                         role = "user",
-                        content = sourceJson
+                        parts = new[]
+                        {
+                            new
+                            {
+                                text =
+                                    "Translate this Vietnamese rental listing data into natural English. " +
+                                    "Keep numbers, addresses, place names, units, and brand names recognizable. " +
+                                    "Return only compact JSON with keys: title, description, streetAddress, typeName, amenityNames.\n\n" +
+                                    sourceJson
+                            }
+                        }
                     }
+                },
+                generationConfig = new
+                {
+                    temperature = 0,
+                    responseMimeType = "application/json"
                 }
             };
 
             try
             {
                 using var response = await _httpClient.PostAsJsonAsync(
-                    "chat/completions",
+                    $"models/{model}:generateContent",
                     payload,
                     cancellationToken);
 
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogWarning(
-                        "xAI translation failed with status {StatusCode}",
+                        "Gemini translation failed with status {StatusCode}",
                         response.StatusCode);
                     return Original(request, isTranslated: false);
                 }
@@ -108,9 +112,10 @@ namespace Backend_API.Services.Implementations
                     cancellationToken: cancellationToken);
 
                 var content = document.RootElement
-                    .GetProperty("choices")[0]
-                    .GetProperty("message")
+                    .GetProperty("candidates")[0]
                     .GetProperty("content")
+                    .GetProperty("parts")[0]
+                    .GetProperty("text")
                     .GetString();
 
                 if (string.IsNullOrWhiteSpace(content))
@@ -126,7 +131,7 @@ namespace Backend_API.Services.Implementations
                                       || ex is InvalidOperationException
                                       || ex is KeyNotFoundException)
             {
-                _logger.LogWarning(ex, "Could not translate listing data with xAI.");
+                _logger.LogWarning(ex, "Could not translate listing data with Gemini.");
                 return Original(request, isTranslated: false);
             }
         }
@@ -155,7 +160,8 @@ namespace Backend_API.Services.Implementations
                 StreetAddress = ReadString(root, "streetAddress") ?? original.StreetAddress,
                 TypeName = ReadString(root, "typeName") ?? original.TypeName,
                 AmenityNames = ReadStringList(root, "amenityNames", original.AmenityNames),
-                IsTranslated = true
+                IsTranslated = true,
+                Provider = "Google Gemini"
             };
         }
 
@@ -195,7 +201,8 @@ namespace Backend_API.Services.Implementations
                 StreetAddress = request.StreetAddress,
                 TypeName = request.TypeName,
                 AmenityNames = request.AmenityNames,
-                IsTranslated = isTranslated
+                IsTranslated = isTranslated,
+                Provider = "Google Gemini"
             };
         }
     }

@@ -130,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen>
             borderRadius: BorderRadius.circular(AppConstants.radiusMd),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
+                color: AppColors.primary.withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -224,15 +224,13 @@ class _LoginScreenState extends State<LoginScreen>
           width: double.infinity,
           height: 52,
           child: ElevatedButton(
-            onPressed: isLoading
-                ? null
-                : () => _onLogin(context.read<AuthBloc>()),
+            onPressed:
+                isLoading ? null : () => _onLogin(context.read<AuthBloc>()),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               disabledBackgroundColor: AppColors.primaryLight,
               shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(AppConstants.radiusLg),
+                borderRadius: BorderRadius.circular(AppConstants.radiusLg),
               ),
               elevation: 0,
             ),
@@ -281,7 +279,7 @@ class _LoginScreenState extends State<LoginScreen>
         return Column(
           children: [
             _SocialLoginButton(
-              label: 'Tiep tuc voi Google',
+              label: 'Tiếp tục với Google',
               iconText: 'G',
               iconColor: const Color(0xFFDB4437),
               onPressed: isLoading
@@ -290,7 +288,7 @@ class _LoginScreenState extends State<LoginScreen>
             ),
             const SizedBox(height: AppConstants.spacingMd),
             _SocialLoginButton(
-              label: 'Tiep tuc voi Facebook',
+              label: 'Tiếp tục với Facebook',
               iconText: 'f',
               iconColor: const Color(0xFF1877F2),
               onPressed: isLoading

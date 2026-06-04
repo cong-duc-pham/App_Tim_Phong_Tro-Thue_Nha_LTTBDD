@@ -32,8 +32,10 @@ import '../../models/payment.dart';
 import '../../screens/chat/conversations_screen.dart';
 import '../../screens/chat/chat_screen.dart';
 import '../../widgets/main_bottom_nav.dart';
+import 'router_keys.dart';
 
 final appRouter = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/',
   routes: [
     GoRoute(path: '/', builder: (_, __) => const SplashScreen()),

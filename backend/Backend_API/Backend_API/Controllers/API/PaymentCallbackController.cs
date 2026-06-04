@@ -1,3 +1,4 @@
+using Backend_API.Models.DTOs.Payment;
 using Backend_API.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -61,6 +62,34 @@ namespace Backend_API.Controllers
             {
                 return BadRequest(new { success = false, message = ex.Message });
             }
+        }
+
+        [HttpPost("payos/webhook")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> PayOsWebhook([FromBody] PayOsWebhookDto webhook)
+        {
+            try
+            {
+                await _paymentService.ProcessPayOsWebhookAsync(webhook);
+                return Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet("payos/return")]
+        public IActionResult PayOsReturn()
+        {
+            return Ok(new { success = true, message = "PayOS return received. Please go back to the app." });
+        }
+
+        [HttpGet("payos/cancel")]
+        public IActionResult PayOsCancel()
+        {
+            return Ok(new { success = false, message = "PayOS payment was cancelled." });
         }
     }
 }

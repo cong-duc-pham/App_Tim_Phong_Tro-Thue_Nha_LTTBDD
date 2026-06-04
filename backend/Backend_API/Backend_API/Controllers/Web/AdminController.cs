@@ -30,15 +30,18 @@ namespace Backend_API.Controllers.MVC
 
         private readonly PhongTroDbContext _context;
         private readonly INotificationService _notificationService;
+        private readonly IListingRealtimeNotifier _listingRealtimeNotifier;
         private readonly CloudinaryStorageHelper _cloudinaryStorageHelper;
 
         public AdminController(
             PhongTroDbContext context,
             INotificationService notificationService,
+            IListingRealtimeNotifier listingRealtimeNotifier,
             CloudinaryStorageHelper cloudinaryStorageHelper)
         {
             _context = context;
             _notificationService = notificationService;
+            _listingRealtimeNotifier = listingRealtimeNotifier;
             _cloudinaryStorageHelper = cloudinaryStorageHelper;
         }
 
@@ -412,6 +415,10 @@ namespace Backend_API.Controllers.MVC
             listing.StatusId = activeStatusId;
             listing.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
+            await _listingRealtimeNotifier.NotifyListingsChangedAsync(
+                listing.ListingId,
+                "approved",
+                ListingStatusActive);
 
             try
             {
@@ -449,6 +456,10 @@ namespace Backend_API.Controllers.MVC
             listing.StatusId = rejectedStatusId;
             listing.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
+            await _listingRealtimeNotifier.NotifyListingsChangedAsync(
+                listing.ListingId,
+                "rejected",
+                ListingStatusRejected);
 
             var rejectedReason = string.IsNullOrWhiteSpace(reason)
                 ? "Tin đăng chưa đáp ứng tiêu chuẩn nội dung. Vui lòng kiểm tra lại thông tin, hình ảnh và giá phòng."
@@ -1223,28 +1234,28 @@ namespace Backend_API.Controllers.MVC
         {
             var lines = new List<string>
             {
-                "SWINGS HOUSE - BILL THANH TOAN",
+                "SWINGS HOUSE - BI?N LAI THANH TO?N",
                 "--------------------------------",
-                $"Ma hoa don: {model.InvoiceCode}",
-                $"Loai hoa don: {model.InvoiceType}",
-                $"Trang thai: {model.StatusName}",
-                $"So tien: {model.TotalAmount:N0} d",
-                $"Nguoi thanh toan: {model.LandlordName}",
+                $"M? h?a ??n: {model.InvoiceCode}",
+                $"Lo?i h?a ??n: {model.InvoiceType}",
+                $"Tr?ng th?i: {model.StatusName}",
+                $"S? ti?n: {model.TotalAmount:N0} d",
+                $"Ng??i thanh to?n: {model.LandlordName}",
                 $"Email: {model.LandlordEmail ?? "-"}",
-                $"Ngay tao: {model.CreatedAt?.ToLocalTime():dd/MM/yyyy HH:mm}",
-                $"Han thanh toan: {model.DueDate:dd/MM/yyyy}",
-                $"Ngay thanh toan: {(model.PaidAt.HasValue ? model.PaidAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "-")}",
-                $"Phuong thuc: {model.PaymentMethod ?? "-"}"
+                $"Ng?y t?o: {model.CreatedAt?.ToLocalTime():dd/MM/yyyy HH:mm}",
+                $"H?n thanh to?n: {model.DueDate:dd/MM/yyyy}",
+                $"Ng?y thanh to?n: {(model.PaidAt.HasValue ? model.PaidAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "-")}",
+                $"Ph??ng th?c: {model.PaymentMethod ?? "-"}"
             };
 
             if (model.ListingId.HasValue)
             {
-                lines.Add($"Tin dang: #{model.ListingId} - {model.ListingTitle ?? "-"}");
+                lines.Add($"Tin ??ng: #{model.ListingId} - {model.ListingTitle ?? "-"}");
             }
 
             if (!string.IsNullOrWhiteSpace(model.Note))
             {
-                lines.Add($"Ghi chu: {model.Note.Trim()}");
+                lines.Add($"Ghi ch?: {model.Note.Trim()}");
             }
 
             lines.Add("--------------------------------");

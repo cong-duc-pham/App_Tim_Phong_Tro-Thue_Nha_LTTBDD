@@ -37,6 +37,18 @@ class PostPackage {
   bool get isFeatured => packageType == 'featured' || isHighlighted;
   bool get isVip => packageType == 'vip';
 
+  static String _displayPackageName(String rawName) {
+    final normalized = rawName.trim().toLowerCase();
+    switch (normalized) {
+      case 'tin thuong':
+        return 'Tin Thường';
+      case 'tin noi bat':
+        return 'Tin Nổi Bật';
+      default:
+        return rawName.replaceAll(' ngay', ' ngày');
+    }
+  }
+
   factory PostPackage.fromJson(Map<String, dynamic> json) {
     T? read<T>(String camel, String pascal) {
       final value = json[camel] ?? json[pascal];
@@ -64,7 +76,9 @@ class PostPackage {
 
     return PostPackage(
       packageId: integer('packageId', 'PackageId'),
-      packageName: read<String>('packageName', 'PackageName') ?? 'Gói đăng tin',
+      packageName: _displayPackageName(
+        read<String>('packageName', 'PackageName') ?? 'Gói đăng tin',
+      ),
       packageType: read<String>('packageType', 'PackageType') ?? 'free',
       durationDays: integer('durationDays', 'DurationDays'),
       price: number('price', 'Price'),

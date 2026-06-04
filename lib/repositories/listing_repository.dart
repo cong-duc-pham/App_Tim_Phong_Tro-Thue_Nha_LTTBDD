@@ -277,12 +277,12 @@ class ListingRepository {
       final body = response.data ?? {};
       final data = body['data'] ?? body['Data'];
       if (data is! Map) {
-        throw Exception('Backend khong tra ve URL video.');
+        throw Exception('Backend kh?ng tr? v? URL video.');
       }
 
       final url = data['url'] ?? data['Url'];
       if (url is! String || url.isEmpty) {
-        throw Exception('URL video khong hop le.');
+        throw Exception('URL video kh?ng h?p l?.');
       }
 
       return url;

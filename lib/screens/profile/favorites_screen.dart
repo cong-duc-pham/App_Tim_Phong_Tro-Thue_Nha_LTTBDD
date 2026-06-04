@@ -1,5 +1,7 @@
 // lib/screens/profile/favorites_screen.dart
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
@@ -9,6 +11,7 @@ import '../../core/localization/app_localizations.dart';
 import '../../core/theme/profile_theme.dart';
 import '../../models/listing.dart';
 import '../../repositories/favorite_repository.dart';
+import '../../repositories/listing_realtime_repository.dart';
 import '../../services/api_service.dart';
 
 // â”€â”€â”€ Model â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -168,12 +171,15 @@ class FavoritesScreen extends StatefulWidget {
 class _FavoritesScreenState extends State<FavoritesScreen>
     with SingleTickerProviderStateMixin {
   final FavoriteRepository _favoriteRepository = FavoriteRepository();
+  final ListingRealtimeRepository _listingRealtimeRepository =
+      ListingRealtimeRepository();
   final List<FavoriteListing> _favorites = [];
   final Set<String> _removingIds = {};
   _SortOption _sort = _SortOption.newest;
   String _searchQuery = '';
   bool _isLoading = true;
   String? _errorMessage;
+  Timer? _listingRealtimeReloadTimer;
   late final AnimationController _emptyAnim;
 
   @override
@@ -184,12 +190,30 @@ class _FavoritesScreenState extends State<FavoritesScreen>
       duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
     _loadFavorites();
+    _connectListingRealtime();
   }
 
   @override
   void dispose() {
+    _listingRealtimeReloadTimer?.cancel();
+    unawaited(_listingRealtimeRepository.disconnect());
     _emptyAnim.dispose();
     super.dispose();
+  }
+
+  Future<void> _connectListingRealtime() async {
+    await _listingRealtimeRepository.connect(
+      onListingsChanged: (_) {
+        if (!mounted) return;
+        _listingRealtimeReloadTimer?.cancel();
+        _listingRealtimeReloadTimer =
+            Timer(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _loadFavorites();
+          }
+        });
+      },
+    );
   }
 
   Future<void> _loadFavorites() async {

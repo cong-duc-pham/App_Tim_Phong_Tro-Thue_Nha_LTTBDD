@@ -42,6 +42,28 @@ namespace Backend_API.Controllers.API
             }
         }
 
+        [Authorize]
+        [HttpGet("api/reviews/me")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetMyReviews()
+        {
+            try
+            {
+                long userId = GetCurrentUserId();
+                var items = await _reviewService.GetMyReviewsAsync(userId);
+                return Ok(new { success = true, data = items, count = items.Count });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { success = false, message = "ChÆ°a Ä‘Äƒng nháº­p." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
         /// <summary>
         /// Tạo đánh giá cho tin đăng (chỉ tenant đã thuê).
         /// </summary>
@@ -117,6 +139,28 @@ namespace Backend_API.Controllers.API
             catch (UnauthorizedAccessException)
             {
                 return Unauthorized(new { success = false, message = "Chưa đăng nhập." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpDelete("api/reviews/{reviewId:long}")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> DeleteReview(long reviewId)
+        {
+            try
+            {
+                long userId = GetCurrentUserId();
+                await _reviewService.DeleteReviewAsync(userId, reviewId);
+                return Ok(new { success = true });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { success = false, message = "ChÆ°a Ä‘Äƒng nháº­p." });
             }
             catch (Exception ex)
             {

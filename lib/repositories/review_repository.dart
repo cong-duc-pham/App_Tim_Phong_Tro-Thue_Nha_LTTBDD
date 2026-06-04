@@ -70,6 +70,41 @@ class ReviewItem {
 class ReviewRepository extends BaseRepository {
   ReviewRepository({super.apiService});
 
+  Future<List<Review>> getMyReviews() async {
+    try {
+      final options = await getOptionsWithToken();
+      final response = await dio.get<Map<String, dynamic>>(
+        '/reviews/me',
+        options: options,
+      );
+
+      final body = response.data ?? {};
+      final data = body['data'] ?? body['Data'];
+      if (data is! List) {
+        return const [];
+      }
+
+      return data
+          .whereType<Map>()
+          .map((item) => Review.fromJson(Map<String, dynamic>.from(item)))
+          .toList();
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
+  Future<void> deleteReview(int reviewId) async {
+    try {
+      final options = await getOptionsWithToken();
+      await dio.delete<Map<String, dynamic>>(
+        '/reviews/$reviewId',
+        options: options,
+      );
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
   /// Lấy danh sách đánh giá của một phòng trọ dạng đơn giản.
   Future<List<Review>> getListingReviews(int listingId) async {
     try {
