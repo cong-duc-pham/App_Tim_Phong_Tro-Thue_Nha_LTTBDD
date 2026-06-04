@@ -17,6 +17,7 @@
             <div class="col-12 col-md-4">
                 <button type="submit" class="btn btn-primary">Lọc</button>
                 <a href="/admin/storage" class="btn btn-outline-secondary">Xóa lọc</a>
+                <a href="/admin/storage?ref_type=@Model.RefType&user_id=@Model.UserId&sync=true" class="btn btn-outline-primary">Đồng bộ ảnh</a>
             </div>
         </form>
     </div>
@@ -56,10 +57,11 @@
                                 <td>@file.UserName (#@file.UserId)</td>
                                 <td>@(file.RefType ?? "-")</td>
                                 <td>
-                                    @if (file.ResourceType == "image" && !string.IsNullOrWhiteSpace(file.SecureUrl))
+                                    @if (file.ResourceType == "image" && !string.IsNullOrWhiteSpace(file.PreviewUrl))
                                     {
-                                        <a href="@file.SecureUrl" target="_blank" rel="noopener">
-                                            <img src="@file.SecureUrl" alt="@file.PublicId" class="rounded border object-fit-cover" style="width: 72px; height: 48px;" />
+                                        <a href="@file.PreviewUrl" target="_blank" rel="noopener" title="@file.PreviewUrl">
+                                            <img src="@file.PreviewUrl" alt="@file.PublicId" class="rounded border object-fit-cover bg-light" style="width: 72px; height: 48px;" loading="lazy" decoding="async" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none');" />
+                                            <span class="d-none small text-danger">Lỗi ảnh</span>
                                         </a>
                                     }
                                     else

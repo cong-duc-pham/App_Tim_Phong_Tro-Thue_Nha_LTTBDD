@@ -150,6 +150,7 @@ public class AdminStorageFileItemViewModel
     public string UserName { get; set; } = string.Empty;
     public string PublicId { get; set; } = string.Empty;
     public string SecureUrl { get; set; } = string.Empty;
+    public string? PreviewUrl { get; set; }
     public string ResourceType { get; set; } = string.Empty;
     public int? FileSizeKb { get; set; }
     public string? Format { get; set; }
