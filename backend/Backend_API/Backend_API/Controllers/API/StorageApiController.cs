@@ -45,7 +45,7 @@ namespace Backend_API.Controllers.API
             var userId = GetCurrentUserId();
             if (userId == null)
             {
-                return Unauthorized(new { success = false, message = "Chua dang nhap." });
+                return Unauthorized(new { success = false, message = "Ch?a ??ng nh?p." });
             }
 
             var listing = await _context.Listings
@@ -54,7 +54,7 @@ namespace Backend_API.Controllers.API
 
             if (listing == null)
             {
-                return NotFound(new { success = false, message = "Khong tim thay tin dang." });
+                return NotFound(new { success = false, message = "Kh?ng t?m th?y tin ??ng." });
             }
 
             if (listing.LandlordId != userId.Value)
@@ -64,17 +64,17 @@ namespace Backend_API.Controllers.API
 
             if (file == null || file.Length == 0)
             {
-                return BadRequest(new { success = false, message = "Vui long chon anh." });
+                return BadRequest(new { success = false, message = "Vui l?ng ch?n ?nh." });
             }
 
             if (file.Length > 10 * 1024 * 1024)
             {
-                return BadRequest(new { success = false, message = "Anh khong duoc vuot qua 10 MB." });
+                return BadRequest(new { success = false, message = "?nh kh?ng ???c v??t qu? 10 MB." });
             }
 
             if (!TryResolveImageExtension(file.FileName, file.ContentType, out var extension))
             {
-                return BadRequest(new { success = false, message = "Dinh dang anh khong hop le." });
+                return BadRequest(new { success = false, message = "??nh d?ng ?nh kh?ng h?p l?." });
             }
 
             var safeUploadType = (uploadType ?? "gallery").Trim().ToLowerInvariant();
@@ -165,7 +165,7 @@ namespace Backend_API.Controllers.API
             var userId = GetCurrentUserId();
             if (userId == null)
             {
-                return Unauthorized(new { success = false, message = "Chua dang nhap." });
+                return Unauthorized(new { success = false, message = "Ch?a ??ng nh?p." });
             }
 
             var listing = await _context.Listings
@@ -173,7 +173,7 @@ namespace Backend_API.Controllers.API
 
             if (listing == null)
             {
-                return NotFound(new { success = false, message = "Khong tim thay tin dang." });
+                return NotFound(new { success = false, message = "Kh?ng t?m th?y tin ??ng." });
             }
 
             if (listing.LandlordId != userId.Value)
@@ -183,24 +183,24 @@ namespace Backend_API.Controllers.API
 
             if (file == null || file.Length == 0)
             {
-                return BadRequest(new { success = false, message = "Vui long chon video." });
+                return BadRequest(new { success = false, message = "Vui l?ng ch?n video." });
             }
 
             if (file.Length > 100 * 1024 * 1024)
             {
-                return BadRequest(new { success = false, message = "Video khong duoc vuot qua 100 MB." });
+                return BadRequest(new { success = false, message = "Video kh?ng ???c v??t qu? 100 MB." });
             }
 
             if (!TryResolveVideoExtension(file.FileName, file.ContentType, out var extension))
             {
-                return BadRequest(new { success = false, message = "Dinh dang video khong hop le." });
+                return BadRequest(new { success = false, message = "??nh d?ng video kh?ng h?p l?." });
             }
 
             var existingVideoCount = await _context.ListingVideos
                 .CountAsync(v => v.ListingId == listingId);
             if (existingVideoCount >= MaxListingVideos)
             {
-                return BadRequest(new { success = false, message = $"Moi tin chi duoc upload toi da {MaxListingVideos} video." });
+                return BadRequest(new { success = false, message = $"M?i tin ch? ???c upload t?i ?a {MaxListingVideos} video." });
             }
 
             var fileName = $"{Guid.NewGuid():N}{extension}";

@@ -9,15 +9,19 @@ namespace Backend_API.Services.Implementations
     public class ListingService : IListingService
     {
         private readonly PhongTroDbContext _context;
+        private readonly IListingRealtimeNotifier _listingRealtimeNotifier;
 
         // StatusId cứng (tra cứu từ bảng ListingStatuses)
         private const int STATUS_ACTIVE = 1;
         private const int STATUS_PENDING = 2;
         private const int STATUS_HIDDEN = 5;
 
-        public ListingService(PhongTroDbContext context)
+        public ListingService(
+            PhongTroDbContext context,
+            IListingRealtimeNotifier listingRealtimeNotifier)
         {
             _context = context;
+            _listingRealtimeNotifier = listingRealtimeNotifier;
         }
 
         // ─────────────────────────────────────────────
@@ -28,14 +32,12 @@ namespace Backend_API.Services.Implementations
             // Tạo Listing mới
             await PromoteUserToLandlordIfNeeded(landlordId);
 
-            var hasCoverImage = !string.IsNullOrWhiteSpace(dto.Image0);
-
             var listing = new Listing
             {
                 LandlordId   = landlordId,
                 TypeId       = dto.TypeId,
-                // Business rule: nếu chưa có ảnh cover thì để pending chờ bổ sung/duyệt
-                StatusId     = hasCoverImage ? STATUS_ACTIVE : STATUS_PENDING,
+                // Tin mới luôn chờ admin duyệt, kể cả đã có ảnh bìa.
+                StatusId     = STATUS_PENDING,
                 Title        = dto.Title,
                 Description  = dto.Description,
                 Price        = dto.Price,
@@ -110,6 +112,11 @@ namespace Backend_API.Services.Implementations
             await _context.CloudinaryFiles.AddRangeAsync(imageFiles);
 
             await _context.SaveChangesAsync();
+
+            await _listingRealtimeNotifier.NotifyListingsChangedAsync(
+                listing.ListingId,
+                "created",
+                "pending");
 
             return await BuildResponseDto(listing.ListingId)
                    ?? throw new Exception("Tạo tin đăng thất bại.");
@@ -188,6 +195,11 @@ namespace Backend_API.Services.Implementations
             }
 
             await _context.SaveChangesAsync();
+            await _listingRealtimeNotifier.NotifyListingsChangedAsync(
+                listingId,
+                "updated",
+                listing.Status?.StatusName);
+
             return await BuildResponseDto(listingId)
                    ?? throw new Exception("Cập nhật tin đăng thất bại.");
         }
@@ -216,6 +228,10 @@ namespace Backend_API.Services.Implementations
             }
 
             await _context.SaveChangesAsync();
+            await _listingRealtimeNotifier.NotifyListingsChangedAsync(
+                listingId,
+                "deleted",
+                "hidden");
         }
 
         public async Task<ListingResponseDto> ToggleListingStatusAsync(long listingId, long landlordId)
@@ -241,6 +257,10 @@ namespace Backend_API.Services.Implementations
 
             listing.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
+            await _listingRealtimeNotifier.NotifyListingsChangedAsync(
+                listingId,
+                "status_changed",
+                listing.StatusId == STATUS_ACTIVE ? "active" : "hidden");
 
             return await BuildResponseDto(listingId)
                    ?? throw new Exception("Cập nhật tin đăng thất bại.");

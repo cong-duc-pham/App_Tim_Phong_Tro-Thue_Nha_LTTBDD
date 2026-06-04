@@ -53,15 +53,15 @@ namespace Backend_API.Services
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(senderName, senderEmail));
             message.To.Add(MailboxAddress.Parse(toEmail));
-            message.Subject = "Ma OTP dat lai mat khau Swings House";
+            message.Subject = "M? OTP ??t l?i m?t kh?u Swings House";
             message.Body = new TextPart("html")
             {
                 Text = $@"
                     <div style=""font-family:Arial,sans-serif;line-height:1.6;color:#111827"">
                         <h2>Swings House</h2>
-                        <p>Ma OTP dat lai mat khau cua ban la:</p>
+                        <p>M? OTP ??t l?i m?t kh?u c?a b?n l?:</p>
                         <div style=""font-size:28px;font-weight:700;letter-spacing:6px;color:#0d6efd"">{otpCode}</div>
-                        <p>Ma co hieu luc trong 10 phut. Neu ban khong yeu cau, hay bo qua email nay.</p>
+                        <p>M? c? hi?u l?c trong 10 ph?t. N?u b?n kh?ng y?u c?u, h?y b? qua email n?y.</p>
                     </div>"
             };
 

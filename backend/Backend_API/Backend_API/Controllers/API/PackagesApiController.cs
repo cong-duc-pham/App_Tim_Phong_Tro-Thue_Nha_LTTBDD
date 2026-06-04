@@ -140,6 +140,32 @@ namespace Backend_API.Controllers.API
             }
         }
 
+        /// <summary>
+        /// Dong bo trang thai hoa don PayOS voi cong thanh toan.
+        /// </summary>
+        [Authorize]
+        [HttpPost("invoices/{invoiceCode}/sync-payos")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> SyncPayOsInvoice(string invoiceCode)
+        {
+            try
+            {
+                long userId = GetCurrentUserId();
+                var invoice = await _paymentService.SyncPayOsInvoiceAsync(userId, invoiceCode);
+                return Ok(new { success = true, data = invoice });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { success = false, message = "ChÆ°a Ä‘Äƒng nháº­p." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
         private long GetCurrentUserId()
         {
             var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);

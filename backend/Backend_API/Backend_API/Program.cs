@@ -121,7 +121,9 @@ builder.Services.AddScoped<IPreferenceService, PreferenceService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
-builder.Services.AddHttpClient<ITranslationService, XaiTranslationService>();
+builder.Services.AddScoped<IListingRealtimeNotifier, ListingRealtimeNotifier>();
+builder.Services.AddHttpClient<IPayOsService, PayOsService>();
+builder.Services.AddHttpClient<ITranslationService, GeminiTranslationService>();
 
 // ── Firebase (hỗ trợ env var FIREBASE_CREDENTIALS_JSON cho Docker)
 var firebaseConfig = builder.Configuration.GetSection("Firebase");
@@ -199,5 +201,6 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<ListingHub>("/hubs/listings");
 
 app.Run();

@@ -7,6 +7,8 @@ namespace Backend_API.Services.Interfaces
         Task<List<PackageListDto>> GetPackagesAsync();
         Task<InvoiceResponseDto> CreateInvoiceAsync(long landlordId, long listingId, int packageId);
         Task ProcessPaymentCallbackAsync(string transactionRef, string gateway);
+        Task ProcessPayOsWebhookAsync(PayOsWebhookDto webhook);
+        Task<InvoiceResponseDto> SyncPayOsInvoiceAsync(long landlordId, string invoiceCode);
         Task<List<InvoiceResponseDto>> GetMyInvoicesAsync(long landlordId);
     }
 }
