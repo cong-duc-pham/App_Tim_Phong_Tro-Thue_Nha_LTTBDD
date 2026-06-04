@@ -718,11 +718,20 @@ namespace Backend_API.Controllers.MVC
         }
 
         [HttpGet("storage")]
-        public async Task<IActionResult> Storage([FromQuery(Name = "ref_type")] string? refType, [FromQuery(Name = "user_id")] long? userId)
+        public async Task<IActionResult> Storage(
+            [FromQuery(Name = "ref_type")] string? refType,
+            [FromQuery(Name = "user_id")] long? userId,
+            [FromQuery(Name = "sync")] bool sync = false)
         {
-            await BackfillListingStorageFilesAsync();
+            if (sync)
+            {
+                await BackfillListingStorageFilesAsync();
+                TempData["AdminSuccess"] = "Đã đồng bộ lại danh sách ảnh storage.";
+                return RedirectToAction(nameof(Storage), new { ref_type = refType, user_id = userId });
+            }
 
             var query = _context.CloudinaryFiles
+                .AsNoTracking()
                 .Include(x => x.User)
                 .Where(x => x.IsActive == true);
 
@@ -739,7 +748,7 @@ namespace Backend_API.Controllers.MVC
 
             var files = await query
                 .OrderByDescending(x => x.CreatedAt)
-                .Take(300)
+                .Take(100)
                 .Select(x => new AdminStorageFileItemViewModel
                 {
                     FileId = x.FileId,
@@ -755,6 +764,11 @@ namespace Backend_API.Controllers.MVC
                     CreatedAt = x.CreatedAt
                 })
                 .ToListAsync();
+
+            foreach (var file in files)
+            {
+                file.PreviewUrl = ToAdminStoragePreviewUrl(file.SecureUrl, file.PublicId, file.Format, Request);
+            }
 
             ViewData["Title"] = "Quản lý Cloudinary Storage";
             return View(new AdminStorageViewModel
@@ -1315,6 +1329,56 @@ namespace Backend_API.Controllers.MVC
             }
 
             return value;
+        }
+
+        private static string? ToAdminStoragePreviewUrl(string? secureUrl, string? publicId, string? format, HttpRequest request)
+        {
+            var value = !string.IsNullOrWhiteSpace(secureUrl)
+                ? secureUrl.Trim()
+                : publicId?.Trim();
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            if (Uri.TryCreate(value, UriKind.Absolute, out var absoluteUri))
+            {
+                if (absoluteUri.AbsolutePath.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+                {
+                    var normalizedPath = AppendImageFormatIfMissing(absoluteUri.AbsolutePath, absoluteUri.AbsolutePath, format);
+                    return $"{request.Scheme}://{request.Host}{normalizedPath}";
+                }
+
+                return value;
+            }
+
+            var path = value.StartsWith("/", StringComparison.Ordinal) ? value : $"/{value}";
+            return path.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase)
+                ? $"{request.Scheme}://{request.Host}{AppendImageFormatIfMissing(path, path, format)}"
+                : path;
+        }
+
+        private static string AppendImageFormatIfMissing(string value, string path, string? format)
+        {
+            if (Path.HasExtension(path) || string.IsNullOrWhiteSpace(format))
+            {
+                return value;
+            }
+
+            var normalizedFormat = format.Trim().TrimStart('.');
+            if (string.IsNullOrWhiteSpace(normalizedFormat))
+            {
+                return value;
+            }
+
+            var queryIndex = value.IndexOf('?', StringComparison.Ordinal);
+            if (queryIndex < 0)
+            {
+                return $"{value}.{normalizedFormat}";
+            }
+
+            return $"{value[..queryIndex]}.{normalizedFormat}{value[queryIndex..]}";
         }
 
         private static bool TryBuildStoragePublicId(string imageUrl, long listingId, out string publicId, out string? format)
