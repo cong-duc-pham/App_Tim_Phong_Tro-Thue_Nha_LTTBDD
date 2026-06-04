@@ -167,6 +167,11 @@ class AppLocalizations {
       'verify_otp_confirm': 'Xác nhận',
       'verify_otp_invalid_phone': 'Vui lòng nhập số điện thoại hợp lệ!',
       'verify_otp_invalid_otp': 'Vui lòng nhập đủ mã OTP 6 số!',
+      'verify_email_input_hint': 'Nhập địa chỉ email của bạn',
+      'verify_otp_sent_to_email': 'Mã OTP đã được gửi đến email {email}',
+      'verify_otp_instruction_email': 'Swings House sẽ gửi mã OTP gồm 6 chữ số đến email này.',
+      'verify_otp_invalid_email': 'Vui lòng nhập địa chỉ email hợp lệ!',
+      'verify_success_email_verify': 'Xác thực địa chỉ email thành công!',
       'search_history_empty_title': 'Lịch sử trống',
       'search_history_empty_desc':
           'Bạn chưa thực hiện lượt tìm kiếm phòng trọ nào gần đây.',
@@ -901,6 +906,11 @@ class AppLocalizations {
       'verify_otp_confirm': 'Confirm',
       'verify_otp_invalid_phone': 'Please enter a valid phone number!',
       'verify_otp_invalid_otp': 'Please enter all 6 OTP digits!',
+      'verify_email_input_hint': 'Enter your email address',
+      'verify_otp_sent_to_email': 'OTP code has been sent to email {email}',
+      'verify_otp_instruction_email': 'Swings House will send a 6-digit OTP code to this email.',
+      'verify_otp_invalid_email': 'Please enter a valid email address!',
+      'verify_success_email_verify': 'Verified email address successfully!',
       'search_history_empty_title': 'No search history',
       'search_history_empty_desc':
           'You have not searched for any rooms recently.',

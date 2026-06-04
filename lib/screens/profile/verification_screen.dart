@@ -8,9 +8,11 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/theme/profile_theme.dart';
+import '../../repositories/auth_repository.dart';
 
 class AccountVerificationScreen extends StatefulWidget {
-  const AccountVerificationScreen({super.key});
+  final bool isFromPostListing;
+  const AccountVerificationScreen({super.key, this.isFromPostListing = false});
 
   @override
   State<AccountVerificationScreen> createState() =>
@@ -41,35 +43,29 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
 
   Future<void> _loadVerificationStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    final firebaseUser = FirebaseAuth.instance.currentUser;
-
-    // Đọc trạng thái Email
-    if (firebaseUser != null) {
-      _emailVerified = firebaseUser.emailVerified;
-      _emailAddress = firebaseUser.email ?? '';
+    
+    // Read from saved local session first (which connects to the real backend server)
+    final savedSession = await AuthRepository().getSavedSession();
+    if (savedSession != null) {
+      _emailVerified = savedSession.isEmailVerified;
+      _emailAddress = savedSession.email;
+      _phoneVerified = savedSession.isPhoneVerified;
+      _phoneNumber = savedSession.phoneNumber ?? '';
+      _facebookLinked = savedSession.firebaseProvider == 'facebook.com';
+      _googleLinked = savedSession.firebaseProvider == 'google.com';
+      
+      // Social login accounts (Google, Facebook) are automatically email-verified
+      if (_googleLinked || _facebookLinked) {
+        _emailVerified = true;
+      }
     } else {
       _emailVerified = prefs.getBool('verify_email_status') ?? false;
-      _emailAddress =
-          prefs.getString('verify_email_address') ?? 'duc.pham@example.com';
+      _emailAddress = prefs.getString('user_email') ?? 'duc.pham@example.com';
+      _phoneVerified = prefs.getBool('verify_phone_status') ?? false;
+      _phoneNumber = prefs.getString('verify_phone_number') ?? '';
+      _facebookLinked = prefs.getBool('link_facebook_status') ?? false;
+      _facebookName = prefs.getString('link_facebook_name') ?? '';
     }
-
-    // Đọc trạng thái Số điện thoại
-    _phoneVerified = prefs.getBool('verify_phone_status') ?? false;
-    _phoneNumber = prefs.getString('verify_phone_number') ?? '';
-    if (!_phoneVerified &&
-        firebaseUser != null &&
-        firebaseUser.phoneNumber != null &&
-        firebaseUser.phoneNumber!.isNotEmpty) {
-      _phoneVerified = true;
-      _phoneNumber = firebaseUser.phoneNumber!;
-    }
-
-    // Đọc trạng thái liên kết Google/Facebook từ SharedPreferences
-    _googleLinked = prefs.getBool('link_google_status') ?? false;
-    _googleEmail = prefs.getString('link_google_email') ?? '';
-
-    _facebookLinked = prefs.getBool('link_facebook_status') ?? false;
-    _facebookName = prefs.getString('link_facebook_name') ?? '';
 
     if (mounted) {
       setState(() {
@@ -81,10 +77,9 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
   // Tính toán mức độ tin cậy động (Trust Level)
   double get _trustScore {
     double score = 0;
-    if (_emailVerified) score += 0.25;
-    if (_phoneVerified) score += 0.25;
-    if (_googleLinked) score += 0.25;
-    if (_facebookLinked) score += 0.25;
+    if (_emailVerified) score += 0.35;
+    if (_phoneVerified) score += 0.35;
+    if (_facebookLinked) score += 0.30;
     return score;
   }
 
@@ -104,77 +99,25 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     return AppColors.error;
   }
 
-  // Giả lập gửi email xác minh
-  Future<void> _verifyEmail() async {
+  void _openEmailVerificationSheet() {
     HapticFeedback.lightImpact();
-    setState(() => _isLoading = true);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _EmailVerificationSheet(
+        onSuccess: (email) async {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('verify_email_status', true);
+          await prefs.setString('user_email', email);
+          
+          await prefs.setBool('verify_account_main_status', _trustScore >= 1.0);
 
-    final firebaseUser = FirebaseAuth.instance.currentUser;
-    if (firebaseUser != null) {
-      try {
-        await firebaseUser.sendEmailVerification();
-      } catch (_) {}
-    }
-
-    await Future.delayed(const Duration(seconds: 1500));
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('verify_email_status', true);
-    await prefs.setString('verify_email_address',
-        _emailAddress.isNotEmpty ? _emailAddress : 'duc.pham@example.com');
-
-    // Đồng bộ cả flag isVerified chung của hệ thống khi đã xác thực email
-    await prefs.setBool(
-        'verify_account_main_status', _trustScore + 0.25 >= 1.0);
-
-    await _loadVerificationStatus();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('verify_email_sent_mock'.tr),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
-  // Giả lập liên kết Google
-  Future<void> _toggleGoogle() async {
-    HapticFeedback.lightImpact();
-    final prefs = await SharedPreferences.getInstance();
-
-    if (_googleLinked) {
-      // Hủy liên kết
-      final confirm = await _showConfirmDialog(
-        title: 'verify_confirm_unlink_google_title'.tr,
-        content: 'verify_confirm_unlink_google_desc'.tr,
-      );
-      if (confirm == true) {
-        setState(() => _isLoading = true);
-        await Future.delayed(const Duration(milliseconds: 800));
-        await prefs.setBool('link_google_status', false);
-        await prefs.setString('link_google_email', '');
-        await prefs.setBool('verify_account_main_status', false);
-        await _loadVerificationStatus();
-        HapticFeedback.mediumImpact();
-      }
-    } else {
-      // Liên kết mới
-      setState(() => _isLoading = true);
-      await Future.delayed(
-          const Duration(seconds: 1500)); // Giả lập loading popup
-      await prefs.setBool('link_google_status', true);
-      await prefs.setString('link_google_email',
-          _emailAddress.isNotEmpty ? _emailAddress : 'duc.pham@gmail.com');
-
-      final nextScore = _trustScore + 0.25;
-      await prefs.setBool('verify_account_main_status', nextScore >= 1.0);
-
-      await _loadVerificationStatus();
-      HapticFeedback.mediumImpact();
-      _showSuccessSnackBar('verify_success_google_link'.tr);
-    }
+          await _loadVerificationStatus();
+          _showSuccessSnackBar('verify_success_email_verify'.tr);
+        },
+      ),
+    );
   }
 
   // Giả lập liên kết Facebook
@@ -231,6 +174,10 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
 
           await _loadVerificationStatus();
           _showSuccessSnackBar('verify_success_phone_verify'.tr);
+
+          if (widget.isFromPostListing && mounted) {
+            context.go('/listing');
+          }
         },
       ),
     );
@@ -356,7 +303,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
                     actionText: _emailVerified
                         ? 'verify_email_verified'.tr
                         : 'verify_email_verify_now'.tr,
-                    onTap: _emailVerified ? null : _verifyEmail,
+                    onTap: _emailVerified ? null : _openEmailVerificationSheet,
                   ),
                   const SizedBox(height: 12),
                   _buildVerificationItem(
@@ -372,22 +319,6 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
                         ? 'verify_phone_verified'.tr
                         : 'verify_phone_verify_now'.tr,
                     onTap: _phoneVerified ? null : _openPhoneVerificationSheet,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildVerificationItem(
-                    icon: Icons.g_mobiledata_rounded,
-                    iconBg: const Color(0xFFFEF2F2),
-                    iconColor: const Color(0xFFDC2626),
-                    title: 'verify_google'.tr,
-                    subtitle:
-                        _googleLinked ? _googleEmail : 'verify_google_desc'.tr,
-                    isVerified: _googleLinked,
-                    actionText: _googleLinked
-                        ? 'verify_action_unlink'.tr
-                        : 'verify_action_link'.tr,
-                    actionColor:
-                        _googleLinked ? AppColors.textMuted : AppColors.primary,
-                    onTap: _toggleGoogle,
                   ),
                   const SizedBox(height: 12),
                   _buildVerificationItem(
@@ -698,7 +629,9 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
     });
   }
 
-  void _sendOtp() {
+  final _authRepository = AuthRepository();
+
+  void _sendOtp() async {
     final phone = _phoneCtrl.text.trim();
     if (phone.length < 9) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -708,13 +641,33 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
     }
     HapticFeedback.lightImpact();
     setState(() {
-      _otpSent = true;
+      _isVerifying = true;
     });
-    _startTimer();
-    // Tự động focus ô OTP đầu tiên sau khi chuyển giao diện
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) _otpFocuses[0].requestFocus();
-    });
+
+    try {
+      await _authRepository.sendPhoneOtp(phone);
+      setState(() {
+        _otpSent = true;
+        _isVerifying = false;
+      });
+      _startTimer();
+      // Tự động focus ô OTP đầu tiên sau khi chuyển giao diện
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) _otpFocuses[0].requestFocus();
+      });
+    } catch (e) {
+      setState(() {
+        _isVerifying = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   void _verifyOtp() async {
@@ -731,16 +684,28 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
       _isVerifying = true;
     });
 
-    // Giả lập xác thực OTP
-    await Future.delayed(const Duration(milliseconds: 1500));
-
-    if (mounted) {
+    try {
+      await _authRepository.verifyPhoneOtp(_phoneCtrl.text.trim(), otp);
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
+        });
+        HapticFeedback.mediumImpact();
+        Navigator.pop(context);
+        widget.onSuccess(_phoneCtrl.text.trim());
+      }
+    } catch (e) {
       setState(() {
         _isVerifying = false;
       });
-      HapticFeedback.mediumImpact();
-      Navigator.pop(context);
-      widget.onSuccess(_phoneCtrl.text.trim());
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -827,7 +792,7 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: _sendOtp,
+                  onPressed: _isVerifying ? null : _sendOtp,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -836,9 +801,363 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
                             BorderRadius.circular(AppConstants.radiusLg)),
                     elevation: 0,
                   ),
-                  child: Text('verify_otp_get_code'.tr,
+                  child: _isVerifying
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : Text('verify_otp_get_code'.tr,
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w800)),
+                ),
+              ),
+            ] else ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(6, (index) {
+                  return SizedBox(
+                    width: 44,
+                    height: 50,
+                    child: TextField(
+                      controller: _otpCtrls[index],
+                      focusNode: _otpFocuses[index],
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      maxLength: 1,
                       style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w800)),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.primary),
+                      decoration: InputDecoration(
+                        counterText: '',
+                        filled: true,
+                        fillColor: context.profileBg,
+                        contentPadding: EdgeInsets.zero,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppConstants.radiusMd),
+                          borderSide: BorderSide(color: context.profileBorder),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppConstants.radiusMd),
+                          borderSide: const BorderSide(
+                              color: AppColors.primary, width: 2),
+                        ),
+                      ),
+                      onChanged: (val) {
+                        if (val.isNotEmpty) {
+                          if (index < 5) {
+                            _otpFocuses[index + 1].requestFocus();
+                          } else {
+                            _otpFocuses[index].unfocus();
+                          }
+                        } else {
+                          if (index > 0) {
+                            _otpFocuses[index - 1].requestFocus();
+                          }
+                        }
+                      },
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _countdown > 0
+                        ? 'verify_otp_resend_countdown'
+                            .tr
+                            .replaceAll('{seconds}', '$_countdown')
+                        : 'verify_otp_not_received'.tr,
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: context.profileTextSecondary,
+                        fontWeight: FontWeight.w600),
+                  ),
+                  if (_countdown == 0)
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        _startTimer();
+                      },
+                      child: Text(
+                        'verify_otp_resend_now'.tr,
+                        style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _isVerifying ? null : _verifyOtp,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppConstants.radiusLg)),
+                    elevation: 0,
+                  ),
+                  child: _isVerifying
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : Text('verify_otp_confirm'.tr,
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w800)),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+// ─── Bottom Sheet xác thực email & OTP ─────────────────────────────
+class _EmailVerificationSheet extends StatefulWidget {
+  final Function(String) onSuccess;
+  const _EmailVerificationSheet({required this.onSuccess});
+
+  @override
+  State<_EmailVerificationSheet> createState() =>
+      _EmailVerificationSheetState();
+}
+
+class _EmailVerificationSheetState extends State<_EmailVerificationSheet> {
+  final TextEditingController _emailCtrl = TextEditingController();
+  final List<TextEditingController> _otpCtrls =
+      List.generate(6, (_) => TextEditingController());
+  final List<FocusNode> _otpFocuses = List.generate(6, (_) => FocusNode());
+
+  bool _otpSent = false;
+  int _countdown = 60;
+  Timer? _timer;
+  bool _isVerifying = false;
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    for (var c in _otpCtrls) {
+      c.dispose();
+    }
+    for (var f in _otpFocuses) {
+      f.dispose();
+    }
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    setState(() {
+      _countdown = 60;
+    });
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_countdown == 0) {
+        timer.cancel();
+      } else {
+        setState(() {
+          _countdown--;
+        });
+      }
+    });
+  }
+
+  final _authRepository = AuthRepository();
+
+  void _sendOtp() async {
+    final email = _emailCtrl.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('verify_otp_invalid_email'.tr)),
+      );
+      return;
+    }
+    HapticFeedback.lightImpact();
+    setState(() {
+      _isVerifying = true;
+    });
+
+    try {
+      await _authRepository.sendEmailOtp(email);
+      setState(() {
+        _otpSent = true;
+        _isVerifying = false;
+      });
+      _startTimer();
+      // Tự động focus ô OTP đầu tiên sau khi chuyển giao diện
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) _otpFocuses[0].requestFocus();
+      });
+    } catch (e) {
+      setState(() {
+        _isVerifying = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _verifyOtp() async {
+    final otp = _otpCtrls.map((c) => c.text).join();
+    if (otp.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('verify_otp_invalid_otp'.tr)),
+      );
+      return;
+    }
+
+    HapticFeedback.lightImpact();
+    setState(() {
+      _isVerifying = true;
+    });
+
+    try {
+      await _authRepository.verifyEmailOtp(_emailCtrl.text.trim(), otp);
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
+        });
+        HapticFeedback.mediumImpact();
+        Navigator.pop(context);
+        widget.onSuccess(_emailCtrl.text.trim());
+      }
+    } catch (e) {
+      setState(() {
+        _isVerifying = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      margin: const EdgeInsets.only(top: 80),
+      decoration: BoxDecoration(
+        color: context.profileCard,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.fromLTRB(20, 20, 20, bottomInset + 30),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.profileBorder,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              _otpSent ? 'verify_otp_title'.tr : 'verify_email_verify_now'.tr,
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: context.profileText),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _otpSent
+                  ? 'verify_otp_sent_to_email'
+                      .tr
+                      .replaceAll('{email}', _emailCtrl.text)
+                  : 'verify_otp_instruction_email'.tr,
+              style: TextStyle(
+                  fontSize: 13,
+                  height: 1.45,
+                  color: context.profileTextSecondary,
+                  fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 24),
+            if (!_otpSent) ...[
+              TextField(
+                controller: _emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: context.profileText),
+                decoration: InputDecoration(
+                  counterText: '',
+                  prefixIcon: const Icon(Icons.email_rounded,
+                      color: AppColors.primary, size: 20),
+                  hintText: 'verify_email_input_hint'.tr,
+                  hintStyle: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: context.profileTextMuted),
+                  filled: true,
+                  fillColor: context.profileBg,
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+                    borderSide: BorderSide(color: context.profileBorder),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+                    borderSide:
+                        const BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _isVerifying ? null : _sendOtp,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppConstants.radiusLg)),
+                    elevation: 0,
+                  ),
+                  child: _isVerifying
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : Text('verify_otp_get_code'.tr,
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w800)),
                 ),
               ),
             ] else ...[

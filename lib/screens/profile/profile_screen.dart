@@ -838,7 +838,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _confirmLogout() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppConstants.radiusLg)),
         title: Text('profile_logout_title'.tr,
@@ -846,13 +846,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         content: Text('profile_logout_desc'.tr),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text('cancel'.tr),
           ),
           ElevatedButton(
             onPressed: () async {
               final router = GoRouter.of(context);
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               if (!mounted) return;
               await LogoutHelper.signOutAndGoToLogin(router);
             },

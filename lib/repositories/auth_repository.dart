@@ -21,6 +21,10 @@ class BackendAuthSession {
     required this.accessToken,
     this.refreshToken,
     this.role,
+    this.isPhoneVerified = false,
+    this.phoneNumber,
+    this.isEmailVerified = false,
+    this.firebaseProvider,
   });
 
   final String userId;
@@ -29,6 +33,10 @@ class BackendAuthSession {
   final String accessToken;
   final String? refreshToken;
   final String? role;
+  final bool isPhoneVerified;
+  final String? phoneNumber;
+  final bool isEmailVerified;
+  final String? firebaseProvider;
 }
 
 class AuthRepository {
@@ -297,6 +305,10 @@ class AuthRepository {
       accessToken: token,
       refreshToken: prefs.getString('refresh_token'),
       role: prefs.getString(AppConstants.keyUserRole),
+      isPhoneVerified: prefs.getBool('verify_phone_status') ?? false,
+      phoneNumber: prefs.getString('verify_phone_number'),
+      isEmailVerified: prefs.getBool('verify_email_status') ?? false,
+      firebaseProvider: prefs.getString('firebase_provider'),
     );
   }
 
@@ -308,6 +320,10 @@ class AuthRepository {
     await prefs.remove('refresh_token');
     await prefs.remove('user_email');
     await prefs.remove('user_full_name');
+    await prefs.remove('verify_phone_status');
+    await prefs.remove('verify_phone_number');
+    await prefs.remove('verify_email_status');
+    await prefs.remove('firebase_provider');
   }
 
   Future<BackendAuthSession> _loginBackendWithFirebase(User? user) async {
@@ -357,14 +373,23 @@ class AuthRepository {
     final fullName = data['fullName'] ?? data['FullName'];
     final refreshToken = data['refreshToken'] ?? data['RefreshToken'];
     final role = data['role'] ?? data['Role'];
+    final isPhoneVerified = data['isPhoneVerified'] ?? data['IsPhoneVerified'] ?? false;
+    final phoneNumber = data['phoneNumber'] ?? data['PhoneNumber'];
+    final isEmailVerified = data['isEmailVerified'] ?? data['IsEmailVerified'] ?? false;
+    final firebaseProvider = data['firebaseProvider'] ?? data['FirebaseProvider'];
+    final emailVal = data['email'] ?? data['Email'] ?? fallbackEmail;
 
     return BackendAuthSession(
       userId: userId?.toString() ?? '',
-      email: fallbackEmail,
+      email: emailVal.toString(),
       fullName: fullName?.toString() ?? fallbackFullName,
       accessToken: accessToken,
       refreshToken: refreshToken?.toString(),
       role: role?.toString(),
+      isPhoneVerified: isPhoneVerified is bool ? isPhoneVerified : false,
+      phoneNumber: phoneNumber?.toString(),
+      isEmailVerified: isEmailVerified is bool ? isEmailVerified : false,
+      firebaseProvider: firebaseProvider?.toString(),
     );
   }
 
@@ -374,6 +399,10 @@ class AuthRepository {
     await prefs.setString(AppConstants.keyUserId, session.userId);
     await prefs.setString('user_email', session.email);
     await prefs.setString('user_full_name', session.fullName);
+    await prefs.setBool('verify_phone_status', session.isPhoneVerified);
+    await prefs.setString('verify_phone_number', session.phoneNumber ?? '');
+    await prefs.setBool('verify_email_status', session.isEmailVerified);
+    await prefs.setString('firebase_provider', session.firebaseProvider ?? '');
     if (session.refreshToken != null) {
       await prefs.setString('refresh_token', session.refreshToken!);
     }
@@ -399,5 +428,99 @@ class AuthRepository {
     return message.startsWith('Exception: ')
         ? message.substring('Exception: '.length)
         : message;
+  }
+
+  /// Gửi mã OTP xác minh số điện thoại về số điện thoại thực.
+  Future<void> sendPhoneOtp(String phone) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AppConstants.keyUserToken);
+    if (token == null || token.isEmpty) {
+      throw Exception('Bạn cần đăng nhập để thực hiện xác thực.');
+    }
+
+    try {
+      await _apiService.dio.post<Map<String, dynamic>>(
+        '/auth/send-phone-otp',
+        data: {
+          'phone': phone.trim(),
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } catch (e) {
+      throw Exception(readBackendMessage(e));
+    }
+  }
+
+  /// Xác minh mã OTP số điện thoại.
+  Future<void> verifyPhoneOtp(String phone, String otpCode) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AppConstants.keyUserToken);
+    if (token == null || token.isEmpty) {
+      throw Exception('Bạn cần đăng nhập để thực hiện xác thực.');
+    }
+
+    try {
+      await _apiService.dio.post<Map<String, dynamic>>(
+        '/auth/verify-phone-otp',
+        data: {
+          'phone': phone.trim(),
+          'otpCode': otpCode.trim(),
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      
+      // Lưu vào local
+      await prefs.setBool('verify_phone_status', true);
+      await prefs.setString('verify_phone_number', phone.trim());
+    } catch (e) {
+      throw Exception(readBackendMessage(e));
+    }
+  }
+
+  /// Gửi mã OTP xác minh email.
+  Future<void> sendEmailOtp(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AppConstants.keyUserToken);
+    if (token == null || token.isEmpty) {
+      throw Exception('Bạn cần đăng nhập để thực hiện xác thực.');
+    }
+
+    try {
+      await _apiService.dio.post<Map<String, dynamic>>(
+        '/auth/send-email-otp',
+        data: {
+          'email': email.trim(),
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } catch (e) {
+      throw Exception(readBackendMessage(e));
+    }
+  }
+
+  /// Xác minh mã OTP email.
+  Future<void> verifyEmailOtp(String email, String otpCode) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AppConstants.keyUserToken);
+    if (token == null || token.isEmpty) {
+      throw Exception('Bạn cần đăng nhập để thực hiện xác thực.');
+    }
+
+    try {
+      await _apiService.dio.post<Map<String, dynamic>>(
+        '/auth/verify-email-otp',
+        data: {
+          'email': email.trim(),
+          'otpCode': otpCode.trim(),
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      // Lưu vào local
+      await prefs.setBool('verify_email_status', true);
+      await prefs.setString('user_email', email.trim());
+    } catch (e) {
+      throw Exception(readBackendMessage(e));
+    }
   }
 }

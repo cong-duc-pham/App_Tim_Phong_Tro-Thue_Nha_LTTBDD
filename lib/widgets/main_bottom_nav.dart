@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
@@ -144,6 +145,42 @@ class _MainBottomNavState extends State<MainBottomNav>
   Future<void> _goTo(BuildContext context, String route) async {
     final currentPath = GoRouterState.of(context).uri.path;
     if (currentPath == route) return;
+
+    if (route == AppConstants.routePostListing) {
+      final prefs = await SharedPreferences.getInstance();
+      final isPhoneVerified = prefs.getBool('verify_phone_status') ?? false;
+
+      if (!isPhoneVerified) {
+        if (!context.mounted) return;
+        final proceed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text(
+              'Yêu cầu xác thực',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: const Text(
+              'Bạn cần xác thực số điện thoại trước khi có thể đăng tin mới. Xác thực ngay?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Để sau', style: TextStyle(color: Colors.grey)),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Xác thực ngay'),
+              ),
+            ],
+          ),
+        );
+
+        if (proceed == true && context.mounted) {
+          context.go('/verify-account?isFromPostListing=true');
+        }
+        return;
+      }
+    }
 
     if (currentPath == AppConstants.routePostListing &&
         PostListingDraftService.hasDraft.value) {
