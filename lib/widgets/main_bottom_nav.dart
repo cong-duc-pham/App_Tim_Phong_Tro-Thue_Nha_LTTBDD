@@ -176,7 +176,7 @@ class _MainBottomNavState extends State<MainBottomNav>
         );
 
         if (proceed == true && context.mounted) {
-          context.go('/verify-account?isFromPostListing=true');
+          context.push('/verify-account?isFromPostListing=true');
         }
         return;
       }
