@@ -1,3 +1,5 @@
+import '../core/utils/url_helper.dart';
+
 class Message {
   final int messageId;
   final int convId;
@@ -45,7 +47,7 @@ class Message {
       senderId: integer('senderId', 'SenderId'),
       content: read<String>('content', 'Content') ?? '',
       msgType: read<String>('msgType', 'MsgType') ?? 'text',
-      fileUrl: read<String>('fileUrl', 'FileUrl'),
+      fileUrl: UrlHelper.sanitizeUrl(read<String>('fileUrl', 'FileUrl')),
       isRead: boolean('isRead', 'IsRead'),
       sentAt: sentAtRaw == null
           ? DateTime.now()
