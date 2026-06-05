@@ -1,5 +1,7 @@
 // lib/models/listing.dart
 
+import '../core/utils/url_helper.dart';
+
 class Listing {
   final int listingId;
   final String title;
@@ -161,15 +163,15 @@ class Listing {
       streetAddress: read<String>('streetAddress', 'StreetAddress') ?? '',
       latitude: nullableNumber('latitude', 'Latitude'),
       longitude: nullableNumber('longitude', 'Longitude'),
-      image0: read<String>('image0', 'Image0'),
-      image1: read<String>('image1', 'Image1'),
-      image2: read<String>('image2', 'Image2'),
-      image3: read<String>('image3', 'Image3'),
-      image4: read<String>('image4', 'Image4'),
-      image5: read<String>('image5', 'Image5'),
+      image0: UrlHelper.sanitizeUrl(read<String>('image0', 'Image0')),
+      image1: UrlHelper.sanitizeUrl(read<String>('image1', 'Image1')),
+      image2: UrlHelper.sanitizeUrl(read<String>('image2', 'Image2')),
+      image3: UrlHelper.sanitizeUrl(read<String>('image3', 'Image3')),
+      image4: UrlHelper.sanitizeUrl(read<String>('image4', 'Image4')),
+      image5: UrlHelper.sanitizeUrl(read<String>('image5', 'Image5')),
       landlordId: nullableInt('landlordId', 'LandlordId'),
       landlordName: read<String>('landlordName', 'LandlordName'),
-      landlordAvatar: read<String>('landlordAvatar', 'LandlordAvatar'),
+      landlordAvatar: UrlHelper.sanitizeUrl(read<String>('landlordAvatar', 'LandlordAvatar')),
       landlordPhone: read<String>('landlordPhone', 'LandlordPhone'),
       electricPrice: nullableNumber('electricPrice', 'ElectricPrice'),
       waterPrice: nullableNumber('waterPrice', 'WaterPrice'),

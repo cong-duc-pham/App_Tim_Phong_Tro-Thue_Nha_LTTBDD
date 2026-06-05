@@ -1,5 +1,7 @@
 // lib/models/user.dart
 
+import '../core/utils/url_helper.dart';
+
 class User {
   final String id;
   final String fullName;
@@ -29,7 +31,7 @@ class User {
       phone: json['phone'] ?? json['Phone'] ?? '',
       role: json['role'] ?? json['Role'] ?? 'tenant',
       isVerified: json['isVerified'] ?? json['IsVerified'] ?? false,
-      avatarUrl: json['avatarUrl'] ?? json['AvatarUrl'],
+      avatarUrl: UrlHelper.sanitizeUrl(json['avatarUrl'] ?? json['AvatarUrl']),
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : (json['CreatedAt'] != null
