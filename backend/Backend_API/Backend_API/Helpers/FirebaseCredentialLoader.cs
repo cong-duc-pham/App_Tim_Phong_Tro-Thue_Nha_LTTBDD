@@ -13,7 +13,13 @@ namespace Backend_API.Helpers
                 throw new InvalidOperationException("Firebase credential chưa được cấu hình.");
             }
 
-            var resolvedPath = ResolvePath(credentialPathOrContent.Trim());
+            var trimmed = credentialPathOrContent.Trim();
+            if (trimmed.StartsWith("{"))
+            {
+                return CreateCredentialFromRaw(trimmed);
+            }
+
+            var resolvedPath = ResolvePath(trimmed);
             if (!File.Exists(resolvedPath))
             {
                 throw new FileNotFoundException(
