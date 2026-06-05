@@ -1,5 +1,6 @@
 // lib/screens/auth/register_screen.dart
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -27,6 +28,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   bool _acceptTerms = false;
+  late final TapGestureRecognizer _termsRecognizer;
+  late final TapGestureRecognizer _privacyRecognizer;
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -43,6 +46,10 @@ class _RegisterScreenState extends State<RegisterScreen>
       begin: const Offset(0, 0.06),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
+    _termsRecognizer = TapGestureRecognizer()
+      ..onTap = () => context.push(AppConstants.routeTerms);
+    _privacyRecognizer = TapGestureRecognizer()
+      ..onTap = () => context.push(AppConstants.routePrivacyPolicy);
     _animController.forward();
   }
 
@@ -53,6 +60,8 @@ class _RegisterScreenState extends State<RegisterScreen>
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
     _animController.dispose();
     super.dispose();
   }
@@ -91,7 +100,8 @@ class _RegisterScreenState extends State<RegisterScreen>
             if (state is AuthRegisterSuccess) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text('Đăng ký thành công. Vui lòng đăng nhập.'),
+                  content:
+                      const Text('Đăng ký thành công. Vui lòng đăng nhập.'),
                   backgroundColor: AppColors.success,
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
@@ -246,8 +256,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             controller: _confirmPasswordController,
             label: 'Xác nhận mật khẩu',
             obscure: _obscureConfirm,
-            onToggle: () =>
-                setState(() => _obscureConfirm = !_obscureConfirm),
+            onToggle: () => setState(() => _obscureConfirm = !_obscureConfirm),
             validator: (v) {
               if (v == null || v.isEmpty) return 'Vui lòng xác nhận mật khẩu';
               if (v != _passwordController.text) return 'Mật khẩu không khớp';
@@ -352,11 +361,13 @@ class _RegisterScreenState extends State<RegisterScreen>
                 TextSpan(
                   text: 'Điều khoản sử dụng',
                   style: AppTextStyles.btnSecondary.copyWith(fontSize: 13),
+                  recognizer: _termsRecognizer,
                 ),
                 const TextSpan(text: ' và '),
                 TextSpan(
                   text: 'Chính sách bảo mật',
                   style: AppTextStyles.btnSecondary.copyWith(fontSize: 13),
+                  recognizer: _privacyRecognizer,
                 ),
               ],
             ),
@@ -374,9 +385,8 @@ class _RegisterScreenState extends State<RegisterScreen>
           width: double.infinity,
           height: 52,
           child: ElevatedButton(
-            onPressed: isLoading
-                ? null
-                : () => _onRegister(context.read<AuthBloc>()),
+            onPressed:
+                isLoading ? null : () => _onRegister(context.read<AuthBloc>()),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               disabledBackgroundColor: AppColors.primaryLight,

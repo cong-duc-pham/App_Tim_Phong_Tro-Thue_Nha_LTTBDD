@@ -25,9 +25,11 @@ namespace Backend_API.Services.Interfaces
 
         Task DeactivateAccountAsync(long userId);
 
-        Task SendPhoneOtpAsync(long userId, string phone);
+        Task<string?> SendPhoneOtpAsync(long userId, string phone);
 
-        Task VerifyPhoneOtpAsync(long userId, string phone, string otpCode);
+        Task VerifyPhoneOtpAsync(long userId, string phone, string otpCode);
+
+        Task VerifyPhoneWithFirebaseAsync(long userId, string phone, string firebaseIdToken);
 
         Task SendEmailOtpAsync(long userId, string email);
 

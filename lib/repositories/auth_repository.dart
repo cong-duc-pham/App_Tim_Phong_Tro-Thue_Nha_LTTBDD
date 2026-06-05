@@ -395,10 +395,13 @@ class AuthRepository {
     final fullName = data['fullName'] ?? data['FullName'];
     final refreshToken = data['refreshToken'] ?? data['RefreshToken'];
     final role = data['role'] ?? data['Role'];
-    final isPhoneVerified = data['isPhoneVerified'] ?? data['IsPhoneVerified'] ?? false;
+    final isPhoneVerified =
+        data['isPhoneVerified'] ?? data['IsPhoneVerified'] ?? false;
     final phoneNumber = data['phoneNumber'] ?? data['PhoneNumber'];
-    final isEmailVerified = data['isEmailVerified'] ?? data['IsEmailVerified'] ?? false;
-    final firebaseProvider = data['firebaseProvider'] ?? data['FirebaseProvider'];
+    final isEmailVerified =
+        data['isEmailVerified'] ?? data['IsEmailVerified'] ?? false;
+    final firebaseProvider =
+        data['firebaseProvider'] ?? data['FirebaseProvider'];
     final emailVal = data['email'] ?? data['Email'] ?? fallbackEmail;
 
     return BackendAuthSession(
@@ -453,7 +456,7 @@ class AuthRepository {
   }
 
   /// Gửi mã OTP xác minh số điện thoại về số điện thoại thực.
-  Future<void> sendPhoneOtp(String phone) async {
+  Future<String?> sendPhoneOtp(String phone) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(AppConstants.keyUserToken);
     if (token == null || token.isEmpty) {
@@ -461,13 +464,15 @@ class AuthRepository {
     }
 
     try {
-      await _apiService.dio.post<Map<String, dynamic>>(
+      final response = await _apiService.dio.post<Map<String, dynamic>>(
         '/auth/send-phone-otp',
         data: {
           'phone': phone.trim(),
         },
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
+      final devOtp = response.data?['devOtp'] ?? response.data?['DevOtp'];
+      return devOtp?.toString();
     } catch (e) {
       throw Exception(readBackendMessage(e));
     }
@@ -490,8 +495,35 @@ class AuthRepository {
         },
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-      
+
       // Lưu vào local
+      await prefs.setBool('verify_phone_status', true);
+      await prefs.setString('verify_phone_number', phone.trim());
+    } catch (e) {
+      throw Exception(readBackendMessage(e));
+    }
+  }
+
+  Future<void> verifyPhoneWithFirebase({
+    required String phone,
+    required String firebaseIdToken,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AppConstants.keyUserToken);
+    if (token == null || token.isEmpty) {
+      throw Exception('Bạn cần đăng nhập để thực hiện xác thực.');
+    }
+
+    try {
+      await _apiService.dio.post<Map<String, dynamic>>(
+        '/auth/verify-phone-firebase',
+        data: {
+          'phone': phone.trim(),
+          'firebaseIdToken': firebaseIdToken,
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
       await prefs.setBool('verify_phone_status', true);
       await prefs.setString('verify_phone_number', phone.trim());
     } catch (e) {
