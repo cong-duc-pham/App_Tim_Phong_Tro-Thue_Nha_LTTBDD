@@ -1,9 +1,9 @@
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/localization/app_localizations.dart';
@@ -22,7 +22,7 @@ class AccountVerificationScreen extends StatefulWidget {
 class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
   bool _isLoading = true;
 
-  // Trạng thái xác thực các cổng
+  // TrÃ¡ÂºÂ¡ng thÃƒÂ¡i xÃƒÂ¡c thÃ¡Â»Â±c cÃƒÂ¡c cÃ¡Â»â€¢ng
   bool _emailVerified = false;
   String _emailAddress = '';
 
@@ -43,7 +43,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
 
   Future<void> _loadVerificationStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Read from saved local session first (which connects to the real backend server)
     final savedSession = await AuthRepository().getSavedSession();
     if (savedSession != null) {
@@ -53,7 +53,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
       _phoneNumber = savedSession.phoneNumber ?? '';
       _facebookLinked = savedSession.firebaseProvider == 'facebook.com';
       _googleLinked = savedSession.firebaseProvider == 'google.com';
-      
+
       // Social login accounts (Google, Facebook) are automatically email-verified
       if (_googleLinked || _facebookLinked) {
         _emailVerified = true;
@@ -74,7 +74,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     }
   }
 
-  // Tính toán mức độ tin cậy động (Trust Level)
+  // TÃƒÂ­nh toÃƒÂ¡n mÃ¡Â»Â©c Ã„â€˜Ã¡Â»â„¢ tin cÃ¡ÂºÂ­y Ã„â€˜Ã¡Â»â„¢ng (Trust Level)
   double get _trustScore {
     double score = 0;
     if (_emailVerified) score += 0.35;
@@ -110,7 +110,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('verify_email_status', true);
           await prefs.setString('user_email', email);
-          
+
           await prefs.setBool('verify_account_main_status', _trustScore >= 1.0);
 
           await _loadVerificationStatus();
@@ -120,13 +120,13 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     );
   }
 
-  // Giả lập liên kết Facebook
+  // GiÃ¡ÂºÂ£ lÃ¡ÂºÂ­p liÃƒÂªn kÃ¡ÂºÂ¿t Facebook
   Future<void> _toggleFacebook() async {
     HapticFeedback.lightImpact();
     final prefs = await SharedPreferences.getInstance();
 
     if (_facebookLinked) {
-      // Hủy liên kết
+      // HÃ¡Â»Â§y liÃƒÂªn kÃ¡ÂºÂ¿t
       final confirm = await _showConfirmDialog(
         title: 'verify_confirm_unlink_facebook_title'.tr,
         content: 'verify_confirm_unlink_facebook_desc'.tr,
@@ -141,11 +141,12 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
         HapticFeedback.mediumImpact();
       }
     } else {
-      // Liên kết mới
+      // LiÃƒÂªn kÃ¡ÂºÂ¿t mÃ¡Â»â€ºi
       setState(() => _isLoading = true);
       await Future.delayed(const Duration(seconds: 1500));
       await prefs.setBool('link_facebook_status', true);
-      await prefs.setString('link_facebook_name', 'Đức Phạm (Facebook)');
+      await prefs.setString(
+          'link_facebook_name', 'Ã„ÂÃ¡Â»Â©c PhÃ¡ÂºÂ¡m (Facebook)');
 
       final nextScore = _trustScore + 0.25;
       await prefs.setBool('verify_account_main_status', nextScore >= 1.0);
@@ -156,7 +157,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     }
   }
 
-  // Mở Bottom Sheet xác thực số điện thoại
+  // MÃ¡Â»Å¸ Bottom Sheet xÃƒÂ¡c thÃ¡Â»Â±c sÃ¡Â»â€˜ Ã„â€˜iÃ¡Â»â€¡n thoÃ¡ÂºÂ¡i
   void _openPhoneVerificationSheet() {
     HapticFeedback.lightImpact();
     showModalBottomSheet(
@@ -579,7 +580,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
   }
 }
 
-// ─── Bottom Sheet xác thực số điện thoại & OTP ─────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Bottom Sheet xÃƒÂ¡c thÃ¡Â»Â±c sÃ¡Â»â€˜ Ã„â€˜iÃ¡Â»â€¡n thoÃ¡ÂºÂ¡i & OTP Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 class _PhoneVerificationSheet extends StatefulWidget {
   final Function(String) onSuccess;
   const _PhoneVerificationSheet({required this.onSuccess});
@@ -599,6 +600,10 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
   int _countdown = 60;
   Timer? _timer;
   bool _isVerifying = false;
+  String? _phoneMessage;
+  bool _isPhoneMessageError = false;
+  String? _verificationId;
+  int? _resendToken;
 
   @override
   void dispose() {
@@ -631,42 +636,103 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
 
   final _authRepository = AuthRepository();
 
+  String _toFirebasePhoneNumber(String phone) {
+    if (phone.startsWith('+84')) return phone;
+    if (phone.startsWith('84')) return '+$phone';
+    if (phone.startsWith('0')) return '+84${phone.substring(1)}';
+    return phone;
+  }
+
+  String _friendlyFirebasePhoneError(Object error) {
+    if (error is FirebaseAuthException) {
+      final raw = '${error.code} ${error.message ?? ''}';
+      if (raw.contains('BILLING_NOT_ENABLED')) {
+        return 'Firebase chua bat Billing/Blaze cho SMS that. Neu dang test, hay them so nay vao Phone numbers for testing trong Firebase Console.';
+      }
+      if (error.code == 'operation-not-allowed') {
+        return 'Firebase Phone provider chua duoc bat. Hay bat Phone trong Authentication > Sign-in method.';
+      }
+      if (error.code == 'invalid-phone-number') {
+        return 'So dien thoai khong hop le. Vui long nhap theo dang 09xxxxxxxx.';
+      }
+      if (error.code == 'too-many-requests') {
+        return 'Ban da yeu cau OTP qua nhieu lan. Vui long thu lai sau.';
+      }
+      if (error.code == 'invalid-verification-code') {
+        return 'Ma OTP khong dung. Hay nhap dung ma test da khai bao trong Firebase Console.';
+      }
+      return error.message ?? 'Khong xac thuc duoc so dien thoai qua Firebase.';
+    }
+
+    final raw = error.toString().replaceAll('Exception: ', '');
+    if (raw.contains('BILLING_NOT_ENABLED')) {
+      return 'Firebase chua bat Billing/Blaze cho SMS that. Neu dang test, hay them so nay vao Phone numbers for testing trong Firebase Console.';
+    }
+    return raw;
+  }
+
   void _sendOtp() async {
     final phone = _phoneCtrl.text.trim();
-    if (phone.length < 9) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('verify_otp_invalid_phone'.tr)),
-      );
+    final isValidVietnamPhone =
+        RegExp(r'^(0[3|5|7|8|9])+([0-9]{8})$').hasMatch(phone);
+    if (!isValidVietnamPhone) {
+      setState(() {
+        _phoneMessage = 'Vui long nhap so dien thoai Viet Nam hop le.';
+        _isPhoneMessageError = true;
+      });
       return;
     }
+    FocusScope.of(context).unfocus();
     HapticFeedback.lightImpact();
     setState(() {
       _isVerifying = true;
+      _phoneMessage = null;
+      _isPhoneMessageError = false;
     });
 
     try {
-      await _authRepository.sendPhoneOtp(phone);
-      setState(() {
-        _otpSent = true;
-        _isVerifying = false;
-      });
-      _startTimer();
-      // Tự động focus ô OTP đầu tiên sau khi chuyển giao diện
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) _otpFocuses[0].requestFocus();
-      });
+      await FirebaseAuth.instance.verifyPhoneNumber(
+        phoneNumber: _toFirebasePhoneNumber(phone),
+        timeout: const Duration(seconds: 60),
+        forceResendingToken: _resendToken,
+        verificationCompleted: (credential) async {
+          await _completeFirebasePhoneVerification(credential);
+        },
+        verificationFailed: (e) {
+          if (!mounted) return;
+          setState(() {
+            _isVerifying = false;
+            _phoneMessage = _friendlyFirebasePhoneError(e);
+            _isPhoneMessageError = true;
+          });
+        },
+        codeSent: (verificationId, resendToken) {
+          if (!mounted) return;
+          setState(() {
+            _verificationId = verificationId;
+            _resendToken = resendToken;
+            _otpSent = true;
+            _isVerifying = false;
+            _phoneMessage =
+                'Da tao phien xac thuc Firebase. Hay nhap ma OTP test trong Firebase Console.';
+            _isPhoneMessageError = false;
+          });
+          _startTimer();
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted) _otpFocuses[0].requestFocus();
+          });
+        },
+        codeAutoRetrievalTimeout: (verificationId) {
+          _verificationId = verificationId;
+        },
+      );
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isVerifying = false;
+        _phoneMessage = _friendlyFirebasePhoneError(e);
+        _isPhoneMessageError = true;
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceAll('Exception: ', '')),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
     }
   }
 
@@ -682,30 +748,61 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
     HapticFeedback.lightImpact();
     setState(() {
       _isVerifying = true;
+      _phoneMessage = null;
+      _isPhoneMessageError = false;
     });
 
     try {
-      await _authRepository.verifyPhoneOtp(_phoneCtrl.text.trim(), otp);
-      if (mounted) {
-        setState(() {
-          _isVerifying = false;
-        });
-        HapticFeedback.mediumImpact();
-        Navigator.pop(context);
-        widget.onSuccess(_phoneCtrl.text.trim());
+      final verificationId = _verificationId;
+      if (verificationId == null || verificationId.isEmpty) {
+        throw Exception('Phien xac thuc da het han. Vui long gui lai ma OTP.');
       }
+      final credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: otp,
+      );
+      await _completeFirebasePhoneVerification(credential);
     } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isVerifying = false;
+        _phoneMessage = _friendlyFirebasePhoneError(e);
+        _isPhoneMessageError = true;
+      });
+    }
+  }
+
+  Future<void> _completeFirebasePhoneVerification(
+    PhoneAuthCredential credential,
+  ) async {
+    try {
+      final userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+      final firebaseIdToken = await userCredential.user?.getIdToken(true);
+      if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
+        throw Exception('Khong lay duoc Firebase token sau khi xac thuc.');
+      }
+
+      final phone = _phoneCtrl.text.trim();
+      await _authRepository.verifyPhoneWithFirebase(
+        phone: phone,
+        firebaseIdToken: firebaseIdToken,
+      );
+
+      if (!mounted) return;
       setState(() {
         _isVerifying = false;
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceAll('Exception: ', '')),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
+      HapticFeedback.mediumImpact();
+      Navigator.pop(context);
+      widget.onSuccess(phone);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isVerifying = false;
+        _phoneMessage = _friendlyFirebasePhoneError(e);
+        _isPhoneMessageError = true;
+      });
     }
   }
 
@@ -787,6 +884,13 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
                   ),
                 ),
               ),
+              if (_phoneMessage != null) ...[
+                const SizedBox(height: 10),
+                _InlineOtpMessage(
+                  message: _phoneMessage!,
+                  isError: _isPhoneMessageError,
+                ),
+              ],
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -880,10 +984,7 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
                   ),
                   if (_countdown == 0)
                     GestureDetector(
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        _startTimer();
-                      },
+                      onTap: _isVerifying ? null : _sendOtp,
                       child: Text(
                         'verify_otp_resend_now'.tr,
                         style: const TextStyle(
@@ -919,6 +1020,13 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
                               fontSize: 15, fontWeight: FontWeight.w800)),
                 ),
               ),
+              if (_phoneMessage != null) ...[
+                const SizedBox(height: 12),
+                _InlineOtpMessage(
+                  message: _phoneMessage!,
+                  isError: _isPhoneMessageError,
+                ),
+              ],
             ],
           ],
         ),
@@ -927,8 +1035,41 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
   }
 }
 
+class _InlineOtpMessage extends StatelessWidget {
+  const _InlineOtpMessage({
+    required this.message,
+    required this.isError,
+  });
 
-// ─── Bottom Sheet xác thực email & OTP ─────────────────────────────
+  final String message;
+  final bool isError;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isError ? AppColors.error : AppColors.successText;
+    final bgColor = isError ? AppColors.errorBg : AppColors.successBg;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppConstants.spacingMd),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+      ),
+      child: Text(
+        message,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          height: 1.35,
+        ),
+      ),
+    );
+  }
+}
+
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Bottom Sheet xÃƒÂ¡c thÃ¡Â»Â±c email & OTP Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 class _EmailVerificationSheet extends StatefulWidget {
   final Function(String) onSuccess;
   const _EmailVerificationSheet({required this.onSuccess});
@@ -1000,7 +1141,7 @@ class _EmailVerificationSheetState extends State<_EmailVerificationSheet> {
         _isVerifying = false;
       });
       _startTimer();
-      // Tự động focus ô OTP đầu tiên sau khi chuyển giao diện
+      // TÃ¡Â»Â± Ã„â€˜Ã¡Â»â„¢ng focus ÃƒÂ´ OTP Ã„â€˜Ã¡ÂºÂ§u tiÃƒÂªn sau khi chuyÃ¡Â»Æ’n giao diÃ¡Â»â€¡n
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) _otpFocuses[0].requestFocus();
       });

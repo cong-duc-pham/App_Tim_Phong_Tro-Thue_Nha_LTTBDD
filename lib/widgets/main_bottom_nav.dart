@@ -148,6 +148,47 @@ class _MainBottomNavState extends State<MainBottomNav>
 
     if (route == AppConstants.routePostListing) {
       final prefs = await SharedPreferences.getInstance();
+      final savedToken = prefs.getString(AppConstants.keyUserToken);
+      final savedUserId = prefs.getString(AppConstants.keyUserId);
+      final isLoggedIn = savedToken != null &&
+          savedToken.isNotEmpty &&
+          savedUserId != null &&
+          savedUserId.isNotEmpty;
+
+      if (!isLoggedIn) {
+        if (!context.mounted) return;
+        final proceed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text(
+              'Bạn chưa đăng nhập',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: const Text(
+              'Bạn cần đăng nhập trước khi có thể đăng tin mới.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text(
+                  'Để sau',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Đăng nhập ngay'),
+              ),
+            ],
+          ),
+        );
+
+        if (proceed == true && context.mounted) {
+          context.go(AppConstants.routeLogin);
+        }
+        return;
+      }
+
       final isPhoneVerified = prefs.getBool('verify_phone_status') ?? false;
 
       if (!isPhoneVerified) {
@@ -165,7 +206,10 @@ class _MainBottomNavState extends State<MainBottomNav>
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Để sau', style: TextStyle(color: Colors.grey)),
+                child: const Text(
+                  'Để sau',
+                  style: TextStyle(color: Colors.grey),
+                ),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
@@ -184,6 +228,7 @@ class _MainBottomNavState extends State<MainBottomNav>
 
     if (currentPath == AppConstants.routePostListing &&
         PostListingDraftService.hasDraft.value) {
+      if (!context.mounted) return;
       final shouldLeave = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
