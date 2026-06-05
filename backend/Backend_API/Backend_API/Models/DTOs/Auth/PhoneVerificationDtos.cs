@@ -19,4 +19,14 @@ namespace Backend_API.Models.DTOs.Auth
         [StringLength(6, MinimumLength = 6, ErrorMessage = "Mã OTP phải có đúng 6 ký tự.")]
         public string OtpCode { get; set; } = null!;
     }
+
+    public class VerifyFirebasePhoneRequestDto
+    {
+        [Required(ErrorMessage = "Số điện thoại là bắt buộc.")]
+        [Phone(ErrorMessage = "Số điện thoại không hợp lệ.")]
+        public string Phone { get; set; } = null!;
+
+        [Required(ErrorMessage = "Firebase token là bắt buộc.")]
+        public string FirebaseIdToken { get; set; } = null!;
+    }
 }

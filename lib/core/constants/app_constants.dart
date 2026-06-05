@@ -68,6 +68,8 @@ class AppConstants {
   static const String routeHome = '/home';
   static const String routeLogin = '/login';
   static const String routeRegister = '/register';
+  static const String routeTerms = '/terms';
+  static const String routePrivacyPolicy = '/privacy-policy';
   static const String routeProfile = '/profile';
   static const String routeListingDetail = '/listing/:id';
   static const String routePostListing = '/listing';

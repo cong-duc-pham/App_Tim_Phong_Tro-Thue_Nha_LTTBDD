@@ -23,6 +23,7 @@ import '../../screens/profile/settings_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
 import '../../screens/auth/forgot_password_screen.dart';
+import '../../screens/auth/legal_document_screen.dart';
 import '../../screens/payment/invoice_detail_screen.dart';
 import '../../screens/payment/invoice_screen.dart';
 import '../../screens/payment/package_screen.dart';
@@ -84,6 +85,16 @@ final appRouter = GoRouter(
         builder: (_, __) => const NotificationsScreen()),
     GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
     GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+    GoRoute(
+      path: '/terms',
+      builder: (_, __) =>
+          const LegalDocumentScreen(type: LegalDocumentType.terms),
+    ),
+    GoRoute(
+      path: '/privacy-policy',
+      builder: (_, __) =>
+          const LegalDocumentScreen(type: LegalDocumentType.privacy),
+    ),
     GoRoute(path: '/about', builder: (_, __) => const AboutAppScreen()),
     GoRoute(
         path: '/report-issue', builder: (_, __) => const ReportIssueScreen()),
