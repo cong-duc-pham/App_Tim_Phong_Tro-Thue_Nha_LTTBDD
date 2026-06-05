@@ -1,9 +1,10 @@
-using Backend_API.Models.DTOs.Auth;
+﻿using Backend_API.Models.DTOs.Auth;
 using Backend_API.Models.Entities;
 using Backend_API.Services.Interfaces;
 using Backend_API.Services;
 using Backend_API.Helpers;
 using FirebaseAdmin.Auth;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
@@ -22,19 +23,25 @@ namespace Backend_API.Services.Implementations
         private readonly FirebaseHelper _firebaseHelper;
         private readonly IEmailService _emailService;
         private readonly ISmsService _smsService;
+        private readonly IWebHostEnvironment _environment;
+        private readonly IConfiguration _configuration;
 
         public AuthService(
             PhongTroDbContext context,
             JwtTokenHelper jwtHelper,
             FirebaseHelper firebaseHelper,
             IEmailService emailService,
-            ISmsService smsService)
+            ISmsService smsService,
+            IWebHostEnvironment environment,
+            IConfiguration configuration)
         {
             _context = context;
             _jwtHelper = jwtHelper;
             _firebaseHelper = firebaseHelper;
             _emailService = emailService;
             _smsService = smsService;
+            _environment = environment;
+            _configuration = configuration;
         }
 
         public async Task<LoginResponseDto> RegisterAsync(RegisterRequestDto dto)
@@ -44,7 +51,7 @@ namespace Backend_API.Services.Implementations
                 .AnyAsync(u => (u.Email != null && u.Email.ToLower() == email) || u.Phone == dto.Phone);
             if (isDuplicate)
             {
-                throw new Exception("Email hoặc Số điện thoại đã được sử dụng.");
+                throw new Exception("Email hoáº·c Sá»‘ Ä‘iá»‡n thoáº¡i Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng.");
             }
 
             var hash = PasswordHasher.Hash(dto.Password);
@@ -69,7 +76,7 @@ namespace Backend_API.Services.Implementations
             await _context.UserPreferences.AddAsync(preference);
             await _context.SaveChangesAsync();
 
-            // Lấy lại user bao gồm Role để GenerateToken đầy đủ
+            // Láº¥y láº¡i user bao gá»“m Role Ä‘á»ƒ GenerateToken Ä‘áº§y Ä‘á»§
             var userWithRole = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.UserId == newUser.UserId);
 
             var token = _jwtHelper.GenerateToken(userWithRole ?? newUser);
@@ -100,7 +107,7 @@ namespace Backend_API.Services.Implementations
                 
             if (user == null || string.IsNullOrEmpty(user.PasswordHash) || !PasswordHasher.Verify(dto.Password, user.PasswordHash))
             {
-                throw new Exception("Thông tin đăng nhập không hợp lệ.");
+                throw new Exception("ThÃ´ng tin Ä‘Äƒng nháº­p khÃ´ng há»£p lá»‡.");
             }
 
             EnsureUserIsActive(user);
@@ -131,8 +138,8 @@ namespace Backend_API.Services.Implementations
 
         public async Task<LoginResponseDto> LoginWithFirebaseAsync(string firebaseToken)
         {
-            // 1. Xác thực Firebase Token
-            var (uid, email, name, picture, provider) = await _firebaseHelper.VerifyIdToken(firebaseToken);
+            // 1. XÃ¡c thá»±c Firebase Token
+            var (uid, email, name, picture, provider, _) = await _firebaseHelper.VerifyIdToken(firebaseToken);
 
             var normalizedEmail = string.IsNullOrWhiteSpace(email) ? null : NormalizeEmail(email);
             var existingUser = await _context.Users.FirstOrDefaultAsync(u =>
@@ -143,12 +150,12 @@ namespace Backend_API.Services.Implementations
                 throw new Exception("Tai khoan nay da bi khoa hoac vo hieu hoa.");
             }
             
-            // Theo như yêu cầu: gọi SP upsert
-            // Đối số của SP thường theo thứ tự: uid, email, name, picture
+            // Theo nhÆ° yÃªu cáº§u: gá»i SP upsert
+            // Äá»‘i sá»‘ cá»§a SP thÆ°á»ng theo thá»© tá»±: uid, email, name, picture
             await _context.Database.ExecuteSqlInterpolatedAsync(
                 $"EXEC sp_UpsertFirebaseUser {uid}, {email}, {name}, {picture}, {provider}, {uid}, {firebaseToken}");
 
-            // Load lại User vừa Upsert xong
+            // Load láº¡i User vá»«a Upsert xong
             var user = await _context.Users
                 .Include(u => u.Role)
                 .Include(u => u.UserPreference)
@@ -156,7 +163,7 @@ namespace Backend_API.Services.Implementations
 
             if (user == null)
             {
-                throw new Exception("Không thể đồng bộ người dùng từ Firebase.");
+                throw new Exception("KhÃ´ng thá»ƒ Ä‘á»“ng bá»™ ngÆ°á»i dÃ¹ng tá»« Firebase.");
             }
 
             EnsureUserIsActive(user);
@@ -170,7 +177,7 @@ namespace Backend_API.Services.Implementations
             var token = _jwtHelper.GenerateToken(user);
             var refreshToken = await IssueRefreshTokenAsync(user.UserId);
             
-            // Nếu là user mới thì preference thường OnboardingDone = false
+            // Náº¿u lÃ  user má»›i thÃ¬ preference thÆ°á»ng OnboardingDone = false
             bool isNewUser = user.UserPreference == null || user.UserPreference.OnboardingDone != true;
 
             return new LoginResponseDto
@@ -197,7 +204,7 @@ namespace Backend_API.Services.Implementations
         {
             if (string.IsNullOrWhiteSpace(refreshToken))
             {
-                throw new Exception("Refresh token không hợp lệ.");
+                throw new Exception("Refresh token khÃ´ng há»£p lá»‡.");
             }
 
             var normalized = refreshToken.Trim();
@@ -213,7 +220,7 @@ namespace Backend_API.Services.Implementations
 
             if (provider == null)
             {
-                throw new Exception("Refresh token đã hết hạn hoặc không tồn tại.");
+                throw new Exception("Refresh token Ä‘Ã£ háº¿t háº¡n hoáº·c khÃ´ng tá»“n táº¡i.");
             }
 
             var user = await _context.Users
@@ -223,7 +230,7 @@ namespace Backend_API.Services.Implementations
 
             if (user == null)
             {
-                throw new Exception("Không tìm thấy người dùng hợp lệ cho refresh token.");
+                throw new Exception("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng há»£p lá»‡ cho refresh token.");
             }
 
             var newAccessToken = _jwtHelper.GenerateToken(user);
@@ -257,12 +264,12 @@ namespace Backend_API.Services.Implementations
 
             if (user == null)
             {
-                throw new Exception("Email không tồn tại trong hệ thống.");
+                throw new Exception("Email khÃ´ng tá»“n táº¡i trong há»‡ thá»‘ng.");
             }
 
             if (string.IsNullOrWhiteSpace(user.PasswordHash) && !IsFirebasePasswordUser(user))
             {
-                throw new Exception("Tài khoản này đăng nhập bằng Google/Facebook, không cần đặt lại mật khẩu tại đây.");
+                throw new Exception("TÃ i khoáº£n nÃ y Ä‘Äƒng nháº­p báº±ng Google/Facebook, khÃ´ng cáº§n Ä‘áº·t láº¡i máº­t kháº©u táº¡i Ä‘Ã¢y.");
             }
 
             var oldOtps = await _context.OtpCodes
@@ -306,7 +313,7 @@ namespace Backend_API.Services.Implementations
 
             if (user == null || (string.IsNullOrWhiteSpace(user.PasswordHash) && !IsFirebasePasswordUser(user)))
             {
-                throw new Exception("Tài khoản không hợp lệ để đặt lại mật khẩu.");
+                throw new Exception("TÃ i khoáº£n khÃ´ng há»£p lá»‡ Ä‘á»ƒ Ä‘áº·t láº¡i máº­t kháº©u.");
             }
 
             var otp = await _context.OtpCodes
@@ -321,7 +328,7 @@ namespace Backend_API.Services.Implementations
 
             if (otp == null)
             {
-                throw new Exception("Mã OTP không đúng hoặc đã hết hạn.");
+                throw new Exception("MÃ£ OTP khÃ´ng Ä‘Ãºng hoáº·c Ä‘Ã£ háº¿t háº¡n.");
             }
 
             otp.IsUsed = true;
@@ -458,14 +465,14 @@ namespace Backend_API.Services.Implementations
             var user = await _context.Users.FindAsync(userId);
             if (user == null)
             {
-                throw new Exception("Không tìm thấy người dùng.");
+                throw new Exception("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng.");
             }
 
             if (!string.IsNullOrEmpty(user.PasswordHash))
             {
                 if (!PasswordHasher.Verify(dto.CurrentPassword, user.PasswordHash))
                 {
-                    throw new Exception("Mật khẩu hiện tại không chính xác.");
+                    throw new Exception("Máº­t kháº©u hiá»‡n táº¡i khÃ´ng chÃ­nh xÃ¡c.");
                 }
             }
 
@@ -479,7 +486,7 @@ namespace Backend_API.Services.Implementations
             var user = await _context.Users.FindAsync(userId);
             if (user == null)
             {
-                throw new Exception("Không tìm thấy người dùng.");
+                throw new Exception("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng.");
             }
 
             user.FullName = dto.FullName.Trim();
@@ -521,20 +528,20 @@ namespace Backend_API.Services.Implementations
             }
         }
 
-        public async Task SendPhoneOtpAsync(long userId, string phone)
+        public async Task<string?> SendPhoneOtpAsync(long userId, string phone)
         {
             if (string.IsNullOrWhiteSpace(phone))
             {
-                throw new Exception("Số điện thoại không được để trống.");
+                throw new Exception("Sá»‘ Ä‘iá»‡n thoáº¡i khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
             }
 
             var user = await _context.Users.FindAsync(userId);
             if (user == null)
             {
-                throw new Exception("Không tìm thấy người dùng.");
+                throw new Exception("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng.");
             }
 
-            // Hủy các OTP cũ chưa sử dụng của số điện thoại này
+            // Há»§y cÃ¡c OTP cÅ© chÆ°a sá»­ dá»¥ng cá»§a sá»‘ Ä‘iá»‡n thoáº¡i nÃ y
             var oldOtps = await _context.OtpCodes
                 .Where(o => o.Contact == phone
                     && o.OtpType == PhoneVerificationOtpType
@@ -562,22 +569,36 @@ namespace Backend_API.Services.Implementations
             await _context.OtpCodes.AddAsync(otp);
             await _context.SaveChangesAsync();
 
-            // Gửi tin nhắn SMS thật qua SmsService
+            // Gá»­i tin nháº¯n SMS tháº­t qua SmsService
             var message = $"Swings House: Ma OTP xac minh so dien thoai cua ban la {code}. Ma co hieu luc trong 5 phut.";
-            await _smsService.SendSmsAsync(phone, message);
+            var sent = await _smsService.SendSmsAsync(phone, message);
+            if (sent)
+            {
+                return null;
+            }
+
+            var requireRealDelivery =
+                _configuration.GetValue<bool>("SmsSettings:RequireRealDelivery");
+            if (!requireRealDelivery &&
+                _environment.EnvironmentName.Equals("Development", StringComparison.OrdinalIgnoreCase))
+            {
+                return code;
+            }
+
+            throw new Exception("KhÃ´ng gá»­i Ä‘Æ°á»£c SMS OTP. Vui lÃ²ng kiá»ƒm tra cáº¥u hÃ¬nh nhÃ  cung cáº¥p SMS.");
         }
 
         public async Task VerifyPhoneOtpAsync(long userId, string phone, string otpCode)
         {
             if (string.IsNullOrWhiteSpace(phone) || string.IsNullOrWhiteSpace(otpCode))
             {
-                throw new Exception("Số điện thoại và mã OTP không được để trống.");
+                throw new Exception("Sá»‘ Ä‘iá»‡n thoáº¡i vÃ  mÃ£ OTP khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
             }
 
             var user = await _context.Users.FindAsync(userId);
             if (user == null)
             {
-                throw new Exception("Không tìm thấy người dùng.");
+                throw new Exception("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng.");
             }
 
             var code = otpCode.Trim();
@@ -595,40 +616,104 @@ namespace Backend_API.Services.Implementations
 
             if (otp == null)
             {
-                throw new Exception("Mã OTP không đúng hoặc đã hết hạn.");
+                throw new Exception("MÃ£ OTP khÃ´ng Ä‘Ãºng hoáº·c Ä‘Ã£ háº¿t háº¡n.");
             }
 
+            var normalizedPhone = NormalizeVietnamPhone(phone);
+            await EnsurePhoneCanBeUsedAsync(userId, normalizedPhone);
+
             otp.IsUsed = true;
-            user.Phone = phone.Trim();
-            user.IsVerified = true; // Đánh dấu đã xác thực số điện thoại
+            user.Phone = normalizedPhone;
+            user.IsVerified = true; // ÄÃ¡nh dáº¥u Ä‘Ã£ xÃ¡c thá»±c sá»‘ Ä‘iá»‡n thoáº¡i
             user.UpdatedAt = nowUtc;
             await _context.SaveChangesAsync();
+        }
+
+        public async Task VerifyPhoneWithFirebaseAsync(long userId, string phone, string firebaseIdToken)
+        {
+            if (string.IsNullOrWhiteSpace(phone) || string.IsNullOrWhiteSpace(firebaseIdToken))
+            {
+                throw new Exception("Sá»‘ Ä‘iá»‡n thoáº¡i vÃ  Firebase token khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
+            }
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                throw new Exception("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng.");
+            }
+
+            var (_, _, _, _, _, firebasePhoneNumber) =
+                await _firebaseHelper.VerifyIdToken(firebaseIdToken);
+            if (string.IsNullOrWhiteSpace(firebasePhoneNumber))
+            {
+                throw new Exception("Firebase token khÃ´ng pháº£i token xÃ¡c thá»±c sá»‘ Ä‘iá»‡n thoáº¡i.");
+            }
+
+            var normalizedInput = NormalizeVietnamPhone(phone);
+            var normalizedFirebasePhone = NormalizeVietnamPhone(firebasePhoneNumber);
+            if (normalizedInput != normalizedFirebasePhone)
+            {
+                throw new Exception("Sá»‘ Ä‘iá»‡n thoáº¡i Ä‘Ã£ xÃ¡c thá»±c trÃªn Firebase khÃ´ng khá»›p.");
+            }
+
+            await EnsurePhoneCanBeUsedAsync(userId, normalizedInput);
+
+            user.Phone = normalizedInput;
+            user.IsVerified = true;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task EnsurePhoneCanBeUsedAsync(long userId, string phone)
+        {
+            var isUsedByAnotherUser = await _context.Users
+                .AnyAsync(u => u.UserId != userId && u.Phone == phone);
+            if (isUsedByAnotherUser)
+            {
+                throw new Exception("Số điện thoại này đã được dùng bởi tài khoản khác.");
+            }
+        }
+
+        private static string NormalizeVietnamPhone(string phone)
+        {
+            var normalized = phone.Trim().Replace(" ", "").Replace("-", "");
+            if (normalized.StartsWith("+84"))
+            {
+                return "0" + normalized.Substring(3);
+            }
+
+            if (normalized.StartsWith("84") && normalized.Length >= 11)
+            {
+                return "0" + normalized.Substring(2);
+            }
+
+            return normalized;
         }
 
         public async Task SendEmailOtpAsync(long userId, string email)
         {
             if (string.IsNullOrWhiteSpace(email))
             {
-                throw new Exception("Email không được để trống.");
+                throw new Exception("Email khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
             }
 
             var user = await _context.Users.FindAsync(userId);
             if (user == null)
             {
-                throw new Exception("Không tìm thấy người dùng.");
+                throw new Exception("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng.");
             }
 
             var normalizedEmail = email.Trim().ToLower();
 
-            // Kiểm tra email đã được sử dụng bởi tài khoản khác chưa
+            // Kiá»ƒm tra email Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng bá»Ÿi tÃ i khoáº£n khÃ¡c chÆ°a
             var isEmailUsed = await _context.Users
                 .AnyAsync(u => u.UserId != userId && u.Email != null && u.Email.ToLower() == normalizedEmail);
             if (isEmailUsed)
             {
-                throw new Exception("Email này đã được sử dụng bởi một tài khoản khác.");
+                throw new Exception("Email nÃ y Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng bá»Ÿi má»™t tÃ i khoáº£n khÃ¡c.");
             }
 
-            // Hủy các OTP cũ chưa sử dụng của email này
+            // Há»§y cÃ¡c OTP cÅ© chÆ°a sá»­ dá»¥ng cá»§a email nÃ y
             var oldOtps = await _context.OtpCodes
                 .Where(o => o.Contact == email
                     && o.OtpType == EmailVerificationOtpType
@@ -656,7 +741,7 @@ namespace Backend_API.Services.Implementations
             await _context.OtpCodes.AddAsync(otp);
             await _context.SaveChangesAsync();
 
-            // Gửi email thật qua EmailService
+            // Gá»­i email tháº­t qua EmailService
             await _emailService.SendEmailVerificationOtpAsync(email, code);
         }
 
@@ -664,13 +749,13 @@ namespace Backend_API.Services.Implementations
         {
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(otpCode))
             {
-                throw new Exception("Email và mã OTP không được để trống.");
+                throw new Exception("Email vÃ  mÃ£ OTP khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
             }
 
             var user = await _context.Users.FindAsync(userId);
             if (user == null)
             {
-                throw new Exception("Không tìm thấy người dùng.");
+                throw new Exception("KhÃ´ng tÃ¬m tháº¥y ngÆ°á»i dÃ¹ng.");
             }
 
             var normalizedEmail = email.Trim().ToLower();
@@ -689,12 +774,12 @@ namespace Backend_API.Services.Implementations
 
             if (otp == null)
             {
-                throw new Exception("Mã OTP không đúng hoặc đã hết hạn.");
+                throw new Exception("MÃ£ OTP khÃ´ng Ä‘Ãºng hoáº·c Ä‘Ã£ háº¿t háº¡n.");
             }
 
             otp.IsUsed = true;
             user.Email = normalizedEmail;
-            user.IsEmailVerified = true; // Đánh dấu đã xác thực email
+            user.IsEmailVerified = true; // ÄÃ¡nh dáº¥u Ä‘Ã£ xÃ¡c thá»±c email
             user.UpdatedAt = nowUtc;
             await _context.SaveChangesAsync();
         }

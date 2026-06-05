@@ -295,8 +295,15 @@ namespace Backend_API.Controllers
                     return Unauthorized(new { success = false, message = "Không xác định được danh tính người dùng." });
                 }
 
-                await _authService.SendPhoneOtpAsync(userId, request.Phone);
-                return Ok(new { success = true, message = "Mã OTP đã được gửi về số điện thoại của bạn." });
+                var devOtp = await _authService.SendPhoneOtpAsync(userId, request.Phone);
+                return Ok(new
+                {
+                    success = true,
+                    message = devOtp == null
+                        ? "Mã OTP đã được gửi về số điện thoại của bạn."
+                        : "SMS chưa gửi thật. Dùng mã OTP thử nghiệm để tiếp tục xác thực.",
+                    devOtp
+                });
             }
             catch (Exception ex)
             {
@@ -324,6 +331,30 @@ namespace Backend_API.Controllers
 
                 await _authService.VerifyPhoneOtpAsync(userId, request.Phone, request.OtpCode);
                 return Ok(new { success = true, message = "Xác thực số điện thoại thành công." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpPost("verify-phone-firebase")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> VerifyPhoneWithFirebase([FromBody] VerifyFirebasePhoneRequestDto request)
+        {
+            try
+            {
+                var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdStr) || !long.TryParse(userIdStr, out long userId))
+                {
+                    return Unauthorized(new { success = false, message = "Không xác định được danh tính người dùng." });
+                }
+
+                await _authService.VerifyPhoneWithFirebaseAsync(userId, request.Phone, request.FirebaseIdToken);
+                return Ok(new { success = true, message = "Xác thực số điện thoại bằng Firebase thành công." });
             }
             catch (Exception ex)
             {
