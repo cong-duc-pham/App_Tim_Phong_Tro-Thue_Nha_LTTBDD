@@ -1,3 +1,5 @@
+import '../core/utils/url_helper.dart';
+
 class Conversation {
   final int convId;
   final int? listingId;
@@ -48,7 +50,7 @@ class Conversation {
       convId: integer('convId', 'ConvId'),
       listingId: optionalInteger('listingId', 'ListingId'),
       listingTitle: read<String>('listingTitle', 'ListingTitle'),
-      listingImage: read<String>('listingImage', 'ListingImage'),
+      listingImage: UrlHelper.sanitizeUrl(read<String>('listingImage', 'ListingImage')),
       lastMessage: read<String>('lastMessage', 'LastMessage'),
       lastMsgAt: lastMsgAtRaw == null
           ? null
@@ -56,7 +58,7 @@ class Conversation {
       otherUserId: integer('otherUserId', 'OtherUserId'),
       otherUserName:
           read<String>('otherUserName', 'OtherUserName') ?? 'Người dùng',
-      otherUserAvatar: read<String>('otherUserAvatar', 'OtherUserAvatar'),
+      otherUserAvatar: UrlHelper.sanitizeUrl(read<String>('otherUserAvatar', 'OtherUserAvatar')),
       unreadCount: integer('unreadCount', 'UnreadCount'),
     );
   }
