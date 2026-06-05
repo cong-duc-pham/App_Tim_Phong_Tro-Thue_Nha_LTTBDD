@@ -268,6 +268,10 @@ class AuthRepository {
 
       // Cập nhật lại SharedPreferences nội bộ
       await prefs.setString('user_full_name', fullName.trim());
+      if (phone.trim().isNotEmpty) {
+        await prefs.setString('verify_phone_number', phone.trim());
+        await prefs.setBool('verify_phone_status', true);
+      }
     } on DioException catch (e) {
       throw Exception(readBackendMessage(e));
     }
