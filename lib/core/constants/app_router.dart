@@ -32,8 +32,10 @@ import '../../models/listing.dart';
 import '../../models/payment.dart';
 import '../../screens/chat/conversations_screen.dart';
 import '../../screens/chat/chat_screen.dart';
+import '../../screens/chat/ai_chat_screen.dart';
 import '../../widgets/main_bottom_nav.dart';
 import 'router_keys.dart';
+import 'app_constants.dart';
 
 final appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
@@ -143,6 +145,10 @@ final appRouter = GoRouter(
         final conv = state.extra as Conversation;
         return ChatScreen(conversation: conv);
       },
+    ),
+    GoRoute(
+      path: AppConstants.routeAiChat,
+      builder: (_, __) => const AiChatScreen(),
     ),
     GoRoute(
       path: '/listing/:id',

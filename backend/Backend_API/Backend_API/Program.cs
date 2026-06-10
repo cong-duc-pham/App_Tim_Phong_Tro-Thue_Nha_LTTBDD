@@ -36,6 +36,12 @@ using Backend_API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration.AddJsonFile(
+    "appsettings.Local.json",
+    optional: true,
+    reloadOnChange: true);
+builder.Configuration.AddEnvironmentVariables();
+
 
 
 // ── Controllers (Web API & MVC Views)
@@ -315,6 +321,8 @@ builder.Services.AddScoped<IListingRealtimeNotifier, ListingRealtimeNotifier>();
 builder.Services.AddHttpClient<IPayOsService, PayOsService>();
 
 builder.Services.AddHttpClient<ITranslationService, GeminiTranslationService>();
+
+builder.Services.AddHttpClient<IAiChatService, GeminiAiChatService>();
 
 builder.Services.AddHttpClient();
 
