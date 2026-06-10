@@ -74,6 +74,7 @@ class AppConstants {
   static const String routeListingDetail = '/listing/:id';
   static const String routePostListing = '/listing';
   static const String routeChat = '/chat';
+  static const String routeAiChat = '/chat/ai';
   static const String routePackages = '/packages';
   static const String routeInvoices = '/invoices';
   static const String routeFavorites = '/favorites';

@@ -184,8 +184,63 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
       body: Column(
         children: [
           _buildSearchAndFilters(),
+          _buildAiAssistantCard(),
           Expanded(child: _buildBody()),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAiAssistantCard() {
+    return Material(
+      color: context.profileBg,
+      child: InkWell(
+        onTap: () => context.push(AppConstants.routeAiChat),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppColors.primary, Color(0xFF6C63FF)],
+            ),
+            borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+          ),
+          child: const Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: Colors.white24,
+                child: Icon(
+                  Icons.auto_awesome_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Trợ lý AI tìm phòng',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Hỏi về ngân sách, khu vực, hợp đồng và đặt cọc',
+                      style: TextStyle(color: Colors.white70, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: Colors.white),
+            ],
+          ),
+        ),
       ),
     );
   }

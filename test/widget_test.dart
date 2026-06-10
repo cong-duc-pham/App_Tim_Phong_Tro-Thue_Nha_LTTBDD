@@ -1,30 +1,20 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:ung_dung_tim_kiem_tro/main.dart';
+import 'package:ung_dung_tim_kiem_tro/core/utils/validators.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('Validators', () {
+    test('accepts valid account fields', () {
+      expect(Validators.email('teacher@example.com'), isNull);
+      expect(Validators.phone('0912345678'), isNull);
+      expect(Validators.password('123456'), isNull);
+      expect(Validators.otp('123456'), isNull);
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('rejects invalid account fields', () {
+      expect(Validators.email('invalid-email'), isNotNull);
+      expect(Validators.phone('123'), isNotNull);
+      expect(Validators.password('123'), isNotNull);
+      expect(Validators.otp('12ab56'), isNotNull);
+    });
   });
 }

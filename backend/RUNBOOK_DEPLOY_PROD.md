@@ -31,6 +31,8 @@ Cloudinary__UploadPreset=phongtro_unsigned
 Cloudinary__ListingUploadPreset=phongtro_listing_unsigned
 Cloudinary__AvatarUploadPreset=phongtro_avatar_unsigned
 Cloudinary__ChatUploadPreset=phongtro_chat_unsigned
+GEMINI_API_KEY=<gemini-api-key>
+AiChat__Gemini__Model=gemini-2.5-flash
 Swagger__Enabled=true
 Cors__AllowedOrigins__0=https://your-production-domain.com
 ```
@@ -61,6 +63,8 @@ docker run -d `
   -e Cloudinary__ListingUploadPreset="phongtro_listing_unsigned" `
   -e Cloudinary__AvatarUploadPreset="phongtro_avatar_unsigned" `
   -e Cloudinary__ChatUploadPreset="phongtro_chat_unsigned" `
+  -e GEMINI_API_KEY="<gemini-api-key>" `
+  -e AiChat__Gemini__Model="gemini-2.5-flash" `
   -e Swagger__Enabled="true" `
   -e Cors__AllowedOrigins__0="https://your-production-domain.com" `
   phongtro-api:latest
