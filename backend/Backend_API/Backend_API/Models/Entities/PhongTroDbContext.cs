@@ -101,6 +101,10 @@ public partial class PhongTroDbContext : DbContext
 
     public virtual DbSet<Ward> Wards { get; set; }
 
+    public virtual DbSet<ViewingAppointment> ViewingAppointments { get; set; }
+
+    public virtual DbSet<Rental> Rentals { get; set; }
+
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -1029,7 +1033,9 @@ public partial class PhongTroDbContext : DbContext
         {
             entity.HasKey(e => e.ReviewId).HasName("PK__Reviews__60883D90D0DA281C");
 
-            entity.HasIndex(e => new { e.ListingId, e.ReviewerId }, "UQ__Reviews__ED9BC2D526F2A52C").IsUnique();
+            entity.HasIndex(e => new { e.ListingId, e.ReviewerId }, "UX_Reviews_Listing_Reviewer_Type")
+                .HasFilter("[type] = 'review' AND [is_deleted] = 0")
+                .IsUnique();
 
             entity.Property(e => e.ReviewId).HasColumnName("review_id");
             entity.Property(e => e.Comment).HasColumnName("comment");
@@ -1048,6 +1054,22 @@ public partial class PhongTroDbContext : DbContext
             entity.Property(e => e.RatingSecurity).HasColumnName("rating_security");
             entity.Property(e => e.RepliedAt).HasColumnName("replied_at");
             entity.Property(e => e.ReviewerId).HasColumnName("reviewer_id");
+            entity.Property(e => e.Type)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasDefaultValueSql("('review')")
+                .HasColumnName("type");
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasDefaultValueSql("('approved')")
+                .HasColumnName("status");
+            entity.Property(e => e.ReportCount)
+                .HasDefaultValueSql("(0)")
+                .HasColumnName("report_count");
+            entity.Property(e => e.IsDeleted)
+                .HasDefaultValueSql("(0)")
+                .HasColumnName("is_deleted");
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnName("updated_at");
@@ -1564,6 +1586,96 @@ public partial class PhongTroDbContext : DbContext
                 .HasForeignKey(d => d.DistrictId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Wards__district___7A672E12");
+        });
+
+        modelBuilder.Entity<ViewingAppointment>(entity =>
+        {
+            entity.HasKey(e => e.AppointmentId).HasName("PK_ViewingAppointments");
+
+            entity.ToTable("ViewingAppointments");
+
+            entity.Property(e => e.AppointmentId).HasColumnName("appointment_id");
+            entity.Property(e => e.ListingId).HasColumnName("listing_id");
+            entity.Property(e => e.TenantId).HasColumnName("tenant_id");
+            entity.Property(e => e.LandlordId).HasColumnName("landlord_id");
+            entity.Property(e => e.ScheduledAt).HasColumnName("scheduled_at");
+
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasDefaultValueSql("('pending')")
+                .HasColumnName("status");
+
+            entity.Property(e => e.TenantNote)
+                .HasMaxLength(500)
+                .HasColumnName("tenant_note");
+
+            entity.Property(e => e.LandlordNote)
+                .HasMaxLength(500)
+                .HasColumnName("landlord_note");
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnName("created_at");
+
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnName("updated_at");
+
+            entity.HasOne(d => d.Listing).WithMany(p => p.ViewingAppointments)
+                .HasForeignKey(d => d.ListingId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ViewingAppointments_Listings");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.ViewingAppointmentTenants)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ViewingAppointments_Tenants");
+
+            entity.HasOne(d => d.Landlord).WithMany(p => p.ViewingAppointmentLandlords)
+                .HasForeignKey(d => d.LandlordId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ViewingAppointments_Landlords");
+        });
+
+        modelBuilder.Entity<Rental>(entity =>
+        {
+            entity.HasKey(e => e.RentalId).HasName("PK_Rentals");
+
+            entity.ToTable("Rentals");
+
+            entity.Property(e => e.RentalId).HasColumnName("rental_id");
+            entity.Property(e => e.ListingId).HasColumnName("listing_id");
+            entity.Property(e => e.TenantId).HasColumnName("tenant_id");
+            entity.Property(e => e.LandlordId).HasColumnName("landlord_id");
+            entity.Property(e => e.StartDate).HasColumnName("start_date");
+            entity.Property(e => e.EndDate).HasColumnName("end_date");
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasDefaultValueSql("('active')")
+                .HasColumnName("status");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnName("updated_at");
+
+            entity.HasOne(d => d.Listing).WithMany(p => p.Rentals)
+                .HasForeignKey(d => d.ListingId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Rentals_Listings");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.RentalTenants)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Rentals_Tenants");
+
+            entity.HasOne(d => d.Landlord).WithMany(p => p.RentalLandlords)
+                .HasForeignKey(d => d.LandlordId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Rentals_Landlords");
         });
 
         OnModelCreatingPartial(modelBuilder);
