@@ -94,3 +94,5 @@ Thumbs.db
 # Firebase Admin SDK Private Keys
 *firebase-adminsdk*.json
 
+artifacts/
+*.dll
