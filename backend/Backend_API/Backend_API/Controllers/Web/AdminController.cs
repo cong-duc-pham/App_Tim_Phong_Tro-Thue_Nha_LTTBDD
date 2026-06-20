@@ -522,6 +522,50 @@ namespace Backend_API.Controllers.MVC
             return RedirectToAction(nameof(Listings));
         }
 
+        [HttpGet("viewing-appointments")]
+        public async Task<IActionResult> ViewingAppointments([FromQuery] string? status)
+        {
+            var query = _context.ViewingAppointments
+                .Include(x => x.Listing)
+                .Include(x => x.Tenant)
+                .Include(x => x.Landlord)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                var normalizedStatus = status.Trim().ToLowerInvariant();
+                query = query.Where(x => x.Status == normalizedStatus);
+            }
+
+            var appointments = await query
+                .OrderBy(x => x.Status == "pending" ? 0 : 1)
+                .ThenBy(x => x.ScheduledAt)
+                .Take(500)
+                .Select(x => new AdminViewingAppointmentItemViewModel
+                {
+                    AppointmentId = x.AppointmentId,
+                    ListingId = x.ListingId,
+                    ListingTitle = x.Listing.Title,
+                    TenantName = x.Tenant.FullName,
+                    TenantPhone = x.Tenant.Phone,
+                    LandlordName = x.Landlord.FullName,
+                    LandlordPhone = x.Landlord.Phone,
+                    ScheduledAt = x.ScheduledAt,
+                    Status = x.Status,
+                    TenantNote = x.TenantNote,
+                    LandlordNote = x.LandlordNote,
+                    CreatedAt = x.CreatedAt
+                })
+                .ToListAsync();
+
+            ViewData["Title"] = "Lịch xem phòng";
+            return View(new AdminViewingAppointmentsViewModel
+            {
+                Status = status,
+                Appointments = appointments
+            });
+        }
+
         [HttpGet("reports")]
         public async Task<IActionResult> Reports()
         {

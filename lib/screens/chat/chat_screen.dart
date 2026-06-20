@@ -34,7 +34,9 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isLoading = true;
   final _messageRepo = MessageRepository();
 
-  bool get _isListingUnavailable => widget.conversation.listingId == null || widget.conversation.listingId == 0;
+  bool get _isListingUnavailable =>
+      widget.conversation.listingId == null ||
+      widget.conversation.listingId == 0;
 
   @override
   void initState() {
@@ -83,7 +85,8 @@ class _ChatScreenState extends State<ChatScreen> {
         _messages.sort((a, b) => a.sentAt.compareTo(b.sentAt));
         _isLoading = false;
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom(animated: false));
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _scrollToBottom(animated: false));
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -121,10 +124,11 @@ class _ChatScreenState extends State<ChatScreen> {
           if (msg.convId == widget.conversation.convId) {
             if (!mounted) return;
             setState(() {
-              final index = _messages.indexWhere((m) => 
-                m.messageId == msg.messageId || 
-                (m.senderId == _currentUserId && m.content == msg.content && m.messageId > 900000000000)
-              );
+              final index = _messages.indexWhere((m) =>
+                  m.messageId == msg.messageId ||
+                  (m.senderId == _currentUserId &&
+                      m.content == msg.content &&
+                      m.messageId > 900000000000));
               if (index != -1) {
                 _messages[index] = msg;
               } else {
@@ -216,7 +220,8 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
     ]);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom(animated: false));
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _scrollToBottom(animated: false));
   }
 
   void _scrollToBottom({bool animated = true}) {
@@ -266,7 +271,8 @@ class _ChatScreenState extends State<ChatScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('chat_send_error'.tr.replaceAll('{error}', _cleanError(e))),
+          content:
+              Text('chat_send_error'.tr.replaceAll('{error}', _cleanError(e))),
           action: SnackBarAction(
             label: 'common_retry'.tr,
             textColor: Colors.white,
@@ -275,16 +281,21 @@ class _ChatScreenState extends State<ChatScreen> {
                 _messages.add(tempMessage);
               });
               _scrollToBottom();
-              _messageRepo.sendMessage(
+              _messageRepo
+                  .sendMessage(
                 convId: widget.conversation.convId,
                 content: text,
-              ).catchError((err) {
+              )
+                  .catchError((err) {
                 if (mounted) {
                   setState(() {
                     _messages.remove(tempMessage);
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('chat_send_retry_failed'.tr.replaceAll('{error}', _cleanError(err)))),
+                    SnackBar(
+                        content: Text('chat_send_retry_failed'
+                            .tr
+                            .replaceAll('{error}', _cleanError(err)))),
                   );
                 }
               });
@@ -326,7 +337,10 @@ class _ChatScreenState extends State<ChatScreen> {
         _messages.remove(tempMessage);
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('chat_media_send_error'.tr.replaceAll('{error}', _cleanError(e)))),
+        SnackBar(
+            content: Text('chat_media_send_error'
+                .tr
+                .replaceAll('{error}', _cleanError(e)))),
       );
     }
   }
@@ -343,7 +357,8 @@ class _ChatScreenState extends State<ChatScreen> {
               Container(
                 color: Colors.amber.shade700,
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -370,25 +385,33 @@ class _ChatScreenState extends State<ChatScreen> {
             if (_isListingUnavailable)
               Container(
                 decoration: BoxDecoration(
-                  color: context.isDarkProfile ? context.profileSubtleCard : Colors.red.shade50.withValues(alpha: 0.9),
+                  color: context.isDarkProfile
+                      ? context.profileSubtleCard
+                      : Colors.red.shade50.withValues(alpha: 0.9),
                   border: Border(
                     bottom: BorderSide(
-                      color: context.isDarkProfile ? Colors.red.withValues(alpha: 0.3) : Colors.red.shade100,
+                      color: context.isDarkProfile
+                          ? Colors.red.withValues(alpha: 0.3)
+                          : Colors.red.shade100,
                       width: 1,
                     ),
                   ),
                 ),
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline_rounded, color: Colors.red.shade700, size: 18),
+                    Icon(Icons.info_outline_rounded,
+                        color: Colors.red.shade700, size: 18),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'chat_listing_unavailable'.tr,
                         style: TextStyle(
-                          color: context.isDarkProfile ? Colors.red.shade400 : Colors.red.shade800,
+                          color: context.isDarkProfile
+                              ? Colors.red.shade400
+                              : Colors.red.shade800,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -401,7 +424,9 @@ class _ChatScreenState extends State<ChatScreen> {
               _buildListingContextBar(),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                  ? const Center(
+                      child:
+                          CircularProgressIndicator(color: AppColors.primary))
                   : _errorMessage != null
                       ? _buildErrorBody()
                       : _buildMessagesList(),
@@ -421,7 +446,8 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.wifi_off_rounded, size: 42, color: context.profileTextMuted),
+            Icon(Icons.wifi_off_rounded,
+                size: 42, color: context.profileTextMuted),
             const SizedBox(height: 12),
             Text(
               _errorMessage ?? 'chat_error_load_failed'.tr,
@@ -441,7 +467,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
-    final appBarBg = context.isDarkProfile ? context.profileCard : AppColors.primary;
+    final appBarBg =
+        context.isDarkProfile ? context.profileCard : AppColors.primary;
     return AppBar(
       backgroundColor: appBarBg,
       foregroundColor: Colors.white,
@@ -553,7 +580,8 @@ class _ChatScreenState extends State<ChatScreen> {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: context.isDarkProfile ? context.profileText : AppColors.primary,
+          color:
+              context.isDarkProfile ? context.profileText : AppColors.primary,
         ),
       ),
     );
@@ -595,7 +623,8 @@ class _ChatScreenState extends State<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.conversation.listingTitle ?? 'chat_listing_placeholder'.tr,
+                  widget.conversation.listingTitle ??
+                      'chat_listing_placeholder'.tr,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -620,7 +649,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: context.isDarkProfile ? context.profileSubtleCard : AppColors.primaryLight,
+                        color: context.isDarkProfile
+                            ? context.profileSubtleCard
+                            : AppColors.primaryLight,
                         borderRadius:
                             BorderRadius.circular(AppConstants.radiusSm),
                       ),
@@ -629,7 +660,9 @@ class _ChatScreenState extends State<ChatScreen> {
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
-                          color: context.isDarkProfile ? context.profileText : AppColors.primary,
+                          color: context.isDarkProfile
+                              ? context.profileText
+                              : AppColors.primary,
                         ),
                       ),
                     ),
@@ -650,7 +683,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     context.push('/listing/$listingId');
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Không có thông tin phòng trọ này.')),
+                      SnackBar(
+                          content: Text('Không có thông tin phòng trọ này.')),
                     );
                   }
                 },
@@ -857,7 +891,8 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Row(
         children: [
           Text(
-            'chat_typing'.tr.replaceAll('{username}', widget.conversation.otherUserName.split(' (').first),
+            'chat_typing'.tr.replaceAll('{username}',
+                widget.conversation.otherUserName.split(' (').first),
             style: TextStyle(
                 fontSize: 11,
                 fontStyle: FontStyle.italic,
@@ -882,12 +917,14 @@ class _ChatScreenState extends State<ChatScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
           color: context.profileSubtleCard,
-          border: Border(top: BorderSide(color: context.profileBorder, width: 1)),
+          border:
+              Border(top: BorderSide(color: context.profileBorder, width: 1)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.lock_outline_rounded, color: context.profileTextSecondary, size: 20),
+            Icon(Icons.lock_outline_rounded,
+                color: context.profileTextSecondary, size: 20),
             const SizedBox(width: 8),
             Text(
               'chat_listing_closed'.tr,
@@ -925,7 +962,9 @@ class _ChatScreenState extends State<ChatScreen> {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: context.isDarkProfile ? context.profileSubtleCard : AppColors.primaryLight,
+                color: context.isDarkProfile
+                    ? context.profileSubtleCard
+                    : AppColors.primaryLight,
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -943,7 +982,9 @@ class _ChatScreenState extends State<ChatScreen> {
               decoration: BoxDecoration(
                 color: context.profileInputFill,
                 borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-                border: context.isDarkProfile ? Border.all(color: context.profileBorder) : null,
+                border: context.isDarkProfile
+                    ? Border.all(color: context.profileBorder)
+                    : null,
               ),
               child: TextField(
                 controller: _textCtrl,
@@ -1119,9 +1160,11 @@ class _ChatScreenState extends State<ChatScreen> {
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppConstants.radiusLg)),
         title: Text('chat_call_title'.tr,
-            style: TextStyle(fontWeight: FontWeight.w700, color: context.profileText)),
+            style: TextStyle(
+                fontWeight: FontWeight.w700, color: context.profileText)),
         content: Text(
-            'chat_call_desc'.tr.replaceAll('{username}', widget.conversation.otherUserName.split(' (').first),
+            'chat_call_desc'.tr.replaceAll('{username}',
+                widget.conversation.otherUserName.split(' (').first),
             style: TextStyle(color: context.profileTextSecondary)),
         actions: [
           TextButton(
@@ -1132,8 +1175,7 @@ class _ChatScreenState extends State<ChatScreen> {
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content: Text('chat_call_starting'.tr)),
+                SnackBar(content: Text('chat_call_starting'.tr)),
               );
             },
             child: Text('chat_call_now'.tr),
@@ -1158,17 +1200,35 @@ class _ChatScreenState extends State<ChatScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (!_isListingUnavailable)
+                ListTile(
+                  leading: const Icon(Icons.calendar_month_rounded,
+                      color: AppColors.primary),
+                  title: Text(
+                    'Đặt lịch xem phòng',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: context.profileText),
+                  ),
+                  onTap: () {
+                    final listingId = widget.conversation.listingId;
+                    Navigator.pop(context);
+                    if (listingId != null && listingId != 0) {
+                      context.push('/listing/$listingId?openSchedule=true');
+                    }
+                  },
+                ),
               ListTile(
                 leading: Icon(Icons.bookmark_border_rounded,
                     color: context.profileText),
                 title: Text('chat_option_save_listing'.tr,
-                    style: TextStyle(fontWeight: FontWeight.w600, color: context.profileText)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: context.profileText)),
                 onTap: () {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content:
-                            Text('chat_option_saved_success'.tr)),
+                    SnackBar(content: Text('chat_option_saved_success'.tr)),
                   );
                 },
               ),

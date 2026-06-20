@@ -93,6 +93,8 @@ public partial class PhongTroDbContext : DbContext
 
     public virtual DbSet<ViewHistory> ViewHistories { get; set; }
 
+    public virtual DbSet<ViewingAppointment> ViewingAppointments { get; set; }
+
     public virtual DbSet<VwListingWithPackage> VwListingWithPackages { get; set; }
 
     public virtual DbSet<VwPendingFcmNotification> VwPendingFcmNotifications { get; set; }
@@ -1406,6 +1408,55 @@ public partial class PhongTroDbContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.ViewHistories)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK__ViewHisto__user___32AB8735");
+        });
+
+        modelBuilder.Entity<ViewingAppointment>(entity =>
+        {
+            entity.HasKey(e => e.AppointmentId).HasName("PK_ViewingAppointments");
+
+            entity.HasIndex(e => new { e.LandlordId, e.ScheduledAt }, "IX_ViewingAppointments_Landlord");
+
+            entity.HasIndex(e => new { e.TenantId, e.ScheduledAt }, "IX_ViewingAppointments_Tenant");
+
+            entity.HasIndex(e => e.ListingId, "IX_ViewingAppointments_Listing");
+
+            entity.Property(e => e.AppointmentId).HasColumnName("appointment_id");
+            entity.Property(e => e.ListingId).HasColumnName("listing_id");
+            entity.Property(e => e.TenantId).HasColumnName("tenant_id");
+            entity.Property(e => e.LandlordId).HasColumnName("landlord_id");
+            entity.Property(e => e.ScheduledAt).HasColumnName("scheduled_at");
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasDefaultValue("pending")
+                .HasColumnName("status");
+            entity.Property(e => e.TenantNote)
+                .HasMaxLength(500)
+                .HasColumnName("tenant_note");
+            entity.Property(e => e.LandlordNote)
+                .HasMaxLength(500)
+                .HasColumnName("landlord_note");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnName("updated_at");
+
+            entity.HasOne(d => d.Listing).WithMany(p => p.ViewingAppointments)
+                .HasForeignKey(d => d.ListingId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ViewingAppointments_Listings");
+
+            entity.HasOne(d => d.Tenant).WithMany(p => p.ViewingAppointmentTenants)
+                .HasForeignKey(d => d.TenantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ViewingAppointments_Tenants");
+
+            entity.HasOne(d => d.Landlord).WithMany(p => p.ViewingAppointmentLandlords)
+                .HasForeignKey(d => d.LandlordId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ViewingAppointments_Landlords");
         });
 
         modelBuilder.Entity<VwListingWithPackage>(entity =>

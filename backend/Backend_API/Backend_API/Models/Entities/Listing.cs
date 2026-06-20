@@ -115,5 +115,7 @@ public partial class Listing
 
     public virtual ICollection<ViewHistory> ViewHistories { get; set; } = new List<ViewHistory>();
 
+    public virtual ICollection<ViewingAppointment> ViewingAppointments { get; set; } = new List<ViewingAppointment>();
+
     public virtual Ward? Ward { get; set; }
 }
