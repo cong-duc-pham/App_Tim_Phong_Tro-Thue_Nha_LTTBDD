@@ -318,6 +318,8 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 builder.Services.AddScoped<IListingRealtimeNotifier, ListingRealtimeNotifier>();
 
+builder.Services.AddScoped<IViewingAppointmentService, ViewingAppointmentService>();
+
 builder.Services.AddHttpClient<IPayOsService, PayOsService>();
 
 builder.Services.AddHttpClient<ITranslationService, GeminiTranslationService>();
@@ -387,6 +389,8 @@ builder.Services.AddSignalR();
 builder.Services.AddHostedService<DailyStatsJob>();
 
 builder.Services.AddHostedService<VipExpiryWorker>();
+
+builder.Services.AddHostedService<ViewingAppointmentReminderWorker>();
 
 
 

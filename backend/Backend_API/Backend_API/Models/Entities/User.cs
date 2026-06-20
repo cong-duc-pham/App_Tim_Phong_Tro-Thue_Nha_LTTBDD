@@ -84,4 +84,8 @@ public partial class User
     public virtual UserPreference? UserPreference { get; set; }
 
     public virtual ICollection<ViewHistory> ViewHistories { get; set; } = new List<ViewHistory>();
+
+    public virtual ICollection<ViewingAppointment> ViewingAppointmentTenants { get; set; } = new List<ViewingAppointment>();
+
+    public virtual ICollection<ViewingAppointment> ViewingAppointmentLandlords { get; set; } = new List<ViewingAppointment>();
 }
