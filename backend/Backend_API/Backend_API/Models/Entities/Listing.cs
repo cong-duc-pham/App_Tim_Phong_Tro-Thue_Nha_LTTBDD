@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Backend_API.Models.Entities;
@@ -84,6 +84,10 @@ public partial class Listing
     public virtual ICollection<Banner> Banners { get; set; } = new List<Banner>();
 
     public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
+
+    public virtual ICollection<ViewingAppointment> ViewingAppointments { get; set; } = new List<ViewingAppointment>();
+
+    public virtual ICollection<Rental> Rentals { get; set; } = new List<Rental>();
 
     public virtual District? District { get; set; }
 

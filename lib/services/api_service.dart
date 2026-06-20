@@ -4,7 +4,7 @@ class ApiService {
   static const String defaultBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     // Máy ảo Android (Emulator):
-    defaultValue: 'http://10.0.2.2:61795/api',
+    defaultValue: 'https://phongtro-api-2026-beb6dzdja8cvg4hz.southeastasia-01.azurewebsites.net/api',
     // Thiết bị thật (Wi-Fi LAN):
     // defaultValue: 'http://172.24.5.214:61795/api',
   );
