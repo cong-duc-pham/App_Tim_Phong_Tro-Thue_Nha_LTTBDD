@@ -288,7 +288,6 @@ class _MyListingCard extends StatelessWidget {
   }
 
   Future<void> _handleEdit(BuildContext context) async {
-    final router = GoRouter.of(context);
     Listing listingForEdit = listing;
 
     try {
@@ -299,7 +298,8 @@ class _MyListingCard extends StatelessWidget {
     }
 
     if (!context.mounted) return;
-    router.go(
+    // Dùng push() để giữ lại stack điều hướng, giúp back về trang này sau khi sửa.
+    context.push(
       AppConstants.routePostListing,
       extra: listingForEdit,
     );

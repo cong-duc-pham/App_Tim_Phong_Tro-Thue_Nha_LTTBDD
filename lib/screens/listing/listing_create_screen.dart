@@ -829,7 +829,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
       if (!isEditing && _shouldBuyPackage) {
         setState(() => _createdListingIdForVip = created.listingId);
       } else if (isEditing) {
-        _goAfterCurrentFrame(AppConstants.routeMyListings);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          context.go(AppConstants.routeMyListings);
+        });
       } else {
         _goAfterCurrentFrame(AppConstants.routeHome);
       }
@@ -1000,6 +1003,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
       return;
     }
     if (_isEditing) {
+      // Dùng pop() vì đã vào màn hình sửa bằng push()
       if (mounted) context.pop();
       return;
     }
@@ -1116,11 +1120,19 @@ class _PostListingScreenState extends State<PostListingScreen> {
     );
 
     if (picked == null || !mounted) return;
+
+    // Kiểm tra xem vị trí có thực sự thay đổi không (sai lệch > 0.00001 độ ~1m)
+    final locationChanged = _selectedLatitude == null ||
+        _selectedLongitude == null ||
+        (picked.latitude - _selectedLatitude!).abs() > 0.00001 ||
+        (picked.longitude - _selectedLongitude!).abs() > 0.00001;
+
     setState(() {
       _selectedLatitude = picked.latitude;
       _selectedLongitude = picked.longitude;
       _markDraftChanged();
     });
+    if (!locationChanged) return;
     await _fillAddressFromCoordinates(picked);
   }
 
@@ -1270,6 +1282,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
             title: _localizedStepTitles[_currentStep],
             onBack: _handleBack,
             onHelp: _showPostHelpSheet,
+            isEditing: _isEditing,
           ),
           _StepBar(current: _currentStep, total: _totalSteps),
           Expanded(
@@ -2337,12 +2350,14 @@ class _Header extends StatelessWidget {
   final String title;
   final VoidCallback onBack;
   final VoidCallback onHelp;
+  final bool isEditing;
   const _Header({
     required this.step,
     required this.total,
     required this.title,
     required this.onBack,
     required this.onHelp,
+    this.isEditing = false,
   });
 
   @override
@@ -2382,7 +2397,10 @@ class _Header extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('post_header_title'.tr,
+                  Text(
+                      isEditing
+                          ? 'post_header_edit_title'.tr
+                          : 'post_header_title'.tr,
                       style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
