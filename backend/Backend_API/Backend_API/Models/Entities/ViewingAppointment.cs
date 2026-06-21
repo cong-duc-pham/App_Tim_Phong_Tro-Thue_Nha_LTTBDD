@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Backend_API.Models.Entities;
 
@@ -26,7 +27,7 @@ public partial class ViewingAppointment
 
     public virtual Listing Listing { get; set; } = null!;
 
-    public virtual User Tenant { get; set; } = null!;
-
     public virtual User Landlord { get; set; } = null!;
+
+    public virtual User Tenant { get; set; } = null!;
 }
