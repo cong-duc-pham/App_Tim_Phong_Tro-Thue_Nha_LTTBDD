@@ -298,8 +298,8 @@ class _MyListingCard extends StatelessWidget {
     }
 
     if (!context.mounted) return;
-    // Dùng push() để giữ lại stack điều hướng, giúp back về trang này sau khi sửa.
-    context.push(
+    // Dùng go() để mở màn sửa ổn định hơn, tránh lỗi navigator khi đi từ trang cá nhân sang form đăng tin.
+    context.go(
       AppConstants.routePostListing,
       extra: listingForEdit,
     );
