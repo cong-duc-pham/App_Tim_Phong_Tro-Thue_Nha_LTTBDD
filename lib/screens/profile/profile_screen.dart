@@ -1297,9 +1297,13 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
                       size: 18,
                     ),
                     onTap: () {
+                      final rootContext = Navigator.of(context).context;
                       Navigator.pop(context);
-                      context.push(AppConstants.routeVerifyAccount).then((_) {
-                        widget.onSaved();
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!rootContext.mounted) return;
+                        rootContext
+                            .push(AppConstants.routeVerifyAccount)
+                            .then((_) => widget.onSaved());
                       });
                     },
                   ),

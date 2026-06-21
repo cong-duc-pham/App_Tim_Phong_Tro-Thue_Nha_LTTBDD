@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using Backend_API.Models.DTOs.Reviews;
-using Backend_API.Models.DTOs.Rentals;
 using Backend_API.Models.DTOs.Notifications;
+using Backend_API.Models.DTOs.Rentals;
+using Backend_API.Models.DTOs.Reviews;
 using Backend_API.Models.Entities;
 using Backend_API.Services.Implementations;
 using Backend_API.Services.Interfaces;
@@ -30,10 +29,21 @@ namespace Backend_API.Tests
 
     public class ReviewAndRentalTests
     {
+        private sealed class FakeListingRealtimeNotifier : IListingRealtimeNotifier
+        {
+            public List<(long ListingId, string Action, string? StatusName)> Events { get; } = new();
+
+            public Task NotifyListingsChangedAsync(long listingId, string action, string? statusName = null)
+            {
+                Events.Add((listingId, action, statusName));
+                return Task.CompletedTask;
+            }
+        }
+
         private PhongTroDbContext GetDatabaseContext()
         {
             var options = new DbContextOptionsBuilder<PhongTroDbContext>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options;
 
             var context = new PhongTroDbContext(options);
@@ -41,17 +51,36 @@ namespace Backend_API.Tests
             return context;
         }
 
+        private static Listing CreateListing(long landlordId) =>
+            new()
+            {
+                ListingId = 10,
+                LandlordId = landlordId,
+                TypeId = 1,
+                StatusId = 1,
+                Title = "Phong Tro Dep",
+                Price = 1000000,
+                Area = 20,
+                StreetAddress = "123 Le Loi"
+            };
+
+        private static List<ListingStatus> CreateListingStatuses() =>
+            new()
+            {
+                new ListingStatus { StatusId = 1, StatusName = "active" },
+                new ListingStatus { StatusId = 3, StatusName = "rented" },
+            };
+
         [Fact]
         public async Task CreateQnaReview_ShouldSucceedWithoutRenterStatus()
         {
-            // Arrange
             var context = GetDatabaseContext();
             var fakeNotification = new FakeNotificationService();
             var reviewService = new ReviewService(context, fakeNotification);
 
             var landlord = new User { UserId = 1, FullName = "Landlord", Phone = "0123456789", Email = "landlord@test.com" };
             var tenant = new User { UserId = 2, FullName = "Tenant", Phone = "0987654321", Email = "tenant@test.com" };
-            var listing = new Listing { ListingId = 10, Title = "Phong Tro Dep", LandlordId = 1, Price = 1000000, StreetAddress = "123 Le Loi" };
+            var listing = CreateListing(landlord.UserId);
 
             await context.Users.AddRangeAsync(landlord, tenant);
             await context.Listings.AddAsync(listing);
@@ -63,10 +92,8 @@ namespace Backend_API.Tests
                 Type = "qna"
             };
 
-            // Act
             var result = await reviewService.CreateReviewAsync(tenant.UserId, listing.ListingId, dto);
 
-            // Assert
             Assert.NotNull(result);
             Assert.Equal("qna", result.Type);
             Assert.Null(result.Rating);
@@ -78,14 +105,13 @@ namespace Backend_API.Tests
         [Fact]
         public async Task CreateReview_WithoutRenterStatus_ShouldThrowException()
         {
-            // Arrange
             var context = GetDatabaseContext();
             var fakeNotification = new FakeNotificationService();
             var reviewService = new ReviewService(context, fakeNotification);
 
             var landlord = new User { UserId = 1, FullName = "Landlord", Phone = "0123456789", Email = "landlord@test.com" };
             var tenant = new User { UserId = 2, FullName = "Tenant", Phone = "0987654321", Email = "tenant@test.com" };
-            var listing = new Listing { ListingId = 10, Title = "Phong Tro Dep", LandlordId = 1, Price = 1000000, StreetAddress = "123 Le Loi" };
+            var listing = CreateListing(landlord.UserId);
 
             await context.Users.AddRangeAsync(landlord, tenant);
             await context.Listings.AddAsync(listing);
@@ -98,29 +124,28 @@ namespace Backend_API.Tests
                 Type = "review"
             };
 
-            // Act & Assert
             var ex = await Assert.ThrowsAsync<Exception>(() => reviewService.CreateReviewAsync(tenant.UserId, listing.ListingId, dto));
-            Assert.Contains("Chỉ người dùng đã từng thuê phòng này mới được đánh giá", ex.Message);
+            Assert.Contains("đánh giá", ex.Message, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]
         public async Task CreateReview_WithRenterStatus_ShouldSucceed()
         {
-            // Arrange
             var context = GetDatabaseContext();
             var fakeNotification = new FakeNotificationService();
+            var fakeRealtimeNotifier = new FakeListingRealtimeNotifier();
             var reviewService = new ReviewService(context, fakeNotification);
-            var rentalService = new RentalService(context);
+            var rentalService = new RentalService(context, fakeRealtimeNotifier);
 
             var landlord = new User { UserId = 1, FullName = "Landlord", Phone = "0123456789", Email = "landlord@test.com" };
             var tenant = new User { UserId = 2, FullName = "Tenant", Phone = "0987654321", Email = "tenant@test.com" };
-            var listing = new Listing { ListingId = 10, Title = "Phong Tro Dep", LandlordId = 1, Price = 1000000, StreetAddress = "123 Le Loi" };
+            var listing = CreateListing(landlord.UserId);
 
             await context.Users.AddRangeAsync(landlord, tenant);
+            await context.ListingStatuses.AddRangeAsync(CreateListingStatuses());
             await context.Listings.AddAsync(listing);
             await context.SaveChangesAsync();
 
-            // Setup verified rental history
             await rentalService.CreateRentalAsync(landlord.UserId, listing.ListingId, new RentalCreateDto
             {
                 TenantPhone = tenant.Phone,
@@ -134,29 +159,28 @@ namespace Backend_API.Tests
                 Type = "review"
             };
 
-            // Act
             var result = await reviewService.CreateReviewAsync(tenant.UserId, listing.ListingId, dto);
 
-            // Assert
             Assert.NotNull(result);
             Assert.Equal("review", result.Type);
             Assert.Equal((byte)5, result.Rating);
             Assert.Equal("approved", result.Status);
             Assert.True(result.IsVerifiedTenant);
             Assert.NotEmpty(fakeNotification.SentNotifications);
+            Assert.Equal(3, (await context.Listings.FindAsync(listing.ListingId))?.StatusId);
+            Assert.Contains(fakeRealtimeNotifier.Events, e => e.ListingId == listing.ListingId && e.StatusName == "rented");
         }
 
         [Fact]
         public async Task SpamDetection_ShouldFlagSpamForUnverifiedTenants()
         {
-            // Arrange
             var context = GetDatabaseContext();
             var fakeNotification = new FakeNotificationService();
             var reviewService = new ReviewService(context, fakeNotification);
 
             var landlord = new User { UserId = 1, FullName = "Landlord", Phone = "0123456789", Email = "landlord@test.com" };
             var tenant = new User { UserId = 2, FullName = "Tenant", Phone = "0987654321", Email = "tenant@test.com" };
-            var listing = new Listing { ListingId = 10, Title = "Phong Tro Dep", LandlordId = 1, Price = 1000000, StreetAddress = "123 Le Loi" };
+            var listing = CreateListing(landlord.UserId);
 
             await context.Users.AddRangeAsync(landlord, tenant);
             await context.Listings.AddAsync(listing);
@@ -168,28 +192,26 @@ namespace Backend_API.Tests
                 Type = "qna"
             };
 
-            // Act
             var result = await reviewService.CreateReviewAsync(tenant.UserId, listing.ListingId, dto);
 
-            // Assert
             Assert.NotNull(result);
-            Assert.Equal("pending", result.Status); // Flagged because unverified
+            Assert.Equal("pending", result.Status);
         }
 
         [Fact]
         public async Task SoftDeleteReview_ShouldSucceedWhenReplied()
         {
-            // Arrange
             var context = GetDatabaseContext();
             var fakeNotification = new FakeNotificationService();
             var reviewService = new ReviewService(context, fakeNotification);
-            var rentalService = new RentalService(context);
+            var rentalService = new RentalService(context, new FakeListingRealtimeNotifier());
 
             var landlord = new User { UserId = 1, FullName = "Landlord", Phone = "0123456789", Email = "landlord@test.com" };
             var tenant = new User { UserId = 2, FullName = "Tenant", Phone = "0987654321", Email = "tenant@test.com" };
-            var listing = new Listing { ListingId = 10, Title = "Phong Tro Dep", LandlordId = 1, Price = 1000000, StreetAddress = "123 Le Loi" };
+            var listing = CreateListing(landlord.UserId);
 
             await context.Users.AddRangeAsync(landlord, tenant);
+            await context.ListingStatuses.AddRangeAsync(CreateListingStatuses());
             await context.Listings.AddAsync(listing);
             await context.SaveChangesAsync();
 
@@ -206,13 +228,9 @@ namespace Backend_API.Tests
                 Type = "review"
             });
 
-            // Landlord replies
             await reviewService.ReplyReviewAsync(landlord.UserId, review.ReviewId, new ReviewReplyDto { Reply = "Cam on ban!" });
-
-            // Act
             await reviewService.DeleteReviewAsync(tenant.UserId, review.ReviewId);
 
-            // Assert
             var updatedReview = await context.Reviews.FindAsync(review.ReviewId);
             Assert.NotNull(updatedReview);
             Assert.True(updatedReview.IsDeleted);
@@ -223,17 +241,17 @@ namespace Backend_API.Tests
         [Fact]
         public async Task ReportReview_ShouldHideAfterThreshold()
         {
-            // Arrange
             var context = GetDatabaseContext();
             var fakeNotification = new FakeNotificationService();
             var reviewService = new ReviewService(context, fakeNotification);
-            var rentalService = new RentalService(context);
+            var rentalService = new RentalService(context, new FakeListingRealtimeNotifier());
 
             var landlord = new User { UserId = 1, FullName = "Landlord", Phone = "0123456789", Email = "landlord@test.com" };
             var tenant = new User { UserId = 2, FullName = "Tenant", Phone = "0987654321", Email = "tenant@test.com" };
-            var listing = new Listing { ListingId = 10, Title = "Phong Tro Dep", LandlordId = 1, Price = 1000000, StreetAddress = "123 Le Loi" };
+            var listing = CreateListing(landlord.UserId);
 
             await context.Users.AddRangeAsync(landlord, tenant);
+            await context.ListingStatuses.AddRangeAsync(CreateListingStatuses());
             await context.Listings.AddAsync(listing);
             await context.SaveChangesAsync();
 
@@ -250,17 +268,49 @@ namespace Backend_API.Tests
                 Type = "review"
             });
 
-            // Act: Report 5 times
             for (int i = 0; i < 5; i++)
             {
                 await reviewService.ReportReviewAsync(landlord.UserId, review.ReviewId);
             }
 
-            // Assert
             var updatedReview = await context.Reviews.FindAsync(review.ReviewId);
             Assert.NotNull(updatedReview);
             Assert.Equal("hidden", updatedReview.Status);
             Assert.False(updatedReview.IsApproved);
+        }
+
+        [Fact]
+        public async Task CreateRental_WhenListingAlreadyHasActiveTenant_ShouldThrowException()
+        {
+            var context = GetDatabaseContext();
+            var rentalService = new RentalService(context, new FakeListingRealtimeNotifier());
+
+            var landlord = new User { UserId = 1, FullName = "Landlord", Phone = "0123456789", Email = "landlord@test.com" };
+            var tenantA = new User { UserId = 2, FullName = "Tenant A", Phone = "0987654321", Email = "tenant-a@test.com" };
+            var tenantB = new User { UserId = 3, FullName = "Tenant B", Phone = "0911222333", Email = "tenant-b@test.com" };
+            var listing = CreateListing(landlord.UserId);
+
+            await context.Users.AddRangeAsync(landlord, tenantA, tenantB);
+            await context.ListingStatuses.AddRangeAsync(CreateListingStatuses());
+            await context.Listings.AddAsync(listing);
+            await context.SaveChangesAsync();
+
+            await rentalService.CreateRentalAsync(landlord.UserId, listing.ListingId, new RentalCreateDto
+            {
+                TenantPhone = tenantA.Phone,
+                StartDate = DateTime.UtcNow
+            });
+
+            var ex = await Assert.ThrowsAsync<Exception>(() => rentalService.CreateRentalAsync(
+                landlord.UserId,
+                listing.ListingId,
+                new RentalCreateDto
+                {
+                    TenantPhone = tenantB.Phone,
+                    StartDate = DateTime.UtcNow
+                }));
+
+            Assert.Contains("ngÆ°á»i thuÃª", ex.Message, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

@@ -72,7 +72,7 @@ class AppConstants {
   static const String routePrivacyPolicy = '/privacy-policy';
   static const String routeProfile = '/profile';
   static const String routeListingDetail = '/listing/:id';
-  static const String routePostListing = '/listing';
+  static const String routePostListing = '/post-listing';
   static const String routeChat = '/chat';
   static const String routeAiChat = '/chat/ai';
   static const String routePackages = '/packages';

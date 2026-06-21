@@ -12,10 +12,14 @@ namespace Backend_API.Services.Implementations
     public class RentalService : IRentalService
     {
         private readonly PhongTroDbContext _context;
+        private readonly IListingRealtimeNotifier _listingRealtimeNotifier;
 
-        public RentalService(PhongTroDbContext context)
+        public RentalService(
+            PhongTroDbContext context,
+            IListingRealtimeNotifier listingRealtimeNotifier)
         {
             _context = context;
+            _listingRealtimeNotifier = listingRealtimeNotifier;
         }
 
         public async Task<RentalResponseDto> CreateRentalAsync(long landlordId, long listingId, RentalCreateDto dto)
@@ -31,6 +35,7 @@ namespace Backend_API.Services.Implementations
                 .Include(l => l.District)
                 .Include(l => l.Ward)
                 .Include(l => l.Landlord)
+                .Include(l => l.Status)
                 .FirstOrDefaultAsync(l => l.ListingId == listingId)
                 ?? throw new Exception("Không tìm thấy tin đăng.");
 
@@ -39,6 +44,14 @@ namespace Backend_API.Services.Implementations
 
             if (tenant.UserId == landlordId)
                 throw new Exception("Bạn không thể tự cho chính mình thuê phòng.");
+
+            if (string.Equals(listing.Status?.StatusName, "rented", StringComparison.OrdinalIgnoreCase))
+                throw new Exception("Tin Ä‘Äƒng nÃ y Ä‘Ã£ Ä‘Æ°á»£c Ä‘Ã¡nh dáº¥u lÃ  Ä‘Ã£ cÃ³ ngÆ°á»i thuÃª.");
+
+            bool listingAlreadyHasTenant = await _context.Rentals
+                .AnyAsync(r => r.ListingId == listingId && r.Status == "active");
+            if (listingAlreadyHasTenant)
+                throw new Exception("Tin Ä‘Äƒng nÃ y Ä‘ang cÃ³ ngÆ°á»i thuÃª hoáº¡t Ä‘á»™ng. HÃ£y káº¿t thÃºc lá»‹ch sá»­ thuÃª hiá»‡n táº¡i trÆ°á»›c.");
 
             bool alreadyRenting = await _context.Rentals
                 .AnyAsync(r => r.ListingId == listingId && r.TenantId == tenant.UserId && r.Status == "active");
@@ -58,7 +71,13 @@ namespace Backend_API.Services.Implementations
             };
 
             await _context.Rentals.AddAsync(rental);
+            listing.StatusId = await GetListingStatusIdAsync("rented");
+            listing.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
+            await _listingRealtimeNotifier.NotifyListingsChangedAsync(
+                listing.ListingId,
+                "status_changed",
+                "rented");
 
             return new RentalResponseDto
             {
@@ -152,6 +171,19 @@ namespace Backend_API.Services.Implementations
                 Status = r.Status,
                 CreatedAt = r.CreatedAt
             }).ToList();
+        }
+
+        private async Task<int> GetListingStatusIdAsync(string statusName)
+        {
+            var statusId = await _context.ListingStatuses
+                .Where(s => s.StatusName.ToLower() == statusName.ToLower())
+                .Select(s => (int?)s.StatusId)
+                .FirstOrDefaultAsync();
+
+            if (statusId == null)
+                throw new Exception($"KhÃ´ng tÃ¬m tháº¥y tráº¡ng thÃ¡i tin Ä‘Äƒng '{statusName}'.");
+
+            return statusId.Value;
         }
 
         private static string? BuildListingAddress(Listing? listing)

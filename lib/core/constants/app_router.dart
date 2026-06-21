@@ -67,7 +67,13 @@ final appRouter = GoRouter(
           },
         ),
         GoRoute(
-            path: '/listing', builder: (_, __) => const PostListingScreen()),
+          path: AppConstants.routePostListing,
+          builder: (context, state) {
+            final initialListing =
+                state.extra is Listing ? state.extra as Listing : null;
+            return PostListingScreen(initialListing: initialListing);
+          },
+        ),
         GoRoute(
             path: '/favorites', builder: (_, __) => const FavoritesScreen()),
         GoRoute(path: '/chat', builder: (_, __) => const ConversationsScreen()),
