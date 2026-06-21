@@ -11,12 +11,18 @@ class LogoutHelper {
 
   static Future<void> signOutAndGoToLogin([GoRouter? router]) async {
     try {
-      await AuthRepository().signOut();
+      await AuthRepository().signOut().timeout(const Duration(seconds: 8));
     } catch (e, stackTrace) {
       debugPrint('Logout failed: $e');
       debugPrintStack(stackTrace: stackTrace);
     } finally {
-      await ChatUnreadService.stopAndClear();
+      try {
+        await ChatUnreadService.stopAndClear().timeout(
+          const Duration(seconds: 4),
+        );
+      } catch (e) {
+        debugPrint('Chat cleanup during logout skipped: $e');
+      }
       final stableContext = rootNavigatorKey.currentContext;
       if (stableContext != null && stableContext.mounted) {
         GoRouter.of(stableContext).go(AppConstants.routeLogin);

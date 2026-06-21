@@ -28,13 +28,14 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _textCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   final bool _isTyping = false;
-  final bool _isSending = false;
+  bool _isSending = false;
   String? _errorMessage;
   bool _showListingHeader = true;
   int _currentUserId = 999; // Lấy từ SharedPreferences hoặc fallback 999
   int? _listingLandlordId;
   double? _listingPrice;
   double? _listingArea;
+  bool _isListingRented = false;
   bool _isConnected = true;
   bool _isLoading = true;
   final _messageRepo = MessageRepository();
@@ -64,6 +65,8 @@ class _ChatScreenState extends State<ChatScreen> {
             _listingLandlordId = listing.landlordId;
             _listingPrice = listing.price;
             _listingArea = listing.area;
+            _isListingRented =
+                listing.statusName.toLowerCase().trim() == 'rented';
           });
         }
       } catch (_) {}
@@ -134,11 +137,7 @@ class _ChatScreenState extends State<ChatScreen> {
         onMessageReceived: (msg) {
           if (msg.convId == widget.conversation.convId) {
             if (!mounted) return;
-            setState(() {
-              if (!_messages.any((m) => m.messageId == msg.messageId)) {
-                _messages.add(msg);
-              }
-            });
+            setState(() => _upsertMessage(msg));
             _scrollToBottom();
             _messageRepo.markAsRead(widget.conversation.convId);
           }
@@ -146,18 +145,7 @@ class _ChatScreenState extends State<ChatScreen> {
         onMessageSentConfirm: (msg) {
           if (msg.convId == widget.conversation.convId) {
             if (!mounted) return;
-            setState(() {
-              final index = _messages.indexWhere((m) =>
-                  m.messageId == msg.messageId ||
-                  (m.senderId == _currentUserId &&
-                      m.content == msg.content &&
-                      m.messageId > 900000000000));
-              if (index != -1) {
-                _messages[index] = msg;
-              } else {
-                _messages.add(msg);
-              }
-            });
+            setState(() => _upsertMessage(msg, replacePending: true));
             _scrollToBottom();
           }
         },
@@ -184,6 +172,50 @@ class _ChatScreenState extends State<ChatScreen> {
     return message.startsWith('Exception: ')
         ? message.substring('Exception: '.length)
         : message;
+  }
+
+  bool _isPendingLocalMessage(Message message) {
+    return message.senderId == _currentUserId &&
+        message.messageId > 900000000000;
+  }
+
+  bool _sameMessagePayload(Message a, Message b) {
+    return a.convId == b.convId &&
+        a.senderId == b.senderId &&
+        a.msgType == b.msgType &&
+        a.fileUrl == b.fileUrl &&
+        a.content == b.content;
+  }
+
+  void _upsertMessage(Message msg, {bool replacePending = false}) {
+    final existingIndex =
+        _messages.indexWhere((message) => message.messageId == msg.messageId);
+    if (existingIndex != -1) {
+      _messages[existingIndex] = msg;
+      return;
+    }
+
+    final duplicateIndex =
+        _messages.indexWhere((message) => _sameMessagePayload(message, msg));
+    if (duplicateIndex != -1) {
+      _messages[duplicateIndex] = msg;
+      return;
+    }
+
+    if (replacePending && msg.senderId == _currentUserId) {
+      final pendingIndex = _messages.lastIndexWhere((message) =>
+          _isPendingLocalMessage(message) &&
+          message.convId == msg.convId &&
+          message.msgType == msg.msgType &&
+          message.fileUrl == msg.fileUrl);
+      if (pendingIndex != -1) {
+        _messages[pendingIndex] = msg;
+        return;
+      }
+    }
+
+    _messages.add(msg);
+    _messages.sort((a, b) => a.sentAt.compareTo(b.sentAt));
   }
 
   void _loadMockMessages() {
@@ -265,6 +297,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (text.isEmpty || _isSending) return;
 
     _textCtrl.clear();
+    setState(() => _isSending = true);
     final tempId = DateTime.now().millisecondsSinceEpoch;
     final tempMessage = Message(
       messageId: tempId,
@@ -289,8 +322,11 @@ class _ChatScreenState extends State<ChatScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      final stillPending =
+          _messages.any((message) => message.messageId == tempId);
+      if (!stillPending) return;
       setState(() {
-        _messages.remove(tempMessage);
+        _messages.removeWhere((message) => message.messageId == tempId);
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -301,6 +337,7 @@ class _ChatScreenState extends State<ChatScreen> {
             textColor: Colors.white,
             onPressed: () {
               setState(() {
+                _isSending = true;
                 _messages.add(tempMessage);
               });
               _scrollToBottom();
@@ -311,8 +348,12 @@ class _ChatScreenState extends State<ChatScreen> {
               )
                   .catchError((err) {
                 if (mounted) {
+                  final retryStillPending =
+                      _messages.any((message) => message.messageId == tempId);
+                  if (!retryStillPending) return;
                   setState(() {
-                    _messages.remove(tempMessage);
+                    _messages
+                        .removeWhere((message) => message.messageId == tempId);
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -321,11 +362,15 @@ class _ChatScreenState extends State<ChatScreen> {
                             .replaceAll('{error}', _cleanError(err)))),
                   );
                 }
+              }).whenComplete(() {
+                if (mounted) setState(() => _isSending = false);
               });
             },
           ),
         ),
       );
+    } finally {
+      if (mounted) setState(() => _isSending = false);
     }
   }
 
@@ -369,16 +414,24 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _confirmRentalAction() async {
+    final otherUserName = widget.conversation.otherUserName.split(" (").first;
+    final isEndingRental = _isListingRented;
+    final title = isEndingRental ? 'Xác nhận hết thuê' : 'Xác nhận cho thuê';
+    final content = isEndingRental
+        ? 'Xác nhận rằng $otherUserName đã hết thuê phòng trọ này? Tin đăng sẽ được mở lại.'
+        : 'Xác nhận rằng bạn đã cho $otherUserName thuê phòng trọ này?';
+    final successMessage = isEndingRental
+        ? 'Đã xác nhận hết thuê. Tin đăng đã được mở lại.'
+        : 'Đã xác nhận cho thuê thành công! Người thuê hiện đã có quyền đánh giá phòng trọ này.';
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: context.profileCard,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppConstants.radiusLg)),
-        title: const Text('Xác nhận cho thuê',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-        content: Text(
-            'Xác nhận rằng bạn đã cho ${_messages.isNotEmpty ? widget.conversation.otherUserName.split(" (").first : "người dùng này"} thuê phòng trọ này?',
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+        content: Text(content,
             style: TextStyle(color: context.profileTextSecondary)),
         actions: [
           TextButton(
@@ -401,12 +454,16 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final repo = ConversationRepository();
-      await repo.confirmRental(widget.conversation.convId);
+      if (isEndingRental) {
+        await repo.endRental(widget.conversation.convId);
+      } else {
+        await repo.confirmRental(widget.conversation.convId);
+      }
       if (!mounted) return;
+      setState(() => _isListingRented = !isEndingRental);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Đã xác nhận cho thuê thành công! Người thuê hiện đã có quyền đánh giá phòng trọ này.'),
+        SnackBar(
+          content: Text(successMessage),
           backgroundColor: AppColors.success,
         ),
       );
@@ -770,9 +827,11 @@ class _ChatScreenState extends State<ChatScreen> {
                       borderRadius:
                           BorderRadius.circular(AppConstants.radiusMd),
                     ),
-                    child: const Text(
-                      'Xác nhận đã thuê',
-                      style: TextStyle(
+                    child: Text(
+                      _isListingRented
+                          ? 'Xác nhận hết thuê'
+                          : 'Xác nhận đã thuê',
+                      style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,

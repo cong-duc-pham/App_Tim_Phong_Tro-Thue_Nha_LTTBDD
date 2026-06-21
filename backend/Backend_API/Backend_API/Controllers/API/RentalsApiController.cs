@@ -120,6 +120,31 @@ namespace Backend_API.Controllers.API
             }
         }
 
+        /// <summary>
+        /// Chủ nhà xác nhận người thuê đã hết thuê trọ trực tiếp từ phòng chat.
+        /// </summary>
+        [Authorize]
+        [HttpPost("api/rentals/end-from-chat/{convId:long}")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> EndRentalFromChat(long convId)
+        {
+            try
+            {
+                long landlordId = GetCurrentUserId();
+                var result = await _rentalService.EndRentalFromChatAsync(landlordId, convId);
+                return Ok(new { success = true, data = result });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { success = false, message = "Chưa đăng nhập." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
         private long GetCurrentUserId()
         {
             var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);

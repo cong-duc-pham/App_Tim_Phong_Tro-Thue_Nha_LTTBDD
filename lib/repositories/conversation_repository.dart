@@ -54,7 +54,7 @@ class ConversationRepository {
       final data =
           (response.data ?? {})['data'] ?? (response.data ?? {})['Data'];
       if (data is! Map) {
-        throw Exception('Backend khÃ´ng tráº£ vá» há»™i thoáº¡i.');
+        throw Exception('Backend không trả về hội thoại.');
       }
 
       return Conversation.fromJson(Map<String, dynamic>.from(data));
@@ -141,6 +141,25 @@ class ConversationRepository {
       );
       return Map<String, dynamic>.from(response.data ?? {});
     } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
+  Future<Map<String, dynamic>> endRental(int conversationId) async {
+    try {
+      final response = await _authorizedRequest<Map<String, dynamic>>(
+        (accessToken) => _apiService.dio.post<Map<String, dynamic>>(
+          '/rentals/end-from-chat/$conversationId',
+          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+        ),
+      );
+      return Map<String, dynamic>.from(response.data ?? {});
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        throw Exception(
+          'Backend đang chạy chưa có API xác nhận hết thuê. Vui lòng restart/deploy backend rồi thử lại.',
+        );
+      }
       throw Exception(_readBackendMessage(e));
     }
   }
@@ -267,6 +286,9 @@ class ConversationRepository {
     }
     if (data is String && data.trim().isNotEmpty) {
       return data;
+    }
+    if (e.response?.statusCode == 404) {
+      return 'Không tìm thấy API trên backend đang chạy.';
     }
     return e.message ?? 'Không kết nối được backend.';
   }
