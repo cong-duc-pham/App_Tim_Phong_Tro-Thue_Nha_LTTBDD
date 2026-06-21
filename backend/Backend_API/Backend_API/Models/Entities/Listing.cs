@@ -81,6 +81,12 @@ public partial class Listing
 
     public DateTime? UpdatedAt { get; set; }
 
+    public int TotalRatingSum { get; set; }
+
+    public int ReviewCount { get; set; }
+
+    public double AverageRating { get; set; }
+
     public virtual ICollection<Banner> Banners { get; set; } = new List<Banner>();
 
     public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();

@@ -310,6 +310,8 @@ builder.Services.AddScoped<IReviewService, ReviewService>();
 
 builder.Services.AddScoped<IRentalService, RentalService>();
 
+builder.Services.AddScoped<IViewingAppointmentService, ViewingAppointmentService>();
+
 
 builder.Services.AddScoped<IPreferenceService, PreferenceService>();
 

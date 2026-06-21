@@ -15,7 +15,9 @@ import '../../core/constants/app_constants.dart';
 import '../../models/post_package.dart';
 import '../../models/amenity.dart';
 import '../../models/listing.dart';
+import '../../models/location_option.dart';
 import '../../repositories/listing_repository.dart';
+import '../../repositories/location_repository.dart';
 import '../../repositories/package_repository.dart';
 import '../../screens/payment/package_screen.dart';
 import '../../services/post_listing_draft_service.dart';
@@ -92,6 +94,7 @@ class PostListingScreen extends StatefulWidget {
 
 class _PostListingScreenState extends State<PostListingScreen> {
   final ListingRepository _listingRepository = ListingRepository();
+  final LocationRepository _locationRepository = LocationRepository();
   final PackageRepository _packageRepository = PackageRepository();
   final ImagePicker _imagePicker = ImagePicker();
   int _currentStep = 0;
@@ -134,6 +137,13 @@ class _PostListingScreenState extends State<PostListingScreen> {
   String? _selectedProvince;
   String? _selectedDistrict;
   String? _selectedWard;
+  int? _selectedProvinceId;
+  int? _selectedDistrictId;
+  int? _selectedWardId;
+  List<LocationOption> _provinceOptions = [];
+  List<LocationOption> _districtOptions = [];
+  List<LocationOption> _wardOptions = [];
+  bool _isLoadingLocations = false;
   double? _selectedLatitude;
   double? _selectedLongitude;
   bool _isResolvingAddress = false;
@@ -212,9 +222,160 @@ class _PostListingScreenState extends State<PostListingScreen> {
     }
     if (_isEditing && widget.initialListing != null) {
       _applyInitialListing(widget.initialListing!);
+      _loadLocations();
     } else {
-      _loadDraftFromDisk();
+      _loadDraftThenLocations();
     }
+  }
+
+  Future<void> _loadDraftThenLocations() async {
+    await _loadDraftFromDisk();
+    await _loadLocations();
+  }
+
+  Future<void> _loadLocations() async {
+    setState(() => _isLoadingLocations = true);
+    try {
+      final options = await _locationRepository.getProvinces();
+      if (!mounted) return;
+      final selected = _findLocationByIdOrName(
+        options,
+        _selectedProvinceId,
+        _selectedProvince,
+      );
+      setState(() {
+        _provinceOptions = options;
+        _provinces
+          ..clear()
+          ..addAll(options.map((item) => item.name));
+        _selectedProvinceId = selected?.id;
+        _selectedProvince = selected?.name ?? _selectedProvince;
+      });
+      if (_selectedProvinceId != null) {
+        await _loadDistricts(_selectedProvinceId!, preserveSelection: true);
+      }
+    } catch (e) {
+      debugPrint('Could not load provinces: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingLocations = false);
+    }
+  }
+
+  Future<void> _loadDistricts(
+    int provinceId, {
+    bool preserveSelection = false,
+  }) async {
+    try {
+      final options = await _locationRepository.getDistricts(provinceId);
+      if (!mounted || _selectedProvinceId != provinceId) return;
+      final selected = preserveSelection
+          ? _findLocationByIdOrName(
+              options,
+              _selectedDistrictId,
+              _selectedDistrict,
+            )
+          : null;
+      setState(() {
+        _districtOptions = options;
+        _districts
+          ..clear()
+          ..addAll(options.map((item) => item.name));
+        _selectedDistrictId = selected?.id;
+        _selectedDistrict = selected?.name;
+        _wardOptions = [];
+        _wards.clear();
+        _selectedWardId = null;
+        if (!preserveSelection) _selectedWard = null;
+      });
+      if (_selectedDistrictId != null) {
+        await _loadWards(_selectedDistrictId!, preserveSelection: true);
+      }
+    } catch (e) {
+      debugPrint('Could not load districts: $e');
+    }
+  }
+
+  Future<void> _loadWards(
+    int districtId, {
+    bool preserveSelection = false,
+  }) async {
+    try {
+      final options = await _locationRepository.getWards(districtId);
+      if (!mounted || _selectedDistrictId != districtId) return;
+      final selected = preserveSelection
+          ? _findLocationByIdOrName(options, _selectedWardId, _selectedWard)
+          : null;
+      setState(() {
+        _wardOptions = options;
+        _wards
+          ..clear()
+          ..addAll(options.map((item) => item.name));
+        _selectedWardId = selected?.id;
+        _selectedWard = selected?.name;
+      });
+    } catch (e) {
+      debugPrint('Could not load wards: $e');
+    }
+  }
+
+  LocationOption? _findLocationByIdOrName(
+    List<LocationOption> options,
+    int? id,
+    String? name,
+  ) {
+    for (final option in options) {
+      if (id != null && option.id == id) return option;
+    }
+    final target = name?.trim();
+    if (target == null || target.isEmpty) return null;
+    for (final option in options) {
+      if (_addressKey(option.name) == _addressKey(target)) return option;
+    }
+    return null;
+  }
+
+  Future<void> _selectProvince(String? name) async {
+    final province = _findLocationByIdOrName(_provinceOptions, null, name);
+    if (province == null) return;
+    setState(() {
+      _selectedProvinceId = province.id;
+      _selectedProvince = province.name;
+      _selectedDistrictId = null;
+      _selectedDistrict = null;
+      _selectedWardId = null;
+      _selectedWard = null;
+      _districtOptions = [];
+      _districts.clear();
+      _wardOptions = [];
+      _wards.clear();
+      _markDraftChanged();
+    });
+    await _loadDistricts(province.id);
+  }
+
+  Future<void> _selectDistrict(String? name) async {
+    final district = _findLocationByIdOrName(_districtOptions, null, name);
+    if (district == null) return;
+    setState(() {
+      _selectedDistrictId = district.id;
+      _selectedDistrict = district.name;
+      _selectedWardId = null;
+      _selectedWard = null;
+      _wardOptions = [];
+      _wards.clear();
+      _markDraftChanged();
+    });
+    await _loadWards(district.id);
+  }
+
+  void _selectWard(String? name) {
+    final ward = _findLocationByIdOrName(_wardOptions, null, name);
+    if (ward == null) return;
+    setState(() {
+      _selectedWardId = ward.id;
+      _selectedWard = ward.name;
+      _markDraftChanged();
+    });
   }
 
   Future<void> _loadAmenities() async {
@@ -300,6 +461,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
       'selectedProvince': _selectedProvince,
       'selectedDistrict': _selectedDistrict,
       'selectedWard': _selectedWard,
+      'selectedProvinceId': _selectedProvinceId,
+      'selectedDistrictId': _selectedDistrictId,
+      'selectedWardId': _selectedWardId,
       'selectedLatitude': _selectedLatitude,
       'selectedLongitude': _selectedLongitude,
       'imagePaths': _slots.map((s) => s.file?.path ?? '').toList(),
@@ -341,6 +505,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
       _selectedProvince = data['selectedProvince'];
       _selectedDistrict = data['selectedDistrict'];
       _selectedWard = data['selectedWard'];
+      _selectedProvinceId = _asInt(data['selectedProvinceId']);
+      _selectedDistrictId = _asInt(data['selectedDistrictId']);
+      _selectedWardId = _asInt(data['selectedWardId']);
       _selectedLatitude = data['selectedLatitude'];
       _selectedLongitude = data['selectedLongitude'];
 
@@ -404,10 +571,12 @@ class _PostListingScreenState extends State<PostListingScreen> {
     _availableFrom = listing.availableFrom;
     // Tin cũ có thể dùng địa danh không nằm trong bộ lựa chọn mẫu.
     // Giữ lại và thêm nó vào dropdown để form không làm mất địa chỉ khi sửa.
-    _selectedProvince =
-        _putAndSelect(_provinces, _normalizeProvince(listing.provinceName));
-    _selectedDistrict = _putAndSelect(_districts, listing.districtName);
-    _selectedWard = _putAndSelect(_wards, listing.wardName);
+    _selectedProvince = _normalizeProvince(listing.provinceName);
+    _selectedDistrict = listing.districtName;
+    _selectedWard = listing.wardName;
+    _selectedProvinceId = listing.provinceId;
+    _selectedDistrictId = listing.districtId;
+    _selectedWardId = listing.wardId;
     _selectedLatitude = listing.latitude;
     _selectedLongitude = listing.longitude;
     _slots[0].networkUrl = listing.image0;
@@ -829,7 +998,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
       if (!isEditing && _shouldBuyPackage) {
         setState(() => _createdListingIdForVip = created.listingId);
       } else if (isEditing) {
-        _goAfterCurrentFrame(AppConstants.routeMyListings);
+        if (mounted) {
+          context.go(AppConstants.routeMyListings);
+        }
       } else {
         _goAfterCurrentFrame(AppConstants.routeHome);
       }
@@ -932,9 +1103,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
         }
         return null;
       case 2:
-        if (_selectedProvince == null) return 'post_validation_province'.tr;
-        if (_selectedDistrict == null) return 'post_validation_district'.tr;
-        if (_selectedWard == null) return 'post_validation_ward'.tr;
+        if (_selectedProvinceId == null) return 'post_validation_province'.tr;
+        if (_selectedDistrictId == null) return 'post_validation_district'.tr;
+        if (_selectedWardId == null) return 'post_validation_ward'.tr;
         if (_streetCtrl.text.trim().isEmpty) {
           return 'post_validation_street'.tr;
         }
@@ -1000,7 +1171,8 @@ class _PostListingScreenState extends State<PostListingScreen> {
       return;
     }
     if (_isEditing) {
-      if (mounted) context.pop();
+      // Dùng pop() vì đã vào màn hình sửa bằng push()
+      if (mounted) context.go(AppConstants.routeMyListings);
       return;
     }
     final router = GoRouter.of(context);
@@ -1018,9 +1190,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
       'area': _parseDecimal(_areaCtrl.text)!,
       'typeId': _selectedType!.id,
       'streetAddress': _fullStreetAddress(),
-      'provinceId': null,
-      'districtId': null,
-      'wardId': null,
+      'provinceId': _selectedProvinceId,
+      'districtId': _selectedDistrictId,
+      'wardId': _selectedWardId,
       'latitude': _selectedLatitude,
       'longitude': _selectedLongitude,
       'floor': _parseInt(_floorCtrl.text),
@@ -1116,11 +1288,19 @@ class _PostListingScreenState extends State<PostListingScreen> {
     );
 
     if (picked == null || !mounted) return;
+
+    // Kiểm tra xem vị trí có thực sự thay đổi không (sai lệch > 0.00001 độ ~1m)
+    final locationChanged = _selectedLatitude == null ||
+        _selectedLongitude == null ||
+        (picked.latitude - _selectedLatitude!).abs() > 0.00001 ||
+        (picked.longitude - _selectedLongitude!).abs() > 0.00001;
+
     setState(() {
       _selectedLatitude = picked.latitude;
       _selectedLongitude = picked.longitude;
       _markDraftChanged();
     });
+    if (!locationChanged) return;
     await _fillAddressFromCoordinates(picked);
   }
 
@@ -1169,12 +1349,16 @@ class _PostListingScreenState extends State<PostListingScreen> {
 
       if (!mounted) return;
       setState(() {
-        _selectedProvince = _putAndSelect(_provinces, province);
-        _selectedDistrict = _putAndSelect(_districts, district);
-        _selectedWard = _putAndSelect(_wards, ward);
+        _selectedProvince = province;
+        _selectedDistrict = district;
+        _selectedWard = ward;
+        _selectedProvinceId = null;
+        _selectedDistrictId = null;
+        _selectedWardId = null;
         if (street.isNotEmpty) _streetCtrl.text = street;
         _markDraftChanged();
       });
+      _loadLocations();
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1188,25 +1372,17 @@ class _PostListingScreenState extends State<PostListingScreen> {
     }
   }
 
-  String? _putAndSelect(List<String> items, String? value) {
-    final normalized = value?.trim();
-    if (normalized == null || normalized.isEmpty) return null;
-
-    final existing = items.where(
-      (item) => _addressKey(item) == _addressKey(normalized),
-    );
-    if (existing.isNotEmpty) return existing.first;
-
-    items.add(normalized);
-    return normalized;
-  }
-
   String? _firstNonEmpty(List<dynamic> values) {
     for (final value in values) {
       final text = value?.toString().trim();
       if (text != null && text.isNotEmpty) return text;
     }
     return null;
+  }
+
+  int? _asInt(dynamic value) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
   }
 
   String _normalizeProvince(String? value) {
@@ -1270,6 +1446,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
             title: _localizedStepTitles[_currentStep],
             onBack: _handleBack,
             onHelp: _showPostHelpSheet,
+            isEditing: _isEditing,
           ),
           _StepBar(current: _currentStep, total: _totalSteps),
           Expanded(
@@ -1726,35 +1903,23 @@ class _PostListingScreenState extends State<PostListingScreen> {
               label: 'post_province_label'.tr,
               value: _selectedProvince,
               items: _provinces,
-              onChanged: (v) => setState(() {
-                _selectedProvince = v;
-                _selectedDistrict = null;
-                _selectedWard = null;
-                _markDraftChanged();
-              }),
+              onChanged: _isLoadingLocations ? null : _selectProvince,
             ),
             const SizedBox(height: 14),
             _DropdownField(
               label: 'post_district_label'.tr,
               value: _selectedDistrict,
               items: _districts,
-              enabled: _selectedProvince != null,
-              onChanged: (v) => setState(() {
-                _selectedDistrict = v;
-                _selectedWard = null;
-                _markDraftChanged();
-              }),
+              enabled: _selectedProvinceId != null && !_isLoadingLocations,
+              onChanged: _selectDistrict,
             ),
             const SizedBox(height: 14),
             _DropdownField(
               label: 'post_ward_label'.tr,
               value: _selectedWard,
               items: _wards,
-              enabled: _selectedDistrict != null,
-              onChanged: (v) => setState(() {
-                _selectedWard = v;
-                _markDraftChanged();
-              }),
+              enabled: _selectedDistrictId != null && !_isLoadingLocations,
+              onChanged: _selectWard,
             ),
             const SizedBox(height: 14),
             _InputField(
@@ -2337,12 +2502,14 @@ class _Header extends StatelessWidget {
   final String title;
   final VoidCallback onBack;
   final VoidCallback onHelp;
+  final bool isEditing;
   const _Header({
     required this.step,
     required this.total,
     required this.title,
     required this.onBack,
     required this.onHelp,
+    this.isEditing = false,
   });
 
   @override
@@ -2382,7 +2549,10 @@ class _Header extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('post_header_title'.tr,
+                  Text(
+                      isEditing
+                          ? 'post_header_edit_title'.tr
+                          : 'post_header_title'.tr,
                       style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -2783,7 +2953,7 @@ class _DropdownField extends StatelessWidget {
   final String label;
   final String? value;
   final List<String> items;
-  final ValueChanged<String?> onChanged;
+  final ValueChanged<String?>? onChanged;
   final bool enabled;
 
   const _DropdownField({
@@ -2806,7 +2976,7 @@ class _DropdownField extends StatelessWidget {
                 color: context.profileText.withValues(alpha: 0.7))),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          initialValue: value,
+          initialValue: items.contains(value) ? value : null,
           onChanged: enabled ? onChanged : null,
           dropdownColor: context.profileCard,
           hint: Text('post_select_field'.tr.replaceAll('{field}', label),
