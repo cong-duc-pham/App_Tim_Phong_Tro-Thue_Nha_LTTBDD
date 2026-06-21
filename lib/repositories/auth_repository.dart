@@ -297,15 +297,21 @@ class AuthRepository {
 
   Future<void> signOut() async {
     try {
-      await GoogleSignIn.instance.signOut();
-    } catch (_) {}
+      await GoogleSignIn.instance.signOut().timeout(const Duration(seconds: 3));
+    } catch (e) {
+      debugPrint('Google sign-out skipped: $e');
+    }
 
     try {
-      await FacebookAuth.instance.logOut();
-    } catch (_) {}
+      await FacebookAuth.instance.logOut().timeout(const Duration(seconds: 3));
+    } catch (e) {
+      debugPrint('Facebook sign-out skipped: $e');
+    }
 
     try {
-      await _auth.signOut();
+      await _auth.signOut().timeout(const Duration(seconds: 3));
+    } catch (e) {
+      debugPrint('Firebase sign-out skipped: $e');
     } finally {
       await clearBackendSession();
     }

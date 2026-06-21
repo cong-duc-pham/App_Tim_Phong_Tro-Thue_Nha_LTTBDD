@@ -240,7 +240,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   String _localizedDescription(Listing listing) {
     final raw = listing.description?.trim();
     if (!_isEnglish) {
-      return raw ?? 'KhÃ´ng cÃ³ mÃ´ táº£ chi tiáº¿t cho phÃ²ng trá» nÃ y.';
+      return raw ?? 'Không có mô tả chi tiết cho phòng trọ này.';
     }
     if (raw == null || raw.isEmpty) {
       return 'No detailed description is available for this listing.';

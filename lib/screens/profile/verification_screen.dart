@@ -22,7 +22,7 @@ class AccountVerificationScreen extends StatefulWidget {
 class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
   bool _isLoading = true;
 
-  // TrÃ¡ÂºÂ¡ng thÃƒÂ¡i xÃƒÂ¡c thÃ¡Â»Â±c cÃƒÂ¡c cÃ¡Â»â€¢ng
+  // Trạng thái xác thực các cổng
   bool _emailVerified = false;
   String _emailAddress = '';
 
@@ -30,7 +30,6 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
   String _phoneNumber = '';
 
   bool _googleLinked = false;
-  String _googleEmail = '';
 
   bool _facebookLinked = false;
   String _facebookName = '';
@@ -74,7 +73,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     }
   }
 
-  // TÃƒÂ­nh toÃƒÂ¡n mÃ¡Â»Â©c Ã„â€˜Ã¡Â»â„¢ tin cÃ¡ÂºÂ­y Ã„â€˜Ã¡Â»â„¢ng (Trust Level)
+  // Tính toán mức độ tin cậy động (Trust Level)
   double get _trustScore {
     double score = 0;
     if (_emailVerified) score += 0.35;
@@ -120,13 +119,13 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     );
   }
 
-  // GiÃ¡ÂºÂ£ lÃ¡ÂºÂ­p liÃƒÂªn kÃ¡ÂºÂ¿t Facebook
+  // Giả lập liên kết Facebook
   Future<void> _toggleFacebook() async {
     HapticFeedback.lightImpact();
     final prefs = await SharedPreferences.getInstance();
 
     if (_facebookLinked) {
-      // HÃ¡Â»Â§y liÃƒÂªn kÃ¡ÂºÂ¿t
+      // Hủy liên kết
       final confirm = await _showConfirmDialog(
         title: 'verify_confirm_unlink_facebook_title'.tr,
         content: 'verify_confirm_unlink_facebook_desc'.tr,
@@ -141,12 +140,11 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
         HapticFeedback.mediumImpact();
       }
     } else {
-      // LiÃƒÂªn kÃ¡ÂºÂ¿t mÃ¡Â»â€ºi
+      // Liên kết mới
       setState(() => _isLoading = true);
       await Future.delayed(const Duration(seconds: 1500));
       await prefs.setBool('link_facebook_status', true);
-      await prefs.setString(
-          'link_facebook_name', 'Ã„ÂÃ¡Â»Â©c PhÃ¡ÂºÂ¡m (Facebook)');
+      await prefs.setString('link_facebook_name', 'Đức Phạm (Facebook)');
 
       final nextScore = _trustScore + 0.25;
       await prefs.setBool('verify_account_main_status', nextScore >= 1.0);
@@ -157,7 +155,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
     }
   }
 
-  // MÃ¡Â»Å¸ Bottom Sheet xÃƒÂ¡c thÃ¡Â»Â±c sÃ¡Â»â€˜ Ã„â€˜iÃ¡Â»â€¡n thoÃ¡ÂºÂ¡i
+  // Mở Bottom Sheet xác thực số điện thoại
   void _openPhoneVerificationSheet() {
     HapticFeedback.lightImpact();
     final rootContext = context;
@@ -586,7 +584,7 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
   }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Bottom Sheet xÃƒÂ¡c thÃ¡Â»Â±c sÃ¡Â»â€˜ Ã„â€˜iÃ¡Â»â€¡n thoÃ¡ÂºÂ¡i & OTP Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── Bottom Sheet xác thực số điện thoại & OTP ─────────────────────────────
 class _PhoneVerificationSheet extends StatefulWidget {
   final Function(String) onSuccess;
   const _PhoneVerificationSheet({required this.onSuccess});
@@ -1077,7 +1075,7 @@ class _InlineOtpMessage extends StatelessWidget {
   }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Bottom Sheet xÃƒÂ¡c thÃ¡Â»Â±c email & OTP Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ─── Bottom Sheet xác thực email & OTP ─────────────────────────────
 class _EmailVerificationSheet extends StatefulWidget {
   final Function(String) onSuccess;
   const _EmailVerificationSheet({required this.onSuccess});
@@ -1149,7 +1147,7 @@ class _EmailVerificationSheetState extends State<_EmailVerificationSheet> {
         _isVerifying = false;
       });
       _startTimer();
-      // TÃ¡Â»Â± Ã„â€˜Ã¡Â»â„¢ng focus ÃƒÂ´ OTP Ã„â€˜Ã¡ÂºÂ§u tiÃƒÂªn sau khi chuyÃ¡Â»Æ’n giao diÃ¡Â»â€¡n
+      // Tự động focus ô OTP đầu tiên sau khi chuyển giao diện
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) _otpFocuses[0].requestFocus();
       });

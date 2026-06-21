@@ -233,8 +233,13 @@ class MessageRepository extends BaseRepository {
   /// Ngắt kết nối SignalR Hub.
   Future<void> disconnectFromChatHub() async {
     if (_hubConnection != null) {
-      await _hubConnection!.stop();
+      final connection = _hubConnection;
       _hubConnection = null;
+      try {
+        await connection!.stop().timeout(const Duration(seconds: 3));
+      } catch (_) {
+        // Logging out should not be blocked by a stuck realtime connection.
+      }
     }
   }
 

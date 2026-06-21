@@ -10,6 +10,7 @@ namespace Backend_API.Services.Interfaces
         Task<List<RentalResponseDto>> GetMyTenantsAsync(long landlordId);
         Task<List<RentalResponseDto>> GetMyRentedRoomsAsync(long tenantId);
         Task<RentalResponseDto> ConfirmRentalFromChatAsync(long landlordId, long convId);
+        Task<RentalResponseDto> EndRentalFromChatAsync(long landlordId, long convId);
         Task EnsureRentalsAndUpgradeReviewsTableAsync();
     }
 }

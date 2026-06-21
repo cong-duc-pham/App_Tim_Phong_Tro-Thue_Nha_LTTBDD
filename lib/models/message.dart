@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../core/utils/url_helper.dart';
 
 class Message {
@@ -45,7 +47,7 @@ class Message {
       messageId: integer('messageId', 'MessageId'),
       convId: integer('convId', 'ConvId'),
       senderId: integer('senderId', 'SenderId'),
-      content: read<String>('content', 'Content') ?? '',
+      content: _repairMojibake(read<String>('content', 'Content') ?? ''),
       msgType: read<String>('msgType', 'MsgType') ?? 'text',
       fileUrl: UrlHelper.sanitizeUrl(read<String>('fileUrl', 'FileUrl')),
       isRead: boolean('isRead', 'IsRead'),
@@ -53,6 +55,24 @@ class Message {
           ? DateTime.now()
           : DateTime.tryParse(sentAtRaw.toString()) ?? DateTime.now(),
     );
+  }
+
+  static String _repairMojibake(String value) {
+    if (value.isEmpty) return value;
+    final looksBroken = value.contains('Ã') ||
+        value.contains('Ä') ||
+        value.contains('Æ') ||
+        value.contains('áº') ||
+        value.contains('á»') ||
+        value.contains('Â');
+    if (!looksBroken) return value;
+
+    try {
+      final repaired = utf8.decode(latin1.encode(value));
+      return repaired.contains('�') ? value : repaired;
+    } catch (_) {
+      return value;
+    }
   }
 
   Map<String, dynamic> toJson() {

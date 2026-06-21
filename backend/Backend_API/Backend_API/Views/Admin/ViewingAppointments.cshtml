@@ -3,18 +3,18 @@
     ViewData["Title"] = "Theo dõi lịch xem phòng";
     var statuses = new[]
     {
-        ("", "Táº¥t cáº£"),
-        ("pending", "Äang chá»"),
-        ("confirmed", "ÄÃ£ xÃ¡c nháº­n"),
-        ("declined", "Tá»« chá»‘i"),
-        ("cancelled", "ÄÃ£ há»§y")
+        ("", "Tất cả"),
+        ("pending", "Đang chờ"),
+        ("confirmed", "Đã xác nhận"),
+        ("declined", "Từ chối"),
+        ("cancelled", "Đã hủy")
     };
     string StatusLabel(string status) => status switch
     {
-        "confirmed" => "ÄÃ£ xÃ¡c nháº­n",
-        "declined" => "Tá»« chá»‘i",
-        "cancelled" => "ÄÃ£ há»§y",
-        _ => "Äang chá»"
+        "confirmed" => "Đã xác nhận",
+        "declined" => "Từ chối",
+        "cancelled" => "Đã hủy",
+        _ => "Đang chờ"
     };
     string StatusClass(string status) => status switch
     {
@@ -30,13 +30,13 @@
         <h2 class="h5 mb-1">Theo dõi lịch xem phòng</h2>
         <p class="text-muted mb-0">Admin chỉ theo dõi; chủ trọ là người xác nhận hoặc từ chối yêu cầu.</p>
     </div>
-    <span class="badge text-bg-primary rounded-pill">@Model.Appointments.Count lá»‹ch</span>
+    <span class="badge text-bg-primary rounded-pill">@Model.Appointments.Count lịch</span>
 </div>
 
 <div class="card border-0 shadow-sm">
     <div class="card-body border-bottom">
         <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
-            <label for="status" class="fw-semibold">Tráº¡ng thÃ¡i</label>
+            <label for="status" class="fw-semibold">Trạng thái</label>
             <select id="status" name="status" class="form-select" style="max-width: 210px">
                 @foreach (var option in statuses)
                 {
@@ -50,8 +50,8 @@
                     }
                 }
             </select>
-            <button type="submit" class="btn btn-primary">Lá»c</button>
-            <a href="/admin/viewing-appointments" class="btn btn-outline-secondary">XÃ³a lá»c</a>
+            <button type="submit" class="btn btn-primary">Lọc</button>
+            <a href="/admin/viewing-appointments" class="btn btn-outline-secondary">Xóa lọc</a>
         </form>
     </div>
     <div class="card-body p-0">
@@ -60,19 +60,19 @@
                 <thead class="table-light">
                     <tr>
                         <th>#</th>
-                        <th>PhÃ²ng</th>
-                        <th>NgÆ°á»i thuÃª</th>
-                        <th>Chá»§ trá»</th>
-                        <th>Thá»i gian xem</th>
-                        <th>Tráº¡ng thÃ¡i</th>
-                        <th>Ghi chÃº</th>
+                        <th>Phòng</th>
+                        <th>Người thuê</th>
+                        <th>Chủ trọ</th>
+                        <th>Thời gian xem</th>
+                        <th>Trạng thái</th>
+                        <th>Ghi chú</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (!Model.Appointments.Any())
                     {
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">ChÆ°a cÃ³ lá»‹ch xem phÃ²ng phÃ¹ há»£p.</td>
+                            <td colspan="7" class="text-center py-5 text-muted">Chưa có lịch xem phòng phù hợp.</td>
                         </tr>
                     }
                     else
@@ -98,11 +98,11 @@
                                 <td style="min-width: 220px">
                                     @if (!string.IsNullOrWhiteSpace(item.TenantNote))
                                     {
-                                        <div><span class="small text-muted">KhÃ¡ch:</span> @item.TenantNote</div>
+                                        <div><span class="small text-muted">Khách:</span> @item.TenantNote</div>
                                     }
                                     @if (!string.IsNullOrWhiteSpace(item.LandlordNote))
                                     {
-                                        <div><span class="small text-muted">Chá»§ trá»:</span> @item.LandlordNote</div>
+                                        <div><span class="small text-muted">Chủ trọ:</span> @item.LandlordNote</div>
                                     }
                                     @if (string.IsNullOrWhiteSpace(item.TenantNote) && string.IsNullOrWhiteSpace(item.LandlordNote))
                                     {
