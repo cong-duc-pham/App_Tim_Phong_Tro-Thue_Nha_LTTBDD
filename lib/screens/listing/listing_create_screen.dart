@@ -14,6 +14,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../models/post_package.dart';
 import '../../models/amenity.dart';
+import '../../models/listing.dart';
 import '../../repositories/listing_repository.dart';
 import '../../repositories/package_repository.dart';
 import '../../screens/payment/package_screen.dart';
@@ -79,7 +80,12 @@ const _mapTileUrlTemplate =
 // Screen
 // ─────────────────────────────────────────────
 class PostListingScreen extends StatefulWidget {
-  const PostListingScreen({super.key});
+  final Listing? initialListing;
+
+  const PostListingScreen({super.key, this.initialListing});
+
+  bool get isEditing => initialListing != null;
+
   @override
   State<PostListingScreen> createState() => _PostListingScreenState();
 }
@@ -131,6 +137,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
   double? _selectedLatitude;
   double? _selectedLongitude;
   bool _isResolvingAddress = false;
+
+  bool get _isEditing => widget.isEditing;
+  int? get _editingListingId => widget.initialListing?.listingId;
 
   final _roomTypes = const [
     RoomType(id: 1, name: 'Phòng trọ SV', icon: Icons.bed_outlined),
@@ -201,7 +210,11 @@ class _PostListingScreenState extends State<PostListingScreen> {
     ]) {
       c.addListener(_markDraftChanged);
     }
-    _loadDraftFromDisk();
+    if (_isEditing && widget.initialListing != null) {
+      _applyInitialListing(widget.initialListing!);
+    } else {
+      _loadDraftFromDisk();
+    }
   }
 
   Future<void> _loadAmenities() async {
@@ -214,6 +227,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
       if (!mounted) return;
       setState(() {
         _allAmenities = amenities;
+        if (_isEditing) {
+          _syncAmenitiesFromInitialListing();
+        }
         _isLoadingAmenities = false;
       });
     } catch (e) {
@@ -257,11 +273,13 @@ class _PostListingScreenState extends State<PostListingScreen> {
   }
 
   void _markDraftChanged() {
+    if (_isEditing) return;
     PostListingDraftService.markDirty();
     _saveDraftToDisk();
   }
 
   Future<void> _saveDraftToDisk() async {
+    if (_isEditing) return;
     final Map<String, dynamic> data = {
       'currentStep': _currentStep,
       'selectedTypeId': _selectedType?.id,
@@ -292,6 +310,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
   }
 
   Future<void> _loadDraftFromDisk() async {
+    if (_isEditing) return;
     final data = await PostListingDraftService.loadDraft();
     if (data == null) return;
     if (!mounted) return;
@@ -356,6 +375,58 @@ class _PostListingScreenState extends State<PostListingScreen> {
         }
       }
     });
+  }
+
+  void _applyInitialListing(Listing listing) {
+    final packageInfo = listing.packageInfo;
+    if (packageInfo is Map<String, dynamic>) {
+      _selectedPackage =
+          PostPackage.fromJson(Map<String, dynamic>.from(packageInfo));
+    }
+
+    _selectedType = _roomTypes.firstWhere(
+      (t) => t.id == listing.typeId,
+      orElse: () => _roomTypes.first,
+    );
+    _titleCtrl.text = listing.title;
+    _descCtrl.text = listing.description ?? '';
+    _priceCtrl.text = listing.price.toStringAsFixed(0);
+    _areaCtrl.text = listing.area.toStringAsFixed(0);
+    _floorCtrl.text = listing.floor?.toString() ?? '';
+    _totalFloorsCtrl.text = listing.totalFloors?.toString() ?? '';
+    _maxOccupantsCtrl.text = listing.maxOccupants?.toString() ?? '1';
+    _streetCtrl.text = listing.streetAddress;
+    _electricCtrl.text = listing.electricPrice?.toStringAsFixed(0) ?? '';
+    _waterCtrl.text = listing.waterPrice?.toStringAsFixed(0) ?? '';
+    _internetCtrl.text = listing.internetPrice?.toStringAsFixed(0) ?? '';
+    _parkingCtrl.text = listing.parkingPrice?.toStringAsFixed(0) ?? '';
+    _allowPet = listing.allowPet;
+    _availableFrom = listing.availableFrom;
+    // Tin cũ có thể dùng địa danh không nằm trong bộ lựa chọn mẫu.
+    // Giữ lại và thêm nó vào dropdown để form không làm mất địa chỉ khi sửa.
+    _selectedProvince =
+        _putAndSelect(_provinces, _normalizeProvince(listing.provinceName));
+    _selectedDistrict = _putAndSelect(_districts, listing.districtName);
+    _selectedWard = _putAndSelect(_wards, listing.wardName);
+    _selectedLatitude = listing.latitude;
+    _selectedLongitude = listing.longitude;
+    _slots[0].networkUrl = listing.image0;
+    _slots[1].networkUrl = listing.image1;
+    _slots[2].networkUrl = listing.image2;
+    _slots[3].networkUrl = listing.image3;
+    _slots[4].networkUrl = listing.image4;
+    _slots[5].networkUrl = listing.image5;
+  }
+
+  void _syncAmenitiesFromInitialListing() {
+    final listing = widget.initialListing;
+    if (listing == null || _allAmenities.isEmpty) return;
+
+    final targetNames = listing.amenityNames.map(_addressKey).toSet();
+    _selectedAmenityIds = _allAmenities
+        .where((amenity) => targetNames.contains(_addressKey(amenity.name)))
+        .map((amenity) => amenity.amenityId)
+        .toList();
   }
 
   Future<void> _pickImage(int idx) async {
@@ -456,7 +527,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
       if (!mounted) return;
       setState(() {
         _packages = packages;
-        _selectedPackage =
+        _selectedPackage ??=
             packages.where((package) => package.isFree).isNotEmpty
                 ? packages.firstWhere((package) => package.isFree)
                 : (packages.isNotEmpty ? packages.first : null);
@@ -706,21 +777,33 @@ class _PostListingScreenState extends State<PostListingScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final created = await _listingRepository.createListing(
-        _buildCreatePayload(),
-      );
-      await _markCurrentUserAsLandlord();
+      final payload = _buildSubmitPayload();
+      final isEditing = _isEditing && _editingListingId != null;
+      final created = isEditing
+          ? await _listingRepository.updateListing(_editingListingId!, payload)
+          : await _listingRepository.createListing(payload);
+      if (!isEditing) {
+        await _markCurrentUserAsLandlord();
+      }
+
       final imageUploadMessage = await _tryUploadImages(created.listingId);
-      final videoUploadMessage = await _tryUploadVideos(created.listingId);
+      final videoUploadMessage =
+          isEditing ? null : await _tryUploadVideos(created.listingId);
       if (!mounted) return;
 
-      PostListingDraftService.clear();
+      if (!isEditing) {
+        PostListingDraftService.clear();
+      }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Row(children: [
-          Icon(Icons.check_circle, color: Colors.white),
-          SizedBox(width: 12),
-          Text('Đăng tin thành công! Đang chờ xét duyệt.'),
-        ]),
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 12),
+            Text(isEditing
+                ? 'Cập nhật tin thành công!'
+                : 'Đăng tin thành công! Đang chờ xét duyệt.'),
+          ],
+        ),
         backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -743,8 +826,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ));
       }
-      if (_shouldBuyPackage) {
+      if (!isEditing && _shouldBuyPackage) {
         setState(() => _createdListingIdForVip = created.listingId);
+      } else if (isEditing) {
+        _goAfterCurrentFrame(AppConstants.routeMyListings);
       } else {
         _goAfterCurrentFrame(AppConstants.routeHome);
       }
@@ -884,6 +969,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
   }
 
   Future<bool> _confirmDiscardDraft() async {
+    if (_isEditing) return true;
     if (!PostListingDraftService.hasDraft.value) return true;
 
     final shouldDiscard = await showDialog<bool>(
@@ -913,13 +999,17 @@ class _PostListingScreenState extends State<PostListingScreen> {
       _prev();
       return;
     }
+    if (_isEditing) {
+      if (mounted) context.pop();
+      return;
+    }
     final router = GoRouter.of(context);
     if (await _confirmDiscardDraft() && mounted) {
       router.go(AppConstants.routeHome);
     }
   }
 
-  Map<String, dynamic> _buildCreatePayload() {
+  Map<String, dynamic> _buildSubmitPayload() {
     return {
       'title': _titleCtrl.text.trim(),
       'description':
@@ -1214,6 +1304,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
             currentStep: _currentStep,
             totalSteps: _totalSteps,
             isSubmitting: _isSubmitting,
+            isEditing: _isEditing,
             onNext: _next,
             onPrev: _prev,
             onSubmit: () {
@@ -1500,7 +1591,24 @@ class _PostListingScreenState extends State<PostListingScreen> {
             ),
           ),
         const SizedBox(height: 14),
-        _buildVideoSection(maxVideos),
+        if (_isEditing)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.warningBg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.warning.withValues(alpha: 0.25),
+              ),
+            ),
+            child: const Text(
+              'Chỉnh sửa hiện chưa hỗ trợ thay đổi video.',
+              style: TextStyle(color: AppColors.warningText, height: 1.4),
+            ),
+          )
+        else
+          _buildVideoSection(maxVideos),
         const SizedBox(height: 14),
 
         // Tip
@@ -3818,12 +3926,14 @@ class _PreviewCard extends StatelessWidget {
 class _BottomNav extends StatelessWidget {
   final int currentStep, totalSteps;
   final bool isSubmitting;
+  final bool isEditing;
   final VoidCallback onNext, onPrev, onSubmit;
 
   const _BottomNav({
     required this.currentStep,
     required this.totalSteps,
     required this.isSubmitting,
+    required this.isEditing,
     required this.onNext,
     required this.onPrev,
     required this.onSubmit,
@@ -3893,7 +4003,10 @@ class _BottomNav extends StatelessWidget {
                       style: const TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 15)),
                 ] else ...[
-                  Text(isLast ? 'post_btn_submit'.tr : 'post_btn_next'.tr,
+                  Text(
+                      isLast
+                          ? (isEditing ? 'Cập nhật tin' : 'post_btn_submit'.tr)
+                          : 'post_btn_next'.tr,
                       style: const TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 15)),
                   const SizedBox(width: 6),

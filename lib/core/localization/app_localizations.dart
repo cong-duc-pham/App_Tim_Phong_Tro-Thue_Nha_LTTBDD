@@ -169,7 +169,8 @@ class AppLocalizations {
       'verify_otp_invalid_otp': 'Vui lòng nhập đủ mã OTP 6 số!',
       'verify_email_input_hint': 'Nhập địa chỉ email của bạn',
       'verify_otp_sent_to_email': 'Mã OTP đã được gửi đến email {email}',
-      'verify_otp_instruction_email': 'Swings House sẽ gửi mã OTP gồm 6 chữ số đến email này.',
+      'verify_otp_instruction_email':
+          'Swings House sẽ gửi mã OTP gồm 6 chữ số đến email này.',
       'verify_otp_invalid_email': 'Vui lòng nhập địa chỉ email hợp lệ!',
       'verify_success_email_verify': 'Xác thực địa chỉ email thành công!',
       'search_history_empty_title': 'Lịch sử trống',
@@ -672,8 +673,8 @@ class AppLocalizations {
       'mylistings_confirm_delete': 'Xóa tin đăng này?',
       'mylistings_not_found':
           'Không tìm thấy tin đăng thuộc tài khoản của bạn.',
-      'mylistings_status_active': 'Hoạt động',
-      'mylistings_status_hidden': 'Đã thuê / Tạm ẩn',
+      'mylistings_status_active': 'Đang hiển thị',
+      'mylistings_status_hidden': 'Đang tạm ẩn',
       'mylistings_status_expired': 'Hết hạn',
       'mylistings_status_processing': 'Đang xử lý',
       'mylistings_hide_success':
@@ -685,8 +686,14 @@ class AppLocalizations {
       'mylistings_analytics_title': 'Thống kê tin đăng',
       'mylistings_analytics': 'Thống kê',
       'mylistings_no_analytics': 'Không có thống kê',
-      'mylistings_hide_listing': 'Ẩn tin (Đã thuê)',
-      'mylistings_show_listing': 'Hiện tin (Còn phòng)',
+      'mylistings_hide_listing': 'Ẩn tin',
+      'mylistings_show_listing': 'Hiện lại tin',
+      'mylistings_hide_confirm_title': 'Ẩn tin đăng?',
+      'mylistings_hide_confirm_desc':
+          'Tin sẽ không còn xuất hiện với người đang tìm phòng cho đến khi bạn hiển thị lại.',
+      'mylistings_show_confirm_title': 'Hiện lại tin đăng?',
+      'mylistings_show_confirm_desc':
+          'Tin sẽ xuất hiện trở lại để người tìm phòng có thể xem và liên hệ.',
       'mylistings_normal_package': 'Gói thường',
       'mylistings_saved_count': 'Lượt lưu',
       'mylistings_rating_score': 'Điểm đánh giá',
@@ -928,7 +935,8 @@ class AppLocalizations {
       'verify_otp_invalid_otp': 'Please enter all 6 OTP digits!',
       'verify_email_input_hint': 'Enter your email address',
       'verify_otp_sent_to_email': 'OTP code has been sent to email {email}',
-      'verify_otp_instruction_email': 'Swings House will send a 6-digit OTP code to this email.',
+      'verify_otp_instruction_email':
+          'Swings House will send a 6-digit OTP code to this email.',
       'verify_otp_invalid_email': 'Please enter a valid email address!',
       'verify_success_email_verify': 'Verified email address successfully!',
       'search_history_empty_title': 'No search history',
@@ -1429,8 +1437,8 @@ class AppLocalizations {
       'mylistings_delete': 'Delete',
       'mylistings_confirm_delete': 'Delete this listing?',
       'mylistings_not_found': 'No listing in your account was found.',
-      'mylistings_status_active': 'Active',
-      'mylistings_status_hidden': 'Rented / Hidden',
+      'mylistings_status_active': 'Visible',
+      'mylistings_status_hidden': 'Hidden',
       'mylistings_status_expired': 'Expired',
       'mylistings_status_processing': 'Processing',
       'mylistings_hide_success':
@@ -1442,8 +1450,14 @@ class AppLocalizations {
       'mylistings_analytics_title': 'Listing analytics',
       'mylistings_analytics': 'Analytics',
       'mylistings_no_analytics': 'No analytics',
-      'mylistings_hide_listing': 'Hide listing (Rented)',
-      'mylistings_show_listing': 'Show listing (Available)',
+      'mylistings_hide_listing': 'Hide listing',
+      'mylistings_show_listing': 'Show listing',
+      'mylistings_hide_confirm_title': 'Hide this listing?',
+      'mylistings_hide_confirm_desc':
+          'People looking for rooms will not see this listing until you show it again.',
+      'mylistings_show_confirm_title': 'Show this listing again?',
+      'mylistings_show_confirm_desc':
+          'The listing will be visible again so people can view and contact you.',
       'mylistings_normal_package': 'Standard package',
       'mylistings_saved_count': 'Saves',
       'mylistings_rating_score': 'Rating score',
