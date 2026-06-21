@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/auth/auth_guard.dart';
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
 import '../core/constants/app_text_styles.dart';
@@ -145,6 +146,22 @@ class _MainBottomNavState extends State<MainBottomNav>
   Future<void> _goTo(BuildContext context, String route) async {
     final currentPath = GoRouterState.of(context).uri.path;
     if (currentPath == route) return;
+
+    // Kiểm tra đăng nhập khi truy cập Yêu thích hoặc Tin nhắn
+    if (route == AppConstants.routeFavorites ||
+        route == AppConstants.routeChat) {
+      final loggedIn = await AuthGuard.isLoggedIn();
+      if (!loggedIn) {
+        if (!context.mounted) return;
+        await AuthGuard.showLoginRequired(
+          context,
+          featureName: route == AppConstants.routeFavorites
+              ? 'Yêu thích'
+              : 'Tin nhắn',
+        );
+        return;
+      }
+    }
 
     if (route == AppConstants.routePostListing) {
       final prefs = await SharedPreferences.getInstance();
