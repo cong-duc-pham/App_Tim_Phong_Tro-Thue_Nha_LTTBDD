@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../repositories/auth_repository.dart';
+import '../../services/chat_unread_service.dart';
 import '../constants/app_constants.dart';
 import '../constants/router_keys.dart';
 
@@ -15,6 +16,7 @@ class LogoutHelper {
       debugPrint('Logout failed: $e');
       debugPrintStack(stackTrace: stackTrace);
     } finally {
+      await ChatUnreadService.stopAndClear();
       final stableContext = rootNavigatorKey.currentContext;
       if (stableContext != null && stableContext.mounted) {
         GoRouter.of(stableContext).go(AppConstants.routeLogin);

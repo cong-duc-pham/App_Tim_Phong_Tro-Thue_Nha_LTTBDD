@@ -102,7 +102,8 @@ class MessageRepository extends BaseRepository {
     required void Function(int convId) onMessagesReadByOther,
     void Function(bool isConnected)? onConnectionStateChanged,
   }) async {
-    if (_hubConnection != null && _hubConnection!.state == HubConnectionState.Connected) {
+    if (_hubConnection != null &&
+        _hubConnection!.state == HubConnectionState.Connected) {
       onConnectionStateChanged?.call(true);
       return;
     }
@@ -122,12 +123,13 @@ class MessageRepository extends BaseRepository {
       String hubUrl = dio.options.baseUrl.replaceAll('/api', '/hubs/chat');
 
       // Khởi tạo hub connection
+      // Dùng cả WebSockets lẫn LongPolling để hỗ trợ Azure App Service
       _hubConnection = HubConnectionBuilder()
           .withUrl(
             hubUrl,
             options: HttpConnectionOptions(
               accessTokenFactory: () async => token,
-              transport: HttpTransportType.WebSockets,
+              transport: HttpTransportType.LongPolling,
             ),
           )
           .withAutomaticReconnect()
@@ -145,8 +147,10 @@ class MessageRepository extends BaseRepository {
       _hubConnection!.on("ReceiveMessage", (arguments) {
         if (arguments != null && arguments.isNotEmpty) {
           final rawMsg = arguments[0];
-          if (rawMsg is Map<String, dynamic>) {
-            onMessageReceived(Message.fromJson(rawMsg));
+          if (rawMsg is Map) {
+            onMessageReceived(
+              Message.fromJson(Map<String, dynamic>.from(rawMsg)),
+            );
           }
         }
       });
@@ -154,8 +158,10 @@ class MessageRepository extends BaseRepository {
       _hubConnection!.on("MessageSent", (arguments) {
         if (arguments != null && arguments.isNotEmpty) {
           final rawMsg = arguments[0];
-          if (rawMsg is Map<String, dynamic>) {
-            onMessageSentConfirm(Message.fromJson(rawMsg));
+          if (rawMsg is Map) {
+            onMessageSentConfirm(
+              Message.fromJson(Map<String, dynamic>.from(rawMsg)),
+            );
           }
         }
       });
@@ -191,8 +197,10 @@ class MessageRepository extends BaseRepository {
     String msgType = "text",
     String? fileUrl,
   }) async {
-    if (_hubConnection == null || _hubConnection!.state != HubConnectionState.Connected) {
-      throw Exception('Không có kết nối mạng thời gian thực. Vui lòng thử lại sau.');
+    if (_hubConnection == null ||
+        _hubConnection!.state != HubConnectionState.Connected) {
+      throw Exception(
+          'Không có kết nối mạng thời gian thực. Vui lòng thử lại sau.');
     }
 
     try {
@@ -207,7 +215,8 @@ class MessageRepository extends BaseRepository {
 
   /// Đánh dấu đã đọc toàn bộ tin nhắn trong cuộc hội thoại.
   Future<void> markAsRead(int convId) async {
-    if (_hubConnection == null || _hubConnection!.state != HubConnectionState.Connected) {
+    if (_hubConnection == null ||
+        _hubConnection!.state != HubConnectionState.Connected) {
       return;
     }
 
