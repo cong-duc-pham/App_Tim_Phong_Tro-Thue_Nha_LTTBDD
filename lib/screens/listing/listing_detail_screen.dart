@@ -14,6 +14,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../blocs/listing/listing_bloc.dart';
 import '../../blocs/listing/listing_event.dart';
 import '../../blocs/listing/listing_state.dart';
+import '../../core/auth/auth_guard.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
@@ -379,6 +380,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   Future<void> _startChat(Listing listing) async {
     if (listing.landlordId == null || _isStartingChat) return;
 
+    // Chặn nếu chưa đăng nhập
+    final loggedIn = await AuthGuard.checkAndPrompt(
+      context,
+      featureName: 'Tin nhắn',
+    );
+    if (!loggedIn || !mounted) return;
+
     setState(() => _isStartingChat = true);
     try {
       final conv = await _conversationRepository.createConversation(
@@ -645,7 +653,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                     color: AppColors.error, size: 20)
                 : const Icon(Icons.favorite_border_rounded,
                     color: Colors.white, size: 20),
-            onPressed: () {
+            onPressed: () async {
+              final loggedIn = await AuthGuard.checkAndPrompt(
+                context,
+                featureName: 'Yêu thích',
+              );
+              if (!loggedIn || !context.mounted) return;
               context
                   .read<ListingDetailBloc>()
                   .add(ToggleListingFavorite(listing.listingId));
