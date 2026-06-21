@@ -336,7 +336,7 @@ namespace Backend_API.Tests
         }
 
         [Fact]
-        public async Task CreateReview_WithActiveRenterStatus_ShouldThrowException()
+        public async Task CreateReview_WithActiveRenterStatus_ShouldSucceed()
         {
             // Arrange
             var context = GetDatabaseContext();
@@ -367,9 +367,17 @@ namespace Backend_API.Tests
                 Type = "review"
             };
 
-            // Act & Assert
-            var ex = await Assert.ThrowsAsync<Exception>(() => reviewService.CreateReviewAsync(tenant.UserId, listing.ListingId, dto));
-            Assert.Contains("Chỉ người dùng đã từng thuê phòng này mới được đánh giá", ex.Message);
+            // Act
+            var result = await reviewService.CreateReviewAsync(
+                tenant.UserId,
+                listing.ListingId,
+                dto);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.True(result.IsVerifiedTenant);
+            Assert.Equal("approved", result.Status);
+            Assert.Equal((byte)4, result.Rating);
         }
 
         [Fact]
