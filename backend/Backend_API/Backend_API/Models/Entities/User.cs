@@ -47,6 +47,14 @@ public partial class User
 
     public virtual ICollection<Conversation> ConversationTenants { get; set; } = new List<Conversation>();
 
+    public virtual ICollection<ViewingAppointment> ViewingAppointmentLandlords { get; set; } = new List<ViewingAppointment>();
+
+    public virtual ICollection<ViewingAppointment> ViewingAppointmentTenants { get; set; } = new List<ViewingAppointment>();
+
+    public virtual ICollection<Rental> RentalLandlords { get; set; } = new List<Rental>();
+
+    public virtual ICollection<Rental> RentalTenants { get; set; } = new List<Rental>();
+
     public virtual ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
 
     public virtual ICollection<CloudinaryFile> CloudinaryFiles { get; set; } = new List<CloudinaryFile>();
@@ -84,8 +92,4 @@ public partial class User
     public virtual UserPreference? UserPreference { get; set; }
 
     public virtual ICollection<ViewHistory> ViewHistories { get; set; } = new List<ViewHistory>();
-
-    public virtual ICollection<ViewingAppointment> ViewingAppointmentTenants { get; set; } = new List<ViewingAppointment>();
-
-    public virtual ICollection<ViewingAppointment> ViewingAppointmentLandlords { get; set; } = new List<ViewingAppointment>();
 }

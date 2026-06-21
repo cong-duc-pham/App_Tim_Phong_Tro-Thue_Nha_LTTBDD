@@ -7,7 +7,7 @@ using System.Security.Claims;
 namespace Backend_API.Controllers.API
 {
     /// <summary>
-    /// Quản lý đánh giá (reviews) cho tin đăng: xem, tạo, phản hồi.
+    /// Quản lý đánh giá (reviews) và hỏi đáp (Q&A) cho tin đăng.
     /// </summary>
     [ApiController]
     [Tags("Reviews")]
@@ -21,19 +21,20 @@ namespace Backend_API.Controllers.API
         }
 
         /// <summary>
-        /// Lấy danh sách đánh giá của một tin đăng.
+        /// Lấy danh sách đánh giá hoặc hỏi đáp của một tin đăng.
         /// </summary>
         /// <param name="listingId">ID tin đăng</param>
+        /// <param name="type">Loại: "review" hoặc "qna"</param>
         /// <returns>Danh sách reviews kèm điểm trung bình</returns>
-        /// <response code="200">Trả về danh sách reviews</response>
         [HttpGet("api/listings/{listingId:long}/reviews")]
         [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetReviews(long listingId)
+        public async Task<IActionResult> GetReviews(long listingId, [FromQuery] string? type = null)
         {
             try
             {
-                var items = await _reviewService.GetReviewsByListingAsync(listingId, TryGetCurrentUserId());
-                double avg = items.Count > 0 ? Math.Round(items.Average(r => r.Rating), 1) : 0;
+                var items = await _reviewService.GetReviewsByListingAsync(listingId, type, TryGetCurrentUserId());
+                var reviewsWithRatings = items.Where(r => r.Type == "review" && r.Rating.HasValue && !r.IsDeleted).ToList();
+                double avg = reviewsWithRatings.Count > 0 ? Math.Round(reviewsWithRatings.Average(r => (double)r.Rating!.Value), 1) : 0;
                 return Ok(new { success = true, data = items, count = items.Count, averageRating = avg });
             }
             catch (Exception ex)
@@ -56,7 +57,7 @@ namespace Backend_API.Controllers.API
             }
             catch (UnauthorizedAccessException)
             {
-                return Unauthorized(new { success = false, message = "ChÆ°a Ä‘Äƒng nháº­p." });
+                return Unauthorized(new { success = false, message = "Chưa đăng nhập." });
             }
             catch (Exception ex)
             {
@@ -65,13 +66,8 @@ namespace Backend_API.Controllers.API
         }
 
         /// <summary>
-        /// Tạo đánh giá cho tin đăng (chỉ tenant đã thuê).
+        /// Tạo đánh giá hoặc hỏi đáp cho tin đăng.
         /// </summary>
-        /// <param name="listingId">ID tin đăng</param>
-        /// <param name="dto">Rating (1-5), nội dung, ảnh đánh giá</param>
-        /// <returns>Review vừa tạo</returns>
-        /// <response code="201">Tạo review thành công</response>
-        /// <response code="401">Chưa đăng nhập</response>
         [Authorize]
         [HttpPost("api/listings/{listingId:long}/reviews")]
         [ProducesResponseType(typeof(object), StatusCodes.Status201Created)]
@@ -96,12 +92,83 @@ namespace Backend_API.Controllers.API
         }
 
         /// <summary>
-        /// Phản hồi (reply) một đánh giá — dành cho chủ trọ.
+        /// Cập nhật nội dung đánh giá hoặc hỏi đáp trong vòng 30 phút.
         /// </summary>
-        /// <param name="reviewId">ID review cần phản hồi</param>
-        /// <param name="dto">Nội dung phản hồi</param>
-        /// <response code="200">Phản hồi thành công</response>
-        /// <response code="401">Chưa đăng nhập</response>
+        [Authorize]
+        [HttpPut("api/reviews/{reviewId:long}")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> UpdateReview(long reviewId, [FromBody] ReviewUpdateDto dto)
+        {
+            try
+            {
+                long userId = GetCurrentUserId();
+                var result = await _reviewService.UpdateReviewAsync(userId, reviewId, dto);
+                return Ok(new { success = true, data = result });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { success = false, message = "Chưa đăng nhập." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Xóa đánh giá hoặc hỏi đáp trong vòng 30 phút.
+        /// </summary>
+        [Authorize]
+        [HttpDelete("api/reviews/{reviewId:long}")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> DeleteReview(long reviewId)
+        {
+            try
+            {
+                long userId = GetCurrentUserId();
+                await _reviewService.DeleteReviewAsync(userId, reviewId);
+                return Ok(new { success = true });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { success = false, message = "Chưa đăng nhập." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Báo cáo vi phạm đánh giá hoặc hỏi đáp.
+        /// </summary>
+        [Authorize]
+        [HttpPost("api/reviews/{reviewId:long}/report")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> ReportReview(long reviewId)
+        {
+            try
+            {
+                long userId = GetCurrentUserId();
+                var result = await _reviewService.ReportReviewAsync(userId, reviewId);
+                return Ok(new { success = true, data = result });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized(new { success = false, message = "Chưa đăng nhập." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Phản hồi một đánh giá hoặc hỏi đáp — dành cho chủ trọ.
+        /// </summary>
         [Authorize]
         [HttpPost("api/reviews/{reviewId:long}/reply")]
         [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
@@ -139,28 +206,6 @@ namespace Backend_API.Controllers.API
             catch (UnauthorizedAccessException)
             {
                 return Unauthorized(new { success = false, message = "Chưa đăng nhập." });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { success = false, message = ex.Message });
-            }
-        }
-
-        [Authorize]
-        [HttpDelete("api/reviews/{reviewId:long}")]
-        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
-        public async Task<IActionResult> DeleteReview(long reviewId)
-        {
-            try
-            {
-                long userId = GetCurrentUserId();
-                await _reviewService.DeleteReviewAsync(userId, reviewId);
-                return Ok(new { success = true });
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return Unauthorized(new { success = false, message = "ChÆ°a Ä‘Äƒng nháº­p." });
             }
             catch (Exception ex)
             {

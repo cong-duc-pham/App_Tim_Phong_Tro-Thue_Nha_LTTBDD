@@ -1,12 +1,13 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace Backend_API.Models.DTOs.Reviews
 {
     public class ReviewCreateDto
     {
-        [Required]
         [Range(1, 5)]
-        public byte Rating { get; set; }
+        public byte? Rating { get; set; }
 
         public string? Comment { get; set; }
 
@@ -18,6 +19,22 @@ namespace Backend_API.Models.DTOs.Reviews
 
         // Firebase Storage URLs của ảnh (Flutter upload xong gửi URL lên)
         public List<string> ImageUrls { get; set; } = new();
+
+        // 'review' or 'qna'
+        public string Type { get; set; } = "review";
+    }
+
+    public class ReviewUpdateDto
+    {
+        [Range(1, 5)]
+        public byte? Rating { get; set; }
+
+        public string? Comment { get; set; }
+
+        [Range(1, 5)] public byte? RatingLocation { get; set; }
+        [Range(1, 5)] public byte? RatingPrice { get; set; }
+        [Range(1, 5)] public byte? RatingCleanness { get; set; }
+        [Range(1, 5)] public byte? RatingSecurity { get; set; }
     }
 
     public class ReviewReplyDto
@@ -39,7 +56,7 @@ namespace Backend_API.Models.DTOs.Reviews
         public decimal? ListingPrice   { get; set; }
         public string? ListingImage    { get; set; }
 
-        public byte  Rating            { get; set; }
+        public byte? Rating            { get; set; }
         public string? Comment         { get; set; }
 
         public byte? RatingLocation    { get; set; }
@@ -53,6 +70,11 @@ namespace Backend_API.Models.DTOs.Reviews
         public DateTime? CreatedAt     { get; set; }
         public int LikeCount           { get; set; }
         public bool IsLiked            { get; set; }
+
+        public string Type             { get; set; } = null!;
+        public string Status           { get; set; } = null!;
+        public bool IsVerifiedTenant   { get; set; }
+        public bool IsDeleted          { get; set; }
 
         public List<string> ImageUrls  { get; set; } = new();
     }
