@@ -17,6 +17,7 @@ import '../../screens/profile/support_center_screen.dart';
 import '../../screens/profile/search_history_screen.dart';
 import '../../screens/profile/my_reviews_screen.dart';
 import '../../screens/profile/my_listings_screen.dart';
+import '../../screens/profile/viewing_appointments_screen.dart';
 import '../../screens/profile/verification_screen.dart';
 import '../../screens/profile/change_password_screen.dart';
 import '../../screens/profile/settings_screen.dart';
@@ -108,6 +109,10 @@ final appRouter = GoRouter(
         builder: (_, __) => const SearchHistoryScreen()),
     GoRoute(path: '/my-reviews', builder: (_, __) => const MyReviewsScreen()),
     GoRoute(path: '/my-listings', builder: (_, __) => const MyListingsScreen()),
+    GoRoute(
+      path: '/viewing-appointments',
+      builder: (_, __) => const ViewingAppointmentsScreen(),
+    ),
     GoRoute(path: '/invoices', builder: (_, __) => const InvoiceScreen()),
     GoRoute(
       path: '/invoices/detail',
@@ -155,11 +160,14 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
         final section = state.uri.queryParameters['section'];
+        final openSchedule =
+            state.uri.queryParameters['openSchedule'] == 'true';
         final initialListing =
             state.extra is Listing ? state.extra as Listing : null;
         return ListingDetailScreen(
           listingId: id,
           scrollToReviews: section == 'reviews',
+          autoOpenSchedule: openSchedule,
           initialListing: initialListing,
         );
       },

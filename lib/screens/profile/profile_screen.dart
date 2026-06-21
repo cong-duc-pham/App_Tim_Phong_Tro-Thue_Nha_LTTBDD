@@ -323,6 +323,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onTap: () => context.push(AppConstants.routeSearchHistory),
               ),
               _MenuItem(
+                icon: Icons.calendar_month_outlined,
+                label: 'Lịch xem phòng',
+                onTap: () =>
+                    context.push(AppConstants.routeViewingAppointments),
+              ),
+              _MenuItem(
                 icon: Icons.settings_outlined,
                 label: 'settings_title'.tr,
                 onTap: () => context.push(AppConstants.routeSettings),

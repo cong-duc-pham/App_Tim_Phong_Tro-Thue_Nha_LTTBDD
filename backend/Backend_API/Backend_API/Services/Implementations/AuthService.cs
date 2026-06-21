@@ -47,11 +47,18 @@ namespace Backend_API.Services.Implementations
         public async Task<LoginResponseDto> RegisterAsync(RegisterRequestDto dto)
         {
             var email = NormalizeEmail(dto.Email);
-            var isDuplicate = await _context.Users
-                .AnyAsync(u => (u.Email != null && u.Email.ToLower() == email) || u.Phone == dto.Phone);
-            if (isDuplicate)
+            var emailInUse = await _context.Users
+                .AnyAsync(u => u.Email != null && u.Email.ToLower() == email);
+            if (emailInUse)
             {
-                throw new Exception("Email hoáº·c Sá»‘ Ä‘iá»‡n thoáº¡i Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng.");
+                throw new Exception("Email đã được sử dụng.");
+            }
+
+            var phoneInUse = await _context.Users
+                .AnyAsync(u => u.Phone == dto.Phone);
+            if (phoneInUse)
+            {
+                throw new Exception("Số điện thoại đã được sử dụng.");
             }
 
             var hash = PasswordHasher.Hash(dto.Password);
@@ -65,16 +72,43 @@ namespace Backend_API.Services.Implementations
                 IsActive = true
             };
 
-            await _context.Users.AddAsync(newUser);
-            await _context.SaveChangesAsync();
-
-            var preference = new UserPreference
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                UserId = newUser.UserId,
-                OnboardingDone = false
-            };
-            await _context.UserPreferences.AddAsync(preference);
-            await _context.SaveChangesAsync();
+                await _context.Users.AddAsync(newUser);
+                await _context.SaveChangesAsync();
+
+                var preference = new UserPreference
+                {
+                    UserId = newUser.UserId,
+                    OnboardingDone = false
+                };
+                await _context.UserPreferences.AddAsync(preference);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                await transaction.RollbackAsync();
+                var detail = ex.InnerException?.Message ?? ex.Message;
+                if (detail.Contains("UNIQUE", StringComparison.OrdinalIgnoreCase) ||
+                    detail.Contains("duplicate", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new Exception("Email hoặc số điện thoại đã được sử dụng.");
+                }
+
+                if (detail.Contains("FOREIGN KEY", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new Exception("Dữ liệu nền SQL chưa đầy đủ. Hãy kiểm tra bảng Roles có role_id = 2 (tenant).");
+                }
+
+                throw new Exception($"Không thể lưu tài khoản vào SQL Server: {detail}");
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
 
             // Láº¥y láº¡i user bao gá»“m Role Ä‘á»ƒ GenerateToken Ä‘áº§y Ä‘á»§
             var userWithRole = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.UserId == newUser.UserId);

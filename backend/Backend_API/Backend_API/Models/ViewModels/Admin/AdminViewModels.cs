@@ -143,6 +143,28 @@ public class AdminReportsViewModel
     public List<AdminReportItemViewModel> Reports { get; set; } = new();
 }
 
+public class AdminViewingAppointmentItemViewModel
+{
+    public long AppointmentId { get; set; }
+    public long ListingId { get; set; }
+    public string ListingTitle { get; set; } = string.Empty;
+    public string TenantName { get; set; } = string.Empty;
+    public string? TenantPhone { get; set; }
+    public string LandlordName { get; set; } = string.Empty;
+    public string? LandlordPhone { get; set; }
+    public DateTime ScheduledAt { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? TenantNote { get; set; }
+    public string? LandlordNote { get; set; }
+    public DateTime? CreatedAt { get; set; }
+}
+
+public class AdminViewingAppointmentsViewModel
+{
+    public string? Status { get; set; }
+    public List<AdminViewingAppointmentItemViewModel> Appointments { get; set; } = new();
+}
+
 public class AdminStorageFileItemViewModel
 {
     public long FileId { get; set; }

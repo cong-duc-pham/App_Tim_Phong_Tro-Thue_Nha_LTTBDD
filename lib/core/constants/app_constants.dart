@@ -79,6 +79,7 @@ class AppConstants {
   static const String routeInvoices = '/invoices';
   static const String routeFavorites = '/favorites';
   static const String routeMyListings = '/my-listings';
+  static const String routeViewingAppointments = '/viewing-appointments';
   static const String routeNotifications = '/notifications';
   static const String routeAbout = '/about';
   static const String routeReportIssue = '/report-issue';

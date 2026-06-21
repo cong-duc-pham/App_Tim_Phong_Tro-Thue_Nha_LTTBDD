@@ -308,6 +308,9 @@ builder.Services.AddScoped<IFavoriteService, FavoriteService>();
 
 builder.Services.AddScoped<IReviewService, ReviewService>();
 
+builder.Services.AddScoped<IRentalService, RentalService>();
+
+
 builder.Services.AddScoped<IPreferenceService, PreferenceService>();
 
 builder.Services.AddScoped<INotificationService, NotificationService>();

@@ -21,16 +21,19 @@ import '../../models/amenity.dart';
 import '../../models/listing.dart';
 import '../../repositories/conversation_repository.dart';
 import '../../repositories/review_repository.dart';
+import '../../repositories/viewing_appointment_repository.dart';
 
 class ListingDetailScreen extends StatefulWidget {
   final int listingId;
   final bool scrollToReviews;
+  final bool autoOpenSchedule;
   final Listing? initialListing;
 
   const ListingDetailScreen({
     super.key,
     required this.listingId,
     this.scrollToReviews = false,
+    this.autoOpenSchedule = false,
     this.initialListing,
   });
 
@@ -45,9 +48,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   final TextEditingController _reviewCommentCtrl = TextEditingController();
   final ConversationRepository _conversationRepository =
       ConversationRepository();
+  final ViewingAppointmentRepository _appointmentRepository =
+      ViewingAppointmentRepository();
   bool _isDescExpanded = false;
   bool _isStartingChat = false;
+  bool _isBookingAppointment = false;
   bool _didScrollToReviews = false;
+  bool _didAutoOpenSchedule = false;
   double _reviewRating = 5;
   int? _currentUserId;
 
@@ -86,6 +93,18 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         curve: Curves.easeOutCubic,
         alignment: 0.05,
       );
+    });
+  }
+
+  void _autoOpenScheduleIfNeeded(Listing listing) {
+    if (!widget.autoOpenSchedule || _didAutoOpenSchedule) return;
+    if (listing.landlordId == null) return;
+    if (_currentUserId != null && listing.landlordId == _currentUserId) return;
+
+    _didAutoOpenSchedule = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showScheduleViewingSheet(listing);
     });
   }
 
@@ -387,6 +406,65 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     }
   }
 
+  Future<void> _showScheduleViewingSheet(Listing listing) async {
+    if (_isBookingAppointment) return;
+
+    final created = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ScheduleViewingSlotSheet(
+        listing: listing,
+        repository: _appointmentRepository,
+        onSubmittingChanged: (value) {
+          if (mounted) {
+            setState(() => _isBookingAppointment = value);
+          }
+        },
+      ),
+    );
+
+    if (created == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+              'Da gui lich hen. Chu tro se nhan thong bao de xac nhan.'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: 'Xem lich',
+            textColor: Colors.white,
+            onPressed: () =>
+                context.push(AppConstants.routeViewingAppointments),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _handleScheduleViewingTap(Listing listing) {
+    if (_isBookingAppointment) return;
+    if (listing.landlordId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tin đăng này chưa có thông tin chủ trọ để đặt lịch.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    if (_currentUserId != null && listing.landlordId == _currentUserId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bạn không thể tự đặt lịch xem chính phòng của mình.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    _showScheduleViewingSheet(listing);
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -463,6 +541,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               }
               if (state is ListingDetailLoaded) {
                 _scheduleScrollToReviews();
+                _autoOpenScheduleIfNeeded(state.listing);
                 return _buildContent(context, state);
               }
               return const SizedBox.shrink();
@@ -1925,6 +2004,39 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
+              flex: 2,
+              child: OutlinedButton.icon(
+                onPressed: () => _handleScheduleViewingTap(listing),
+                icon: _isBookingAppointment
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(
+                        Icons.event_available_rounded,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                label: const Text(
+                  'Đặt lịch',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: AppColors.primary),
+                  shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.radiusMd)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
               flex: 3,
               child: ElevatedButton.icon(
                 onPressed: listing.landlordId != null && !_isStartingChat
@@ -2093,6 +2205,400 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScheduleViewingSlotSheet extends StatefulWidget {
+  final Listing listing;
+  final ViewingAppointmentRepository repository;
+  final ValueChanged<bool> onSubmittingChanged;
+
+  const _ScheduleViewingSlotSheet({
+    required this.listing,
+    required this.repository,
+    required this.onSubmittingChanged,
+  });
+
+  @override
+  State<_ScheduleViewingSlotSheet> createState() =>
+      _ScheduleViewingSlotSheetState();
+}
+
+class _ScheduleViewingSlotSheetState extends State<_ScheduleViewingSlotSheet> {
+  final TextEditingController _noteCtrl = TextEditingController();
+  DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
+  List<ViewingAppointmentSlot> _slots = const [];
+  ViewingAppointmentSlot? _selectedSlot;
+  bool _isLoadingSlots = true;
+  bool _isSubmitting = false;
+  String? _slotError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSlots();
+  }
+
+  @override
+  void dispose() {
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSlots() async {
+    setState(() {
+      _isLoadingSlots = true;
+      _slotError = null;
+      _selectedSlot = null;
+    });
+
+    try {
+      final slots = await widget.repository.getAvailableSlots(
+        listingId: widget.listing.listingId,
+        date: _selectedDate,
+      );
+      if (!mounted) return;
+      setState(() {
+        _slots = slots;
+        _isLoadingSlots = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _slotError = _cleanError(e);
+        _slots = const [];
+        _isLoadingSlots = false;
+      });
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 60)),
+    );
+    if (picked == null) return;
+
+    setState(() => _selectedDate = picked);
+    _loadSlots();
+  }
+
+  Future<void> _submit() async {
+    final slot = _selectedSlot;
+    if (slot == null || _isSubmitting) return;
+
+    setState(() => _isSubmitting = true);
+    widget.onSubmittingChanged(true);
+    try {
+      await widget.repository.createAppointment(
+        listingId: widget.listing.listingId,
+        scheduledAt: slot.scheduledAt,
+        note: _noteCtrl.text,
+      );
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_cleanError(e)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      _loadSlots();
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+      widget.onSubmittingChanged(false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.86,
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radiusXxl),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.radiusFull),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Đặt lịch xem phòng',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  widget.listing.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _SchedulePickerTile(
+                  icon: Icons.calendar_month_outlined,
+                  label: 'Ngày xem',
+                  value:
+                      '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                  onTap: _pickDate,
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Chọn khung giờ còn trống',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _isLoadingSlots ? null : _loadSlots,
+                      icon: const Icon(Icons.refresh_rounded),
+                      tooltip: 'Tải lại',
+                    ),
+                  ],
+                ),
+                _buildSlots(),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _noteCtrl,
+                  maxLines: 3,
+                  maxLength: 500,
+                  decoration: InputDecoration(
+                    labelText: 'Ghi chú cho chủ trọ',
+                    hintText:
+                        'Ví dụ: Mình muốn xem phòng sau giờ làm, khoảng 2 người đi xem.',
+                    filled: true,
+                    fillColor: AppColors.bgPage,
+                    border: OutlineInputBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.radiusMd),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.radiusMd),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed:
+                        _selectedSlot == null || _isSubmitting ? null : _submit,
+                    icon: _isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.event_available_rounded,
+                            color: Colors.white),
+                    label: const Text(
+                      'Gửi lịch hẹn',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppConstants.radiusMd),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSlots() {
+    if (_isLoadingSlots) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 18),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_slotError != null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.errorBg,
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+        ),
+        child: Text(
+          _slotError!,
+          style: const TextStyle(color: AppColors.error),
+        ),
+      );
+    }
+
+    if (_slots.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.bgPage,
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+        ),
+        child: const Text(
+          'Ngày này chưa có khung giờ khả dụng.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+      );
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _slots.map((slot) {
+        final selected = _selectedSlot?.scheduledAt == slot.scheduledAt;
+        return ChoiceChip(
+          selected: selected,
+          showCheckmark: false,
+          label: Text(slot.label),
+          onSelected: slot.isAvailable
+              ? (_) => setState(() => _selectedSlot = slot)
+              : null,
+          selectedColor: AppColors.primary,
+          disabledColor: AppColors.bgCardLight,
+          labelStyle: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: selected
+                ? Colors.white
+                : slot.isAvailable
+                    ? AppColors.textPrimary
+                    : AppColors.textMuted,
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  String _cleanError(Object e) {
+    final value = e.toString();
+    return value.startsWith('Exception: ')
+        ? value.substring('Exception: '.length)
+        : value;
+  }
+}
+
+class _SchedulePickerTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  const _SchedulePickerTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.bgPage,
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: AppColors.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "59875388196-44lerb9s60qnc8bbg4e71qcgle5ujeu2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ung_dung_tim_kiem_tro",
+            "certificate_hash": "d7a547cffe77594e1ca44aef1e2a66d7cbb72b83"
+          }
+        },
+        {
+          "client_id": "59875388196-4pgkcpna3ankg1at373h5s73n8qk5d0h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ung_dung_tim_kiem_tro",
+            "certificate_hash": "6b0b95d7900269758d4e73a0c9cfc70b04cd77b0"
+          }
+        },
+        {
           "client_id": "59875388196-khjrjq5d4mipa38bm3dv5h0aov11p4lo.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
