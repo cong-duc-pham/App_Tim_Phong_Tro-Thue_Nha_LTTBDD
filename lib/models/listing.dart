@@ -12,8 +12,11 @@ class Listing {
   final String typeName;
 
   // địa chỉ
+  final int? provinceId;
   final String? provinceName;
+  final int? districtId;
   final String? districtName;
+  final int? wardId;
   final String? wardName;
   final String streetAddress;
   final double? latitude;
@@ -68,8 +71,11 @@ class Listing {
     required this.area,
     required this.typeId,
     required this.typeName,
+    this.provinceId,
     this.provinceName,
+    this.districtId,
     this.districtName,
+    this.wardId,
     this.wardName,
     required this.streetAddress,
     this.latitude,
@@ -157,8 +163,11 @@ class Listing {
       area: number('area', 'Area'),
       typeId: integer('typeId', 'TypeId'),
       typeName: read<String>('typeName', 'TypeName') ?? '',
+      provinceId: nullableInt('provinceId', 'ProvinceId'),
       provinceName: read<String>('provinceName', 'ProvinceName'),
+      districtId: nullableInt('districtId', 'DistrictId'),
       districtName: read<String>('districtName', 'DistrictName'),
+      wardId: nullableInt('wardId', 'WardId'),
       wardName: read<String>('wardName', 'WardName'),
       streetAddress: read<String>('streetAddress', 'StreetAddress') ?? '',
       latitude: nullableNumber('latitude', 'Latitude'),
@@ -171,7 +180,8 @@ class Listing {
       image5: UrlHelper.sanitizeUrl(read<String>('image5', 'Image5')),
       landlordId: nullableInt('landlordId', 'LandlordId'),
       landlordName: read<String>('landlordName', 'LandlordName'),
-      landlordAvatar: UrlHelper.sanitizeUrl(read<String>('landlordAvatar', 'LandlordAvatar')),
+      landlordAvatar: UrlHelper.sanitizeUrl(
+          read<String>('landlordAvatar', 'LandlordAvatar')),
       landlordPhone: read<String>('landlordPhone', 'LandlordPhone'),
       electricPrice: nullableNumber('electricPrice', 'ElectricPrice'),
       waterPrice: nullableNumber('waterPrice', 'WaterPrice'),
@@ -225,8 +235,11 @@ class Listing {
     String? title,
     String? description,
     String? typeName,
+    int? provinceId,
     String? provinceName,
+    int? districtId,
     String? districtName,
+    int? wardId,
     String? wardName,
     String? streetAddress,
     List<String>? amenityNames,
@@ -239,8 +252,11 @@ class Listing {
       area: area,
       typeId: typeId,
       typeName: typeName ?? this.typeName,
+      provinceId: provinceId ?? this.provinceId,
       provinceName: provinceName ?? this.provinceName,
+      districtId: districtId ?? this.districtId,
       districtName: districtName ?? this.districtName,
+      wardId: wardId ?? this.wardId,
       wardName: wardName ?? this.wardName,
       streetAddress: streetAddress ?? this.streetAddress,
       latitude: latitude,
