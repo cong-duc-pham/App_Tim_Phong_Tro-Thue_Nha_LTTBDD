@@ -1291,6 +1291,12 @@ public partial class PhongTroDbContext : DbContext
                 .IsUnicode(false)
                 .HasColumnName("phone");
             entity.Property(e => e.RoleId).HasColumnName("role_id");
+            entity.Property(e => e.ReputationCount)
+                .HasDefaultValue(0)
+                .HasColumnName("reputation_count");
+            entity.Property(e => e.ReputationScore)
+                .HasDefaultValue(5.0)
+                .HasColumnName("reputation_score");
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnName("updated_at");

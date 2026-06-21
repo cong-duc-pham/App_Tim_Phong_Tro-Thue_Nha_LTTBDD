@@ -27,10 +27,10 @@ class _MainBottomNavState extends State<MainBottomNav>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    ChatUnreadService.refresh();
+    unawaited(ChatUnreadService.start());
     _refreshTimer = Timer.periodic(
       const Duration(seconds: 30),
-      (_) => ChatUnreadService.refresh(),
+      (_) => ChatUnreadService.start(),
     );
   }
 
@@ -38,13 +38,17 @@ class _MainBottomNavState extends State<MainBottomNav>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _refreshTimer?.cancel();
+    unawaited(ChatUnreadService.stopRealtime());
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      ChatUnreadService.refresh();
+      unawaited(ChatUnreadService.start());
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      unawaited(ChatUnreadService.stopRealtime());
     }
   }
 
@@ -155,9 +159,8 @@ class _MainBottomNavState extends State<MainBottomNav>
         if (!context.mounted) return;
         await AuthGuard.showLoginRequired(
           context,
-          featureName: route == AppConstants.routeFavorites
-              ? 'Yêu thích'
-              : 'Tin nhắn',
+          featureName:
+              route == AppConstants.routeFavorites ? 'Yêu thích' : 'Tin nhắn',
         );
         return;
       }

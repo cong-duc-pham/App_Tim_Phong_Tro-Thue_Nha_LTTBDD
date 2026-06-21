@@ -11,6 +11,8 @@ class Conversation {
   final String otherUserName;
   final String? otherUserAvatar;
   final int unreadCount;
+  final int tenantId;
+  final int landlordId;
 
   const Conversation({
     required this.convId,
@@ -23,6 +25,8 @@ class Conversation {
     required this.otherUserName,
     this.otherUserAvatar,
     this.unreadCount = 0,
+    required this.tenantId,
+    required this.landlordId,
   });
 
   factory Conversation.fromJson(Map<String, dynamic> json) {
@@ -60,6 +64,8 @@ class Conversation {
           read<String>('otherUserName', 'OtherUserName') ?? 'Người dùng',
       otherUserAvatar: UrlHelper.sanitizeUrl(read<String>('otherUserAvatar', 'OtherUserAvatar')),
       unreadCount: integer('unreadCount', 'UnreadCount'),
+      tenantId: integer('tenantId', 'TenantId'),
+      landlordId: integer('landlordId', 'LandlordId'),
     );
   }
 
@@ -75,6 +81,8 @@ class Conversation {
       'otherUserName': otherUserName,
       'otherUserAvatar': otherUserAvatar,
       'unreadCount': unreadCount,
+      'tenantId': tenantId,
+      'landlordId': landlordId,
     };
   }
 
@@ -89,6 +97,8 @@ class Conversation {
     String? otherUserName,
     String? otherUserAvatar,
     int? unreadCount,
+    int? tenantId,
+    int? landlordId,
   }) {
     return Conversation(
       convId: convId ?? this.convId,
@@ -101,6 +111,8 @@ class Conversation {
       otherUserName: otherUserName ?? this.otherUserName,
       otherUserAvatar: otherUserAvatar ?? this.otherUserAvatar,
       unreadCount: unreadCount ?? this.unreadCount,
+      tenantId: tenantId ?? this.tenantId,
+      landlordId: landlordId ?? this.landlordId,
     );
   }
 }
