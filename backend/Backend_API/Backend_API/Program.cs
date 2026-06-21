@@ -304,6 +304,8 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 
 builder.Services.AddScoped<IListingService, ListingService>();
 
+builder.Services.AddScoped<IViewingAppointmentService, ViewingAppointmentService>();
+
 builder.Services.AddScoped<IFavoriteService, FavoriteService>();
 
 builder.Services.AddScoped<IReviewService, ReviewService>();
@@ -490,4 +492,3 @@ app.MapHub<ListingHub>("/hubs/listings");
 
 
 app.Run();
-

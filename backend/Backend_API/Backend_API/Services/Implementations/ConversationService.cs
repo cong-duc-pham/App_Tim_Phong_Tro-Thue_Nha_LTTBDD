@@ -35,6 +35,8 @@ namespace Backend_API.Services.Implementations
                     ListingId = c.ListingId,
                     ListingTitle = c.Listing?.Title,
                     ListingImage = c.Listing?.Image0,
+                    TenantId = c.TenantId,
+                    LandlordId = c.LandlordId,
                     LastMessage = lastMsg?.Content,
                     LastMsgAt = c.LastMsgAt,
                     OtherUserId = otherUser.UserId,
