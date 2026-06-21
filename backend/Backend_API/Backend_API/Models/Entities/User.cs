@@ -41,6 +41,10 @@ public partial class User
 
     public DateTime? UpdatedAt { get; set; }
 
+    public double ReputationScore { get; set; } = 5.0;
+
+    public int ReputationCount { get; set; } = 0;
+
     public virtual ICollection<AdminLog> AdminLogs { get; set; } = new List<AdminLog>();
 
     public virtual ICollection<Conversation> ConversationLandlords { get; set; } = new List<Conversation>();

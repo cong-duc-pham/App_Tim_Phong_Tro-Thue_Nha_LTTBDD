@@ -304,13 +304,13 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 
 builder.Services.AddScoped<IListingService, ListingService>();
 
+builder.Services.AddScoped<IViewingAppointmentService, ViewingAppointmentService>();
+
 builder.Services.AddScoped<IFavoriteService, FavoriteService>();
 
 builder.Services.AddScoped<IReviewService, ReviewService>();
 
 builder.Services.AddScoped<IRentalService, RentalService>();
-
-builder.Services.AddScoped<IViewingAppointmentService, ViewingAppointmentService>();
 
 
 builder.Services.AddScoped<IPreferenceService, PreferenceService>();
@@ -492,4 +492,3 @@ app.MapHub<ListingHub>("/hubs/listings");
 
 
 app.Run();
-

@@ -203,6 +203,112 @@ namespace Backend_API.Services.Implementations
             return string.Join(", ", parts);
         }
 
+        public async Task<RentalResponseDto> ConfirmRentalFromChatAsync(long landlordId, long convId)
+        {
+            await EnsureRentalsAndUpgradeReviewsTableAsync();
+
+            var conv = await _context.Conversations
+                .Include(c => c.Listing)
+                    .ThenInclude(l => l.Province)
+                .Include(c => c.Listing)
+                    .ThenInclude(l => l.District)
+                .Include(c => c.Listing)
+                    .ThenInclude(l => l.Ward)
+                .Include(c => c.Tenant)
+                .Include(c => c.Landlord)
+                .FirstOrDefaultAsync(c => c.ConvId == convId)
+                ?? throw new Exception("Không tìm thấy cuộc trò chuyện.");
+
+            if (conv.LandlordId != landlordId)
+                throw new Exception("Bạn không phải là chủ nhà trong cuộc trò chuyện này.");
+
+            if (conv.ListingId == null)
+                throw new Exception("Cuộc trò chuyện này không liên kết với tin đăng nào.");
+
+            long listingId = conv.ListingId.Value;
+            long tenantId = conv.TenantId;
+
+            // Check if there is already an active rental for this listing
+            var existingRental = await _context.Rentals
+                .FirstOrDefaultAsync(r => r.ListingId == listingId && r.Status == "active");
+
+            if (existingRental != null)
+            {
+                if (existingRental.TenantId == tenantId)
+                {
+                    return new RentalResponseDto
+                    {
+                        RentalId = existingRental.RentalId,
+                        ListingId = existingRental.ListingId,
+                        ListingTitle = conv.Listing?.Title,
+                        ListingAddress = BuildListingAddress(conv.Listing),
+                        ListingThumbnail = conv.Listing?.Image0,
+                        TenantId = tenantId,
+                        TenantName = conv.Tenant.FullName,
+                        TenantPhone = conv.Tenant.Phone,
+                        TenantAvatar = conv.Tenant.AvatarUrl,
+                        LandlordId = landlordId,
+                        LandlordName = conv.Landlord.FullName,
+                        StartDate = existingRental.StartDate,
+                        EndDate = existingRental.EndDate,
+                        Status = existingRental.Status,
+                        CreatedAt = existingRental.CreatedAt
+                    };
+                }
+                throw new Exception("Tin đăng này đã được xác nhận cho một người thuê khác.");
+            }
+
+            var rental = new Rental
+            {
+                ListingId = listingId,
+                TenantId = tenantId,
+                LandlordId = landlordId,
+                StartDate = DateTime.UtcNow,
+                Status = "active",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _context.Rentals.AddAsync(rental);
+
+            // Update Listing status to 'rented'
+            var listing = conv.Listing;
+            if (listing != null)
+            {
+                listing.StatusId = await GetListingStatusIdAsync("rented");
+                listing.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Real-time update
+            if (listing != null)
+            {
+                await _listingRealtimeNotifier.NotifyListingsChangedAsync(
+                    listing.ListingId,
+                    "status_changed",
+                    "rented");
+            }
+
+            return new RentalResponseDto
+            {
+                RentalId = rental.RentalId,
+                ListingId = rental.ListingId,
+                ListingTitle = listing?.Title,
+                ListingAddress = BuildListingAddress(listing),
+                ListingThumbnail = listing?.Image0,
+                TenantId = tenantId,
+                TenantName = conv.Tenant.FullName,
+                TenantPhone = conv.Tenant.Phone,
+                TenantAvatar = conv.Tenant.AvatarUrl,
+                LandlordId = landlordId,
+                LandlordName = conv.Landlord.FullName,
+                StartDate = rental.StartDate,
+                Status = rental.Status,
+                CreatedAt = rental.CreatedAt
+            };
+        }
+
         public async Task EnsureRentalsAndUpgradeReviewsTableAsync()
         {
             if (_context.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
@@ -276,6 +382,17 @@ BEGIN
     CREATE UNIQUE INDEX UX_Reviews_Listing_Reviewer_Type
     ON dbo.Reviews(listing_id, reviewer_id)
     WHERE type = 'review' AND is_deleted = 0;
+END
+
+-- 5. Add reputation columns to Users table if they don't exist
+IF COL_LENGTH('dbo.Users', 'reputation_score') IS NULL
+BEGIN
+    ALTER TABLE dbo.Users ADD [reputation_score] FLOAT NOT NULL CONSTRAINT DF_Users_ReputationScore DEFAULT (5.0);
+END
+
+IF COL_LENGTH('dbo.Users', 'reputation_count') IS NULL
+BEGIN
+    ALTER TABLE dbo.Users ADD [reputation_count] INT NOT NULL CONSTRAINT DF_Users_ReputationCount DEFAULT (0);
 END
 ";
             await _context.Database.ExecuteSqlRawAsync(sql);

@@ -131,6 +131,20 @@ class ConversationRepository {
     }
   }
 
+  Future<Map<String, dynamic>> confirmRental(int conversationId) async {
+    try {
+      final response = await _authorizedRequest<Map<String, dynamic>>(
+        (accessToken) => _apiService.dio.post<Map<String, dynamic>>(
+          '/rentals/confirm-from-chat/$conversationId',
+          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+        ),
+      );
+      return Map<String, dynamic>.from(response.data ?? {});
+    } on DioException catch (e) {
+      throw Exception(_readBackendMessage(e));
+    }
+  }
+
   Future<int?> getCurrentBackendUserId() async {
     final prefs = await SharedPreferences.getInstance();
     return int.tryParse(prefs.getString(AppConstants.keyUserId) ?? '');

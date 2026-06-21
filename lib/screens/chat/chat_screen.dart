@@ -8,6 +8,8 @@ import '../../core/constants/app_constants.dart';
 import '../../models/conversation.dart';
 import '../../models/message.dart';
 import '../../repositories/message_repository.dart';
+import '../../repositories/conversation_repository.dart';
+import '../../repositories/listing_repository.dart';
 import '../../services/chat_unread_service.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/theme/profile_theme.dart';
@@ -30,6 +32,9 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _errorMessage;
   bool _showListingHeader = true;
   int _currentUserId = 999; // Lấy từ SharedPreferences hoặc fallback 999
+  int? _listingLandlordId;
+  double? _listingPrice;
+  double? _listingArea;
   bool _isConnected = true;
   bool _isLoading = true;
   final _messageRepo = MessageRepository();
@@ -44,7 +49,25 @@ class _ChatScreenState extends State<ChatScreen> {
     _loadCurrentUserId().then((_) {
       _loadRealMessages();
       _setupRealTimeChat();
+      _fetchListingLandlordId();
     });
+  }
+
+  Future<void> _fetchListingLandlordId() async {
+    final listingId = widget.conversation.listingId;
+    if (listingId != null && listingId != 0) {
+      try {
+        final repo = ListingRepository();
+        final listing = await repo.getListing(listingId);
+        if (listing != null && mounted) {
+          setState(() {
+            _listingLandlordId = listing.landlordId;
+            _listingPrice = listing.price;
+            _listingArea = listing.area;
+          });
+        }
+      } catch (_) {}
+    }
   }
 
   @override
@@ -345,6 +368,59 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  void _confirmRentalAction() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: context.profileCard,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppConstants.radiusLg)),
+        title: const Text('Xác nhận cho thuê',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        content: Text(
+            'Xác nhận rằng bạn đã cho ${_messages.isNotEmpty ? widget.conversation.otherUserName.split(" (").first : "người dùng này"} thuê phòng trọ này?',
+            style: TextStyle(color: context.profileTextSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('common_cancel'.tr),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Xác nhận'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final repo = ConversationRepository();
+      await repo.confirmRental(widget.conversation.convId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Đã xác nhận cho thuê thành công! Người thuê hiện đã có quyền đánh giá phòng trọ này.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi: ${_cleanError(e)}'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -588,6 +664,9 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildListingContextBar() {
+    final price = _formatListingPrice(_listingPrice);
+    final area = _formatListingArea(_listingArea);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
@@ -634,17 +713,19 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     Text(
-                      '4.5 ${'chat_month_suffix'.tr}',
+                      price,
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                         color: AppColors.error,
                       ),
                     ),
-                    const SizedBox(width: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
@@ -656,7 +737,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             BorderRadius.circular(AppConstants.radiusSm),
                       ),
                       child: Text(
-                        '25 m²',
+                        area,
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
@@ -676,6 +757,31 @@ class _ChatScreenState extends State<ChatScreen> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (_currentUserId == widget.conversation.landlordId ||
+                  (_listingLandlordId != null &&
+                      _currentUserId == _listingLandlordId)) ...[
+                GestureDetector(
+                  onTap: _confirmRentalAction,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.success,
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.radiusMd),
+                    ),
+                    child: const Text(
+                      'Xác nhận đã thuê',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               GestureDetector(
                 onTap: () {
                   final listingId = widget.conversation.listingId;
@@ -683,7 +789,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     context.push('/listing/$listingId');
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
+                      const SnackBar(
                           content: Text('Không có thông tin phòng trọ này.')),
                     );
                   }
@@ -730,6 +836,23 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
     );
+  }
+
+  String _formatListingPrice(double? value) {
+    if (value == null || value <= 0) return '-- ${'chat_month_suffix'.tr}';
+    final millions = value / 1000000;
+    final amount = millions == millions.roundToDouble()
+        ? millions.toInt().toString()
+        : millions.toStringAsFixed(1);
+    return '$amount ${'chat_month_suffix'.tr}';
+  }
+
+  String _formatListingArea(double? value) {
+    if (value == null || value <= 0) return '-- m²';
+    final amount = value == value.roundToDouble()
+        ? value.toInt().toString()
+        : value.toStringAsFixed(1);
+    return '$amount m²';
   }
 
   Widget _buildMessagesList() {

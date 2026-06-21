@@ -469,6 +469,8 @@ namespace Backend_API.Services.Implementations
                 LandlordName    = l.Landlord?.FullName ?? string.Empty,
                 LandlordAvatar  = l.Landlord?.AvatarUrl,
                 LandlordPhone   = l.Landlord?.Phone ?? string.Empty,
+                LandlordReputationScore = l.Landlord?.ReputationScore ?? 5.0,
+                LandlordReputationCount = l.Landlord?.ReputationCount ?? 0,
                 Title           = l.Title,
                 Description     = l.Description,
                 Price           = l.Price,

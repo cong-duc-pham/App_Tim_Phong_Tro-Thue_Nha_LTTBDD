@@ -21,6 +21,8 @@ namespace Backend_API.Models.DTOs.Chat
         public long? ListingId { get; set; }
         public string? ListingTitle { get; set; }
         public string? ListingImage { get; set; }
+        public long TenantId { get; set; }
+        public long LandlordId { get; set; }
         
         public string? LastMessage { get; set; }
         public DateTime? LastMsgAt { get; set; }
