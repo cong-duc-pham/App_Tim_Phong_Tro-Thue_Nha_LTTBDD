@@ -107,6 +107,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final refType = item.refType?.toLowerCase() ?? '';
     final refId = item.refId;
 
+    final isViewingAppointment = type.contains('appointment') ||
+        refType == 'viewing_appointment';
+
+    if (isViewingAppointment) {
+      context.push(AppConstants.routeViewingAppointments);
+      return;
+    }
+
     if (refId != null &&
         (type == 'listing_reviewed' ||
             type.contains('review') ||
@@ -142,6 +150,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   IconData _iconFor(AppNotification item) {
     final type = item.type.toLowerCase();
     final refType = item.refType?.toLowerCase() ?? '';
+    if (type.contains('appointment') || refType == 'viewing_appointment') {
+      return Icons.event_available_outlined;
+    }
     if (type.contains('chat') || refType.contains('chat')) {
       return Icons.chat_bubble_outline_rounded;
     }
@@ -161,6 +172,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Color _colorFor(AppNotification item) {
     final type = item.type.toLowerCase();
     final refType = item.refType?.toLowerCase() ?? '';
+    if (type.contains('appointment') || refType == 'viewing_appointment') {
+      return AppColors.warning;
+    }
     if (type.contains('payment')) return AppColors.success;
     if (type.contains('report') || refType.contains('report')) {
       return AppColors.info;
