@@ -556,6 +556,15 @@ public partial class PhongTroDbContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnName("updated_at");
+            entity.Property(e => e.TotalRatingSum)
+                .HasDefaultValue(0)
+                .HasColumnName("total_rating_sum");
+            entity.Property(e => e.ReviewCount)
+                .HasDefaultValue(0)
+                .HasColumnName("review_count");
+            entity.Property(e => e.AverageRating)
+                .HasDefaultValue(0.0)
+                .HasColumnName("average_rating");
             entity.Property(e => e.ViewCount)
                 .HasDefaultValue(0)
                 .HasColumnName("view_count");

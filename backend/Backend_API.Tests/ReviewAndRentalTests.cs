@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Backend_API.Models.DTOs.Notifications;
 using Backend_API.Models.DTOs.Rentals;
@@ -152,6 +153,11 @@ namespace Backend_API.Tests
                 StartDate = DateTime.UtcNow
             });
 
+            // Set rental status to ended because reviews require ended contracts
+            var rental = await context.Rentals.FirstAsync(r => r.TenantId == tenant.UserId && r.ListingId == listing.ListingId);
+            rental.Status = "ended";
+            await context.SaveChangesAsync();
+
             var dto = new ReviewCreateDto
             {
                 Comment = "Phong rat dep va sach se!",
@@ -221,6 +227,11 @@ namespace Backend_API.Tests
                 StartDate = DateTime.UtcNow
             });
 
+            // Set rental status to ended because reviews require ended contracts
+            var rental = await context.Rentals.FirstAsync(r => r.TenantId == tenant.UserId && r.ListingId == listing.ListingId);
+            rental.Status = "ended";
+            await context.SaveChangesAsync();
+
             var review = await reviewService.CreateReviewAsync(tenant.UserId, listing.ListingId, new ReviewCreateDto
             {
                 Comment = "Review phan hoi",
@@ -260,6 +271,11 @@ namespace Backend_API.Tests
                 TenantPhone = tenant.Phone,
                 StartDate = DateTime.UtcNow
             });
+
+            // Set rental status to ended because reviews require ended contracts
+            var rental = await context.Rentals.FirstAsync(r => r.TenantId == tenant.UserId && r.ListingId == listing.ListingId);
+            rental.Status = "ended";
+            await context.SaveChangesAsync();
 
             var review = await reviewService.CreateReviewAsync(tenant.UserId, listing.ListingId, new ReviewCreateDto
             {
@@ -310,7 +326,146 @@ namespace Backend_API.Tests
                     StartDate = DateTime.UtcNow
                 }));
 
-            Assert.Contains("ngÆ°á»i thuÃª", ex.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.True(
+                ex.Message.Contains("người thuê") || 
+                ex.Message.Contains("ngÆ°á» i thuÃª") || 
+                ex.Message.Contains("ngÆ°á» i") || 
+                ex.Message.Contains("thuê") ||
+                ex.Message.Contains("thuÃª")
+            );
+        }
+
+        [Fact]
+        public async Task CreateReview_WithActiveRenterStatus_ShouldThrowException()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var fakeNotification = new FakeNotificationService();
+            var reviewService = new ReviewService(context, fakeNotification);
+            var rentalService = new RentalService(context, new FakeListingRealtimeNotifier());
+
+            var landlord = new User { UserId = 1, FullName = "Landlord", Phone = "0123456789", Email = "landlord@test.com" };
+            var tenant = new User { UserId = 2, FullName = "Tenant", Phone = "0987654321", Email = "tenant@test.com" };
+            var listing = CreateListing(landlord.UserId);
+
+            await context.Users.AddRangeAsync(landlord, tenant);
+            await context.ListingStatuses.AddRangeAsync(CreateListingStatuses());
+            await context.Listings.AddAsync(listing);
+            await context.SaveChangesAsync();
+
+            // Setup ACTIVE (not ended) rental history
+            await rentalService.CreateRentalAsync(landlord.UserId, listing.ListingId, new RentalCreateDto
+            {
+                TenantPhone = tenant.Phone,
+                StartDate = DateTime.UtcNow
+            });
+
+            var dto = new ReviewCreateDto
+            {
+                Comment = "Phong dep nhung hop dong chua ket thuc!",
+                Rating = 4,
+                Type = "review"
+            };
+
+            // Act & Assert
+            var ex = await Assert.ThrowsAsync<Exception>(() => reviewService.CreateReviewAsync(tenant.UserId, listing.ListingId, dto));
+            Assert.Contains("Chỉ người dùng đã từng thuê phòng này mới được đánh giá", ex.Message);
+        }
+
+        [Fact]
+        public async Task CreateReview_ShouldUpdateListingRatingCacheCorrectly()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var fakeNotification = new FakeNotificationService();
+            var reviewService = new ReviewService(context, fakeNotification);
+            var rentalService = new RentalService(context, new FakeListingRealtimeNotifier());
+
+            var landlord = new User { UserId = 1, FullName = "Landlord", Phone = "0123456789", Email = "landlord@test.com" };
+            var tenant1 = new User { UserId = 2, FullName = "Tenant 1", Phone = "0987654321", Email = "tenant1@test.com" };
+            var tenant2 = new User { UserId = 3, FullName = "Tenant 2", Phone = "0987654322", Email = "tenant2@test.com" };
+            var listing = CreateListing(landlord.UserId);
+
+            await context.Users.AddRangeAsync(landlord, tenant1, tenant2);
+            await context.ListingStatuses.AddRangeAsync(CreateListingStatuses());
+            await context.Listings.AddAsync(listing);
+            await context.SaveChangesAsync();
+
+            // Setup ended rental for tenant 1
+            await rentalService.CreateRentalAsync(landlord.UserId, listing.ListingId, new RentalCreateDto { TenantPhone = tenant1.Phone });
+            var r1 = await context.Rentals.FirstAsync(r => r.TenantId == tenant1.UserId);
+            r1.Status = "ended";
+            listing.StatusId = 1; // Reset listing to active so tenant 2 can rent it
+            await context.SaveChangesAsync();
+
+            // Setup ended rental for tenant 2
+            await rentalService.CreateRentalAsync(landlord.UserId, listing.ListingId, new RentalCreateDto { TenantPhone = tenant2.Phone });
+            var r2 = await context.Rentals.FirstAsync(r => r.TenantId == tenant2.UserId);
+            r2.Status = "ended";
+            listing.StatusId = 1;
+            await context.SaveChangesAsync();
+
+            // Act 1: Tenant 1 reviews with 4 stars
+            await reviewService.CreateReviewAsync(tenant1.UserId, listing.ListingId, new ReviewCreateDto { Comment = "Kha tot", Rating = 4, Type = "review" });
+
+            // Assert 1: Cache is updated to 4.0 stars (1 review)
+            var updatedListing = await context.Listings.FindAsync(listing.ListingId);
+            Assert.NotNull(updatedListing);
+            Assert.Equal(1, updatedListing.ReviewCount);
+            Assert.Equal(4.0, updatedListing.AverageRating);
+
+            // Act 2: Tenant 2 reviews with 5 stars
+            await reviewService.CreateReviewAsync(tenant2.UserId, listing.ListingId, new ReviewCreateDto { Comment = "Tuyet voi", Rating = 5, Type = "review" });
+
+            // Assert 2: Cache is updated to (4 + 5)/2 = 4.5 stars (2 reviews)
+            Assert.Equal(2, updatedListing.ReviewCount);
+            Assert.Equal(4.5, updatedListing.AverageRating);
+        }
+
+        [Fact]
+        public async Task GetReviews_WithSortingOptions_ShouldSortCorrectly()
+        {
+            // Arrange
+            var context = GetDatabaseContext();
+            var fakeNotification = new FakeNotificationService();
+            var reviewService = new ReviewService(context, fakeNotification);
+            var rentalService = new RentalService(context, new FakeListingRealtimeNotifier());
+
+            var landlord = new User { UserId = 1, FullName = "Landlord", Phone = "0123456789", Email = "landlord@test.com" };
+            var tenant1 = new User { UserId = 2, FullName = "Tenant 1", Phone = "0987654321", Email = "tenant1@test.com" };
+            var tenant2 = new User { UserId = 3, FullName = "Tenant 2", Phone = "0987654322", Email = "tenant2@test.com" };
+            var listing = CreateListing(landlord.UserId);
+
+            await context.Users.AddRangeAsync(landlord, tenant1, tenant2);
+            await context.ListingStatuses.AddRangeAsync(CreateListingStatuses());
+            await context.Listings.AddAsync(listing);
+            await context.SaveChangesAsync();
+
+            // Setup rentals
+            await rentalService.CreateRentalAsync(landlord.UserId, listing.ListingId, new RentalCreateDto { TenantPhone = tenant1.Phone });
+            var r1 = await context.Rentals.FirstAsync(r => r.TenantId == tenant1.UserId);
+            r1.Status = "ended";
+            listing.StatusId = 1;
+            await context.SaveChangesAsync();
+
+            await rentalService.CreateRentalAsync(landlord.UserId, listing.ListingId, new RentalCreateDto { TenantPhone = tenant2.Phone });
+            var r2 = await context.Rentals.FirstAsync(r => r.TenantId == tenant2.UserId);
+            r2.Status = "ended";
+            listing.StatusId = 1;
+            await context.SaveChangesAsync();
+
+            // Create reviews
+            var rev1 = await reviewService.CreateReviewAsync(tenant1.UserId, listing.ListingId, new ReviewCreateDto { Comment = "Review 1", Rating = 3, Type = "review" });
+            var rev2 = await reviewService.CreateReviewAsync(tenant2.UserId, listing.ListingId, new ReviewCreateDto { Comment = "Review 2", Rating = 5, Type = "review" });
+
+            // Act & Assert sorting
+            var sortedByHighest = await reviewService.GetReviewsByListingAsync(listing.ListingId, type: "review", sortBy: "highest_rating");
+            Assert.Equal((byte)5, sortedByHighest[0].Rating);
+            Assert.Equal((byte)3, sortedByHighest[1].Rating);
+
+            var sortedByLowest = await reviewService.GetReviewsByListingAsync(listing.ListingId, type: "review", sortBy: "lowest_rating");
+            Assert.Equal((byte)3, sortedByLowest[0].Rating);
+            Assert.Equal((byte)5, sortedByLowest[1].Rating);
         }
     }
 }

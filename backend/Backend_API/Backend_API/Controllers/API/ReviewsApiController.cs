@@ -7,7 +7,7 @@ using System.Security.Claims;
 namespace Backend_API.Controllers.API
 {
     /// <summary>
-    /// Quản lý đánh giá (reviews) và hỏi đáp (Q&A) cho tin đăng.
+    /// Quản lý đánh giá (reviews) và hỏi đáp (Q&amp;A) cho tin đăng.
     /// </summary>
     [ApiController]
     [Tags("Reviews")]
@@ -25,17 +25,17 @@ namespace Backend_API.Controllers.API
         /// </summary>
         /// <param name="listingId">ID tin đăng</param>
         /// <param name="type">Loại: "review" hoặc "qna"</param>
+        /// <param name="sortBy">Tiêu chí sắp xếp: "newest", "popular", "highest_rating", "lowest_rating"</param>
         /// <returns>Danh sách reviews kèm điểm trung bình</returns>
         [HttpGet("api/listings/{listingId:long}/reviews")]
         [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetReviews(long listingId, [FromQuery] string? type = null)
+        public async Task<IActionResult> GetReviews(long listingId, [FromQuery] string? type = null, [FromQuery] string? sortBy = null)
         {
             try
             {
-                var items = await _reviewService.GetReviewsByListingAsync(listingId, type, TryGetCurrentUserId());
-                var reviewsWithRatings = items.Where(r => r.Type == "review" && r.Rating.HasValue && !r.IsDeleted).ToList();
-                double avg = reviewsWithRatings.Count > 0 ? Math.Round(reviewsWithRatings.Average(r => (double)r.Rating!.Value), 1) : 0;
-                return Ok(new { success = true, data = items, count = items.Count, averageRating = avg });
+                var items = await _reviewService.GetReviewsByListingAsync(listingId, type, sortBy, TryGetCurrentUserId());
+                var ratingInfo = await _reviewService.GetListingRatingAsync(listingId);
+                return Ok(new { success = true, data = items, count = items.Count, averageRating = ratingInfo.AverageRating, reviewCount = ratingInfo.ReviewCount });
             }
             catch (Exception ex)
             {

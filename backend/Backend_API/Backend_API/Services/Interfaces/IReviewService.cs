@@ -13,7 +13,7 @@ namespace Backend_API.Services.Interfaces
         Task<ReviewResponseDto> CreateReviewAsync(long reviewerId, long listingId, ReviewCreateDto dto);
 
         /// <summary>Lấy toàn bộ đánh giá hoặc hỏi đáp (đã được duyệt) của 1 tin đăng.</summary>
-        Task<List<ReviewResponseDto>> GetReviewsByListingAsync(long listingId, string? type = null, long? currentUserId = null);
+        Task<List<ReviewResponseDto>> GetReviewsByListingAsync(long listingId, string? type = null, string? sortBy = null, long? currentUserId = null);
 
         Task<List<ReviewResponseDto>> GetMyReviewsAsync(long reviewerId);
 
@@ -31,5 +31,8 @@ namespace Backend_API.Services.Interfaces
 
         /// <summary>Like/unlike một đánh giá. Trả về review sau khi cập nhật.</summary>
         Task<ReviewResponseDto> ToggleLikeAsync(long userId, long reviewId);
+
+        /// <summary>Lấy thông tin cache đánh giá của tin đăng.</summary>
+        Task<(double AverageRating, int ReviewCount)> GetListingRatingAsync(long listingId);
     }
 }

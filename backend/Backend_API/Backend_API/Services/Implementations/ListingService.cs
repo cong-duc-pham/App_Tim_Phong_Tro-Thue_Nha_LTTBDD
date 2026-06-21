@@ -460,9 +460,7 @@ namespace Backend_API.Services.Implementations
                 .OrderByDescending(p => p.Package.Priority)
                 .FirstOrDefault();
 
-            double avgRating = l.Reviews.Any()
-                ? l.Reviews.Average(r => (double)r.Rating)
-                : 0;
+            double avgRating = l.AverageRating;
 
             return new ListingResponseDto
             {
@@ -510,8 +508,8 @@ namespace Backend_API.Services.Implementations
                 IsFeatured      = l.IsFeatured,
                 ViewCount       = l.ViewCount,
                 SaveCount       = l.SaveCount,
-                AverageRating   = Math.Round(avgRating, 1),
-                ReviewCount     = l.Reviews.Count,
+                AverageRating   = l.AverageRating,
+                ReviewCount     = l.ReviewCount,
                 PackageInfo = activePackage == null ? null : new PackageInfoDto
                 {
                     PackageName = activePackage.Package.PackageName,
