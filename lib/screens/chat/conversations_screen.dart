@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/auth/auth_guard.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../models/conversation.dart';
@@ -25,6 +26,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   String _searchQuery = '';
   String _selectedTab = 'all';
   bool _isLoading = true;
+  bool _isUnauthenticated = false;
   String? _errorMessage;
 
   @override
@@ -68,7 +70,19 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
       setState(() {
         _isLoading = true;
         _errorMessage = null;
+        _isUnauthenticated = false;
       });
+    }
+
+    // Kiểm tra đăng nhập trước khi gọi API
+    final loggedIn = await AuthGuard.isLoggedIn();
+    if (!mounted) return;
+    if (!loggedIn) {
+      setState(() {
+        _isLoading = false;
+        _isUnauthenticated = true;
+      });
+      return;
     }
 
     try {
@@ -85,41 +99,10 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
       setState(() {
         _errorMessage = _cleanError(e);
         _isLoading = false;
-        _loadMockConversations();
       });
     }
   }
 
-  void _loadMockConversations() {
-    _allConversations = [
-      Conversation(
-        convId: 101,
-        listingId: 50001,
-        otherUserId: 10,
-        otherUserName: 'Nguyễn Văn A (Chủ nhà)',
-        otherUserAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-        listingTitle: 'Phòng trọ cao cấp Q7 gần Lotte Mart',
-        listingImage: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80',
-        lastMessage: 'Hình ảnh phòng chụp sáng nay',
-        lastMsgAt: DateTime.now().subtract(const Duration(minutes: 44)),
-        unreadCount: 0,
-      ),
-      Conversation(
-        convId: 102,
-        listingId: 50002,
-        otherUserId: 12,
-        otherUserName: 'Trần Thị B (Chủ nhà)',
-        otherUserAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
-        listingTitle: 'Chung cư mini lầu 2, không chung chủ Quận 1',
-        listingImage: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80',
-        lastMessage: 'Bạn có muốn qua xem phòng chiều nay không?',
-        lastMsgAt: DateTime.now().subtract(const Duration(hours: 2)),
-        unreadCount: 1,
-      ),
-    ];
-    ChatUnreadService.setFromConversations(_allConversations);
-    _applyFilters();
-  }
 
   void _applyFilters() {
     final query = _searchQuery.trim().toLowerCase();
@@ -250,6 +233,11 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
       );
+    }
+
+    // Chưa đăng nhập → hiện UI yêu cầu đăng nhập
+    if (_isUnauthenticated) {
+      return _buildLoginRequiredBox();
     }
 
     if (_errorMessage != null && _allConversations.isEmpty) {
@@ -596,6 +584,74 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                 label: Text(actionLabel),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoginRequiredBox() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: const BoxDecoration(
+                color: AppColors.primaryLight,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.lock_outline_rounded,
+                size: 36,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Đăng nhập để xem tin nhắn',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: context.profileText,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Bạn cần đăng nhập để xem và gửi tin nhắn với chủ nhà.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: context.profileTextSecondary,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () => context.push(AppConstants.routeLogin),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                ),
+              ),
+              icon: const Icon(Icons.login_rounded, size: 18),
+              label: const Text(
+                'Đăng nhập ngay',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
           ],
         ),
       ),

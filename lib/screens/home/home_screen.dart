@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/auth/auth_guard.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/app_text_styles.dart';
@@ -659,6 +660,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _toggleSave(String id) async {
+    // Chặn hành động nếu chưa đăng nhập
+    final loggedIn = await AuthGuard.checkAndPrompt(
+      context,
+      featureName: 'Yêu thích',
+    );
+    if (!loggedIn || !mounted) return;
+
     final wasSaved = _savedIds.contains(id);
     setState(() {
       if (wasSaved) {
