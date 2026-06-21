@@ -205,6 +205,43 @@ class _MyListingCard extends StatelessWidget {
   final VoidCallback? onRefresh;
 
   Future<void> _handleToggleStatus(BuildContext context) async {
+    final isCurrentlyVisible = listing.statusName.toLowerCase() == 'active';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          isCurrentlyVisible
+              ? 'mylistings_hide_confirm_title'.tr
+              : 'mylistings_show_confirm_title'.tr,
+        ),
+        content: Text(
+          isCurrentlyVisible
+              ? 'mylistings_hide_confirm_desc'.tr
+              : 'mylistings_show_confirm_desc'.tr,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text('cancel'.tr),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor:
+                  isCurrentlyVisible ? Colors.orange : AppColors.success,
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(
+              isCurrentlyVisible
+                  ? 'mylistings_hide_listing'.tr
+                  : 'mylistings_show_listing'.tr,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -250,6 +287,24 @@ class _MyListingCard extends StatelessWidget {
     }
   }
 
+  Future<void> _handleEdit(BuildContext context) async {
+    final router = GoRouter.of(context);
+    Listing listingForEdit = listing;
+
+    try {
+      listingForEdit =
+          await ListingRepository().getListingById(listing.listingId);
+    } catch (_) {
+      // Vẫn cho phép chỉnh sửa dữ liệu đã có nếu không thể tải chi tiết.
+    }
+
+    if (!context.mounted) return;
+    router.go(
+      AppConstants.routePostListing,
+      extra: listingForEdit,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final canViewAnalytics = listing.hasAnalytics;
@@ -260,6 +315,10 @@ class _MyListingCard extends StatelessWidget {
       case 'active':
         statusColor = AppColors.success;
         statusLabel = 'mylistings_status_active'.tr;
+        break;
+      case 'rented':
+        statusColor = AppColors.error;
+        statusLabel = 'home_status_rented'.tr;
         break;
       case 'hidden':
         statusColor = Colors.orange;
@@ -380,56 +439,91 @@ class _MyListingCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
+              if (canViewAnalytics) ...[
+                Expanded(
+                  flex: 3,
+                  child: FilledButton.icon(
+                    onPressed: () => context.push(
+                      '${AppConstants.routeListingAnalytics}/${listing.listingId}',
+                      extra: listing,
+                    ),
+                    icon: const Icon(Icons.analytics_outlined, size: 16),
+                    label: Text(
+                      'mylistings_analytics'.tr,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               Expanded(
                 flex: 3,
-                child: FilledButton.icon(
-                  onPressed: canViewAnalytics
-                      ? () => context.push(
-                            '${AppConstants.routeListingAnalytics}/${listing.listingId}',
-                            extra: listing,
-                          )
-                      : null,
-                  icon: const Icon(Icons.analytics_outlined, size: 16),
-                  label: Text(
-                    canViewAnalytics
-                        ? 'mylistings_analytics'.tr
-                        : 'mylistings_no_analytics'.tr,
-                    style: const TextStyle(fontSize: 12),
+                child: OutlinedButton.icon(
+                  onPressed: () => _handleEdit(context),
+                  icon: const Icon(Icons.edit_outlined, size: 16),
+                  label: const Text('Sửa tin', style: TextStyle(fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppConstants.radiusMd),
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 flex: 4,
-                child: OutlinedButton.icon(
-                  onPressed: (listing.statusName.toLowerCase() == 'active' ||
-                          listing.statusName.toLowerCase() == 'hidden')
-                      ? () => _handleToggleStatus(context)
-                      : null,
-                  icon: Icon(
-                    listing.statusName.toLowerCase() == 'active'
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    size: 16,
-                  ),
-                  label: Text(
-                    listing.statusName.toLowerCase() == 'active'
-                        ? 'mylistings_hide_listing'.tr
-                        : 'mylistings_show_listing'.tr,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor:
-                        listing.statusName.toLowerCase() == 'active'
-                            ? Colors.orange
-                            : AppColors.success,
-                    side: BorderSide(
-                      color: listing.statusName.toLowerCase() == 'active'
-                          ? Colors.orange
-                          : AppColors.success,
-                    ),
-                  ),
-                ),
+                child: listing.statusName.toLowerCase() == 'rented'
+                    ? FilledButton.icon(
+                        onPressed: null,
+                        icon: const Icon(Icons.lock_clock_outlined, size: 16),
+                        label: Text(
+                          'home_status_rented'.tr,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        style: FilledButton.styleFrom(
+                          disabledBackgroundColor:
+                              AppColors.error.withValues(alpha: 0.12),
+                          disabledForegroundColor: AppColors.error,
+                        ),
+                      )
+                    : OutlinedButton.icon(
+                        onPressed:
+                            (listing.statusName.toLowerCase() == 'active' ||
+                                    listing.statusName.toLowerCase() == 'hidden')
+                                ? () => _handleToggleStatus(context)
+                                : null,
+                        icon: Icon(
+                          listing.statusName.toLowerCase() == 'active'
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          size: 16,
+                        ),
+                        label: Text(
+                          listing.statusName.toLowerCase() == 'active'
+                              ? 'mylistings_hide_listing'.tr
+                              : 'mylistings_show_listing'.tr,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor:
+                              listing.statusName.toLowerCase() == 'active'
+                                  ? Colors.orange
+                                  : AppColors.success,
+                          side: BorderSide(
+                            color: listing.statusName.toLowerCase() == 'active'
+                                ? Colors.orange
+                                : AppColors.success,
+                          ),
+                        ),
+                      ),
               ),
             ],
           ),
