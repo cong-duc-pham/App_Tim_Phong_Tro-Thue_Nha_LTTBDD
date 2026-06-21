@@ -308,6 +308,9 @@ builder.Services.AddScoped<IFavoriteService, FavoriteService>();
 
 builder.Services.AddScoped<IReviewService, ReviewService>();
 
+builder.Services.AddScoped<IRentalService, RentalService>();
+
+
 builder.Services.AddScoped<IPreferenceService, PreferenceService>();
 
 builder.Services.AddScoped<INotificationService, NotificationService>();
@@ -317,8 +320,6 @@ builder.Services.AddScoped<IConversationService, ConversationService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 builder.Services.AddScoped<IListingRealtimeNotifier, ListingRealtimeNotifier>();
-
-builder.Services.AddScoped<IViewingAppointmentService, ViewingAppointmentService>();
 
 builder.Services.AddHttpClient<IPayOsService, PayOsService>();
 
@@ -389,8 +390,6 @@ builder.Services.AddSignalR();
 builder.Services.AddHostedService<DailyStatsJob>();
 
 builder.Services.AddHostedService<VipExpiryWorker>();
-
-builder.Services.AddHostedService<ViewingAppointmentReminderWorker>();
 
 
 
