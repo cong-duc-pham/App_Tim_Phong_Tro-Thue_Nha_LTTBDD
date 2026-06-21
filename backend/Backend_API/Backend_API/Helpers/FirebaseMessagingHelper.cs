@@ -77,7 +77,7 @@ namespace Backend_API.Helpers
                     Data = data ?? new Dictionary<string, string>()
                 };
 
-                var response = await FirebaseMessaging.DefaultInstance.SendMulticastAsync(message);
+                var response = await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(message);
                 
                 // Nếu có token bị lỗi trong batch (ví dụ: Unregistered) → Invalidate chúng
                 if (response.FailureCount > 0)

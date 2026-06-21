@@ -74,10 +74,9 @@ namespace Backend_API.Helpers
             }
 
             var normalizedJson = obj.ToJsonString();
-            using var stream = new MemoryStream(Encoding.UTF8.GetBytes(normalizedJson));
             try
             {
-                return GoogleCredential.FromStream(stream);
+                return CredentialFactory.FromJson<ServiceAccountCredential>(normalizedJson).ToGoogleCredential();
             }
             catch (FormatException ex)
             {
