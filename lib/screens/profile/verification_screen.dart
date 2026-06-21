@@ -160,11 +160,12 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
   // MÃ¡Â»Å¸ Bottom Sheet xÃƒÂ¡c thÃ¡Â»Â±c sÃ¡Â»â€˜ Ã„â€˜iÃ¡Â»â€¡n thoÃ¡ÂºÂ¡i
   void _openPhoneVerificationSheet() {
     HapticFeedback.lightImpact();
+    final rootContext = context;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _PhoneVerificationSheet(
+      builder: (sheetContext) => _PhoneVerificationSheet(
         onSuccess: (phone) async {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('verify_phone_status', true);
@@ -176,8 +177,13 @@ class _AccountVerificationScreenState extends State<AccountVerificationScreen> {
           await _loadVerificationStatus();
           _showSuccessSnackBar('verify_success_phone_verify'.tr);
 
-          if (widget.isFromPostListing && mounted) {
-            context.go('/listing');
+          if (!mounted) return;
+          if (widget.isFromPostListing) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                rootContext.go(AppConstants.routePostListing);
+              }
+            });
           }
         },
       ),
@@ -795,7 +801,9 @@ class _PhoneVerificationSheetState extends State<_PhoneVerificationSheet> {
       });
       HapticFeedback.mediumImpact();
       Navigator.pop(context);
-      widget.onSuccess(phone);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onSuccess(phone);
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -1182,7 +1190,9 @@ class _EmailVerificationSheetState extends State<_EmailVerificationSheet> {
         });
         HapticFeedback.mediumImpact();
         Navigator.pop(context);
-        widget.onSuccess(_emailCtrl.text.trim());
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          widget.onSuccess(_emailCtrl.text.trim());
+        });
       }
     } catch (e) {
       setState(() {
