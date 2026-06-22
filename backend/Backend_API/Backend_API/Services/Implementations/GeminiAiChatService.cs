@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Backend_API.Models.DTOs.Ai;
@@ -105,6 +106,16 @@ namespace Backend_API.Services.Implementations
                     "Gemini chat request failed with status {StatusCode}: {ErrorBody}",
                     response.StatusCode,
                     errorBody.Length > 1000 ? errorBody[..1000] : errorBody);
+
+                if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    return new AiChatResponseDto
+                    {
+                        Reply = BuildFallbackReply(request),
+                        Model = "local-fallback"
+                    };
+                }
+
                 throw new HttpRequestException(
                     "The AI provider could not answer right now.",
                     null,
@@ -151,6 +162,92 @@ namespace Backend_API.Services.Implementations
                 .Where(text => !string.IsNullOrWhiteSpace(text));
 
             return string.Join("\n", textParts);
+        }
+
+        private static string BuildFallbackReply(AiChatRequestDto request)
+        {
+            var latestMessage = request.Messages
+                .LastOrDefault(message =>
+                    message.Role == "user"
+                    && !string.IsNullOrWhiteSpace(message.Content))
+                ?.Content
+                .Trim()
+                .ToLowerInvariant() ?? string.Empty;
+
+            if (ContainsAny(latestMessage, "tiêu chí", "tieu chi", "phù hợp", "phu hop", "ngân sách", "ngan sach"))
+            {
+                return """
+                    Bạn có thể lập tiêu chí tìm phòng theo 6 nhóm:
+
+                    1. Ngân sách: tiền thuê tối đa và tổng chi phí điện, nước, Internet, gửi xe.
+                    2. Khu vực: khoảng cách đến nơi học/làm và thời gian di chuyển chấp nhận được.
+                    3. Loại phòng: diện tích, ở một mình hay ở ghép, có gác hoặc nội thất.
+                    4. Tiện ích: điều hòa, máy giặt, bếp, chỗ để xe và giờ giấc.
+                    5. An toàn: khóa cửa, camera, lối thoát hiểm và tình trạng ngập.
+                    6. Hợp đồng: tiền cọc, thời hạn thuê, điều kiện hoàn cọc và tăng giá.
+
+                    Hãy ưu tiên 3 tiêu chí bắt buộc, sau đó mới đến các tiêu chí mong muốn.
+                    """;
+            }
+
+            if (ContainsAny(latestMessage, "đặt cọc", "dat coc", "chủ nhà", "chu nha", "hợp đồng", "hop dong"))
+            {
+                return """
+                    Trước khi đặt cọc, bạn nên hỏi rõ:
+
+                    - Tổng tiền thuê và từng khoản phí hằng tháng.
+                    - Số tiền cọc, điều kiện hoàn cọc và trường hợp bị khấu trừ.
+                    - Thời hạn thuê, ngày thanh toán và mức phạt trả phòng sớm.
+                    - Quy định về khách, giờ giấc, nấu ăn, vật nuôi và gửi xe.
+                    - Ai chịu chi phí sửa chữa thiết bị khi hư hỏng.
+                    - Người nhận cọc có phải chủ nhà hoặc người được ủy quyền không.
+
+                    Chỉ chuyển tiền sau khi xem phòng, kiểm tra giấy tờ và nhận phiếu cọc có chữ ký.
+                    """;
+            }
+
+            if (ContainsAny(latestMessage, "đáng ngờ", "dang ngo", "lừa đảo", "lua dao", "an toàn", "an toan"))
+            {
+                return """
+                    Một tin đăng có thể đáng ngờ nếu giá thấp bất thường, từ chối cho xem phòng, thúc giục chuyển cọc hoặc dùng ảnh không khớp địa chỉ.
+
+                    Bạn nên:
+
+                    - Tìm ngược hình ảnh và kiểm tra địa chỉ trên bản đồ.
+                    - Xem phòng trực tiếp hoặc gọi video theo thời gian thực.
+                    - Đối chiếu giấy tờ người cho thuê và quyền cho thuê.
+                    - Không gửi CCCD đầy đủ hoặc mã OTP.
+                    - Không chuyển tiền nếu chưa có thỏa thuận cọc rõ ràng.
+                    """;
+            }
+
+            if (ContainsAny(latestMessage, "khu vực", "khu vuc", "quận", "quan", "đi lại", "di lai"))
+            {
+                return """
+                    Khi chọn khu vực, hãy so sánh thời gian đi lại vào giờ cao điểm, tuyến xe buýt, tình trạng ngập, an ninh và các tiện ích gần phòng.
+
+                    Nên chọn 2-3 khu vực thay thế trong cùng bán kính, rồi so sánh tổng chi phí thuê với chi phí và thời gian di chuyển mỗi tháng.
+                    """;
+            }
+
+            return """
+                Mình đang tạm thời hoạt động ở chế độ hỗ trợ cơ bản. Bạn hãy cung cấp:
+
+                - Khu vực muốn thuê.
+                - Ngân sách tối đa mỗi tháng.
+                - Số người ở.
+                - Diện tích hoặc loại phòng.
+                - Tiện ích bắt buộc.
+                - Ngày dự kiến chuyển vào.
+
+                Từ đó mình sẽ giúp bạn lập danh sách tiêu chí và các câu hỏi cần kiểm tra trước khi thuê.
+                """;
+        }
+
+        private static bool ContainsAny(string text, params string[] keywords)
+        {
+            return keywords.Any(keyword =>
+                text.Contains(keyword, StringComparison.OrdinalIgnoreCase));
         }
     }
 }
