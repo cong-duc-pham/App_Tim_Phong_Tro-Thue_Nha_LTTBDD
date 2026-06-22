@@ -21,16 +21,19 @@ namespace Backend_API.Models.DTOs.Chat
         public long? ListingId { get; set; }
         public string? ListingTitle { get; set; }
         public string? ListingImage { get; set; }
+        public string? ListingStatusName { get; set; }
+        public bool CanConfirmRental { get; set; }
         public long TenantId { get; set; }
         public long LandlordId { get; set; }
-        
+
         public string? LastMessage { get; set; }
         public DateTime? LastMsgAt { get; set; }
-        
+
         public long OtherUserId { get; set; }
         public string OtherUserName { get; set; } = null!;
         public string? OtherUserAvatar { get; set; }
-        
+        public string? OtherUserPhone { get; set; }
+
         public int UnreadCount { get; set; }
     }
 

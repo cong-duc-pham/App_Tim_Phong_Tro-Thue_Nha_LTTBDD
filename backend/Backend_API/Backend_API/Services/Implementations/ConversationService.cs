@@ -18,23 +18,39 @@ namespace Backend_API.Services.Implementations
         {
             var conversations = await _context.Conversations
                 .Include(c => c.Listing)
+                    .ThenInclude(l => l!.Status)
+                .Include(c => c.Listing)
+                    .ThenInclude(l => l!.Rentals)
                 .Include(c => c.Tenant)
                 .Include(c => c.Landlord)
                 .Include(c => c.Messages)
                 .Where(c => c.TenantId == userId || c.LandlordId == userId)
                 .OrderByDescending(c => c.LastMsgAt)
+                .AsSplitQuery()
                 .ToListAsync();
 
-            return conversations.Select(c => {
+            return conversations.Select(c =>
+            {
                 var otherUser = c.TenantId == userId ? c.Landlord : c.Tenant;
                 var lastMsg = c.Messages.OrderByDescending(m => m.SentAt).FirstOrDefault();
-                
+
                 return new ConversationDto
                 {
                     ConvId = c.ConvId,
                     ListingId = c.ListingId,
                     ListingTitle = c.Listing?.Title,
                     ListingImage = c.Listing?.Image0,
+                    ListingStatusName = c.Listing?.Status?.StatusName,
+                    CanConfirmRental = c.Listing != null
+                        && !string.Equals(
+                            c.Listing.Status?.StatusName,
+                            "rented",
+                            StringComparison.OrdinalIgnoreCase)
+                        && !c.Listing.Rentals.Any(r =>
+                            string.Equals(
+                                r.Status,
+                                "active",
+                                StringComparison.OrdinalIgnoreCase)),
                     TenantId = c.TenantId,
                     LandlordId = c.LandlordId,
                     LastMessage = lastMsg?.Content,
@@ -42,6 +58,7 @@ namespace Backend_API.Services.Implementations
                     OtherUserId = otherUser.UserId,
                     OtherUserName = otherUser.FullName ?? "User",
                     OtherUserAvatar = otherUser.AvatarUrl,
+                    OtherUserPhone = otherUser.Phone,
                     UnreadCount = c.Messages.Count(m => m.SenderId != userId && (m.IsRead == false || m.IsRead == null))
                 };
             }).ToList();
@@ -70,7 +87,7 @@ namespace Backend_API.Services.Implementations
                 FileUrl = m.FileUrl,
                 IsRead = m.IsRead ?? false,
                 SentAt = m.SentAt
-            }).Reverse().ToList(); 
+            }).Reverse().ToList();
         }
 
         public async Task<ConversationDto> GetOrCreateConversationAsync(long senderId, long landlordId, long listingId)
