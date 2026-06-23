@@ -203,6 +203,8 @@ class _FilterState {
       );
 }
 
+enum _HomeSortOption { recommended, newest, priceAsc, priceDesc, areaDesc }
+
 // ─── Vietnamese diacritic normalization ─────────────────────────────────────
 
 String _removeDiacritics(String s) {
@@ -252,9 +254,12 @@ class _HomeScreenState extends State<HomeScreen> {
   final FocusNode _searchFocus = FocusNode();
   String _searchQuery = '';
   bool _isSearching = false;
+  bool _isSearchDebouncing = false;
+  Timer? _searchDebounceTimer;
 
   // Filter
   _FilterState _filter = _FilterState();
+  _HomeSortOption _sortOption = _HomeSortOption.recommended;
   List<ListingItem> _sqlListings = [];
   bool _isLoadingListings = false;
   String? _listingLoadError;
@@ -627,6 +632,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _searchCtrl.text = widget.initialSearchQuery!;
           _searchQuery = widget.initialSearchQuery!.trim().toLowerCase();
           _isSearching = true;
+          _isSearchDebouncing = false;
         });
       } else if (widget.initialSearchQuery == null) {
         // Làm trống thanh tìm kiếm nếu query param bị xóa
@@ -634,6 +640,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _searchCtrl.clear();
           _searchQuery = '';
           _isSearching = false;
+          _isSearchDebouncing = false;
         });
       }
     }
@@ -642,6 +649,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _listingRealtimeReloadTimer?.cancel();
+    _searchDebounceTimer?.cancel();
     unawaited(_listingRealtimeRepository.disconnect());
     notificationsEnabledNotifier
         .removeListener(_handleNotificationSettingChanged);
@@ -871,31 +879,43 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onSearchChanged(String val) {
+    _searchDebounceTimer?.cancel();
+    final nextQuery = val.trim().toLowerCase();
     setState(() {
-      _searchQuery = val.trim().toLowerCase();
-      _isSearching = _searchQuery.isNotEmpty;
+      _isSearching = nextQuery.isNotEmpty;
+      _isSearchDebouncing = nextQuery.isNotEmpty;
+    });
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      setState(() {
+        _searchQuery = nextQuery;
+        _isSearchDebouncing = false;
+      });
     });
   }
 
   void _clearSearch() {
+    _searchDebounceTimer?.cancel();
     _searchCtrl.clear();
     _searchFocus.unfocus();
     setState(() {
       _searchQuery = '';
       _isSearching = false;
+      _isSearchDebouncing = false;
     });
   }
 
   List<ListingItem> get _searchResults {
     if (_searchQuery.isEmpty) return [];
     final normalized = _removeDiacritics(_searchQuery.toLowerCase());
-    return _listingsForUi
+    final matched = _listingsForUi
         .where((e) =>
             _removeDiacritics(e.title.toLowerCase()).contains(normalized) ||
             _removeDiacritics(e.address.toLowerCase()).contains(normalized) ||
             e.tags.any(
                 (t) => _removeDiacritics(t.toLowerCase()).contains(normalized)))
         .toList();
+    return _applyFilter(matched);
   }
 
   List<ListingItem> _applyFilter(List<ListingItem> src) {
@@ -918,7 +938,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }).toList()
         : List<ListingItem>.from(src);
 
-    return _applyQuickFilter(filtered);
+    return _applySort(_applyQuickFilter(filtered));
   }
 
   List<ListingItem> _applyQuickFilter(List<ListingItem> src) {
@@ -961,6 +981,40 @@ class _HomeScreenState extends State<HomeScreen> {
       item.createdAt?.millisecondsSinceEpoch ?? 0;
 
   int _listingIdValue(ListingItem item) => int.tryParse(item.id) ?? 0;
+
+  List<ListingItem> _applySort(List<ListingItem> src) {
+    final list = List<ListingItem>.from(src);
+    switch (_sortOption) {
+      case _HomeSortOption.recommended:
+        return list;
+      case _HomeSortOption.newest:
+        return list..sort(_compareNewestFirst);
+      case _HomeSortOption.priceAsc:
+        return list
+          ..sort((a, b) {
+            final priceCompare = a.price.compareTo(b.price);
+            if (priceCompare != 0) return priceCompare;
+            return _compareNewestFirst(a, b);
+          });
+      case _HomeSortOption.priceDesc:
+        return list
+          ..sort((a, b) {
+            final priceCompare = b.price.compareTo(a.price);
+            if (priceCompare != 0) return priceCompare;
+            return _compareNewestFirst(a, b);
+          });
+      case _HomeSortOption.areaDesc:
+        return list
+          ..sort((a, b) {
+            final areaCompare = b.area.compareTo(a.area);
+            if (areaCompare != 0) return areaCompare;
+            return _compareNewestFirst(a, b);
+          });
+    }
+  }
+
+  bool get _hasActiveControls =>
+      _filter.hasActive || _sortOption != _HomeSortOption.recommended;
 
   bool get _isEnglish => Localizations.localeOf(context).languageCode == 'en';
 
@@ -1075,6 +1129,109 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  String _sortLabel(_HomeSortOption option) {
+    return switch (option) {
+      _HomeSortOption.recommended => 'home_sort_recommended'.tr,
+      _HomeSortOption.newest => 'home_sort_newest'.tr,
+      _HomeSortOption.priceAsc => 'home_sort_price_asc'.tr,
+      _HomeSortOption.priceDesc => 'home_sort_price_desc'.tr,
+      _HomeSortOption.areaDesc => 'home_sort_area_desc'.tr,
+    };
+  }
+
+  IconData _sortIcon(_HomeSortOption option) {
+    return switch (option) {
+      _HomeSortOption.recommended => Icons.auto_awesome_rounded,
+      _HomeSortOption.newest => Icons.schedule_rounded,
+      _HomeSortOption.priceAsc => Icons.south_rounded,
+      _HomeSortOption.priceDesc => Icons.north_rounded,
+      _HomeSortOption.areaDesc => Icons.square_foot_rounded,
+    };
+  }
+
+  void _showSortSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        const options = _HomeSortOption.values;
+        return Container(
+          decoration: BoxDecoration(
+            color: context.profileCard,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppConstants.radiusXxl),
+            ),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 4),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: context.profileBorder,
+                    borderRadius:
+                        BorderRadius.circular(AppConstants.radiusFull),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.sort_rounded,
+                          color: context.profileTextMuted, size: 20),
+                      const SizedBox(width: 10),
+                      Text(
+                        'home_sort_title'.tr,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: context.profileText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ...options.map((option) {
+                  final selected = option == _sortOption;
+                  return ListTile(
+                    leading: Icon(
+                      _sortIcon(option),
+                      color: selected
+                          ? AppColors.primary
+                          : context.profileTextMuted,
+                    ),
+                    title: Text(
+                      _sortLabel(option),
+                      style: TextStyle(
+                        fontWeight:
+                            selected ? FontWeight.w700 : FontWeight.w500,
+                        color:
+                            selected ? AppColors.primary : context.profileText,
+                      ),
+                    ),
+                    trailing: selected
+                        ? const Icon(Icons.check_rounded,
+                            color: AppColors.primary)
+                        : null,
+                    onTap: () {
+                      Navigator.pop(context);
+                      setState(() => _sortOption = option);
+                    },
+                  );
+                }),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1105,7 +1262,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (_hasSavedPreferences) ...[
                   SliverToBoxAdapter(child: _buildPreferenceBanner()),
                 ],
-                if (_filter.hasActive) ...[
+                if (_hasActiveControls) ...[
                   SliverToBoxAdapter(child: _buildActiveFilterBanner()),
                 ],
                 SliverList(
@@ -1338,6 +1495,46 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: _showSortSheet,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: context.profileSubtleCard,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: context.profileBorder),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.sort_rounded,
+                    size: 20,
+                    color: _sortOption == _HomeSortOption.recommended
+                        ? context.profileTextSecondary
+                        : AppColors.primary,
+                  ),
+                ),
+                if (_sortOption != _HomeSortOption.recommended)
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: AppColors.notifDot,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -1347,19 +1544,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSearchResults() {
     final results = _searchResults;
+    if (_isSearchDebouncing) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 36),
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2.4),
+          ),
+        ),
+      );
+    }
     return AnimatedSwitcher(
       duration: AppConstants.animNormal,
       child: results.isEmpty
           ? _buildSearchEmpty()
           : Column(
-              key: ValueKey(_searchQuery),
+              key: ValueKey('$_searchQuery-${_filter.hasActive}-$_sortOption'),
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                       AppConstants.paddingH, 16, AppConstants.paddingH, 8),
                   child: Text(
-                    '${results.length} kết quả cho "$_searchQuery"',
+                    'home_search_results_count'
+                        .tr
+                        .replaceAll('{count}', results.length.toString())
+                        .replaceAll('{query}', _searchQuery),
                     style: const TextStyle(
                         fontSize: 13,
                         color: AppColors.textSecondary,
@@ -1390,16 +1602,16 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Text('🔍', style: TextStyle(fontSize: 32)),
             ),
             const SizedBox(height: 16),
-            const Text('Không tìm thấy kết quả',
-                style: TextStyle(
+            Text('home_search_empty_title'.tr,
+                style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary)),
             const SizedBox(height: 6),
-            const Text(
-              'Thử tìm với từ khóa khác\nhoặc điều chỉnh bộ lọc',
+            Text(
+              'home_search_empty_desc'.tr,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                   fontSize: 13, color: AppColors.textMuted, height: 1.5),
             ),
           ],
@@ -1606,7 +1818,9 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'home_filter_active_banner'.tr,
+                _filter.hasActive
+                    ? 'home_filter_active_banner'.tr
+                    : 'home_sort_active_banner'.tr,
                 style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.primary,
@@ -1614,7 +1828,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             GestureDetector(
-              onTap: () => setState(() => _filter = _FilterState()),
+              onTap: () => setState(() {
+                _filter = _FilterState();
+                _sortOption = _HomeSortOption.recommended;
+              }),
               child: Text(
                 'home_filter_clear'.tr,
                 style: const TextStyle(

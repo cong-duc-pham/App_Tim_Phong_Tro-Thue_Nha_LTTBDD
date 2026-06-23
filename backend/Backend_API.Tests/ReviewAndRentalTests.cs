@@ -336,6 +336,86 @@ namespace Backend_API.Tests
         }
 
         [Fact]
+        public async Task ConfirmRentalFromOneChat_ShouldHideConfirmationForAllChatsOfListing()
+        {
+            var context = GetDatabaseContext();
+            var rentalService = new RentalService(context, new FakeListingRealtimeNotifier());
+            var conversationService = new ConversationService(context);
+
+            var landlord = new User
+            {
+                UserId = 1,
+                FullName = "Landlord",
+                Phone = "0123456789",
+                Email = "landlord@test.com"
+            };
+            var tenantA = new User
+            {
+                UserId = 2,
+                FullName = "Tenant A",
+                Phone = "0987654321",
+                Email = "tenant-a@test.com"
+            };
+            var tenantB = new User
+            {
+                UserId = 3,
+                FullName = "Tenant B",
+                Phone = "0911222333",
+                Email = "tenant-b@test.com"
+            };
+            var listing = CreateListing(landlord.UserId);
+            var conversationA = new Conversation
+            {
+                ConvId = 100,
+                ListingId = listing.ListingId,
+                TenantId = tenantA.UserId,
+                LandlordId = landlord.UserId,
+                CreatedAt = DateTime.UtcNow,
+                LastMsgAt = DateTime.UtcNow
+            };
+            var conversationB = new Conversation
+            {
+                ConvId = 101,
+                ListingId = listing.ListingId,
+                TenantId = tenantB.UserId,
+                LandlordId = landlord.UserId,
+                CreatedAt = DateTime.UtcNow,
+                LastMsgAt = DateTime.UtcNow
+            };
+
+            await context.Users.AddRangeAsync(landlord, tenantA, tenantB);
+            await context.ListingStatuses.AddRangeAsync(CreateListingStatuses());
+            await context.Listings.AddAsync(listing);
+            await context.Conversations.AddRangeAsync(conversationA, conversationB);
+            await context.SaveChangesAsync();
+
+            var beforeConfirmation =
+                await conversationService.GetConversationsAsync(landlord.UserId);
+            Assert.All(beforeConfirmation, conversation =>
+                Assert.True(conversation.CanConfirmRental));
+            Assert.Equal(
+                tenantA.Phone,
+                beforeConfirmation.Single(c => c.ConvId == conversationA.ConvId).OtherUserPhone);
+            Assert.Equal(
+                tenantB.Phone,
+                beforeConfirmation.Single(c => c.ConvId == conversationB.ConvId).OtherUserPhone);
+
+            await rentalService.ConfirmRentalFromChatAsync(
+                landlord.UserId,
+                conversationA.ConvId);
+
+            var afterConfirmation =
+                await conversationService.GetConversationsAsync(landlord.UserId);
+
+            Assert.Equal(2, afterConfirmation.Count);
+            Assert.All(afterConfirmation, conversation =>
+            {
+                Assert.False(conversation.CanConfirmRental);
+                Assert.Equal("rented", conversation.ListingStatusName);
+            });
+        }
+
+        [Fact]
         public async Task CreateReview_WithActiveRenterStatus_ShouldSucceed()
         {
             // Arrange

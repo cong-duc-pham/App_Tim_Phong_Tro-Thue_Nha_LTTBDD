@@ -309,6 +309,77 @@ namespace Backend_API.Services.Implementations
             };
         }
 
+        public async Task<RentalResponseDto> EndRentalFromChatAsync(long landlordId, long convId)
+        {
+            await EnsureRentalsAndUpgradeReviewsTableAsync();
+
+            var conv = await _context.Conversations
+                .Include(c => c.Listing)
+                    .ThenInclude(l => l.Province)
+                .Include(c => c.Listing)
+                    .ThenInclude(l => l.District)
+                .Include(c => c.Listing)
+                    .ThenInclude(l => l.Ward)
+                .Include(c => c.Tenant)
+                .Include(c => c.Landlord)
+                .FirstOrDefaultAsync(c => c.ConvId == convId)
+                ?? throw new Exception("Không tìm thấy cuộc trò chuyện.");
+
+            if (conv.LandlordId != landlordId)
+                throw new Exception("Bạn không phải là chủ nhà trong cuộc trò chuyện này.");
+
+            if (conv.ListingId == null)
+                throw new Exception("Cuộc trò chuyện này không liên kết với tin đăng nào.");
+
+            var rental = await _context.Rentals
+                .FirstOrDefaultAsync(r =>
+                    r.ListingId == conv.ListingId.Value &&
+                    r.TenantId == conv.TenantId &&
+                    r.LandlordId == landlordId &&
+                    r.Status == "active")
+                ?? throw new Exception("Không tìm thấy lịch sử thuê đang hoạt động cho người thuê này.");
+
+            rental.Status = "ended";
+            rental.EndDate = DateTime.UtcNow;
+            rental.UpdatedAt = DateTime.UtcNow;
+
+            var listing = conv.Listing;
+            if (listing != null)
+            {
+                listing.StatusId = await GetListingStatusIdAsync("active");
+                listing.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync();
+
+            if (listing != null)
+            {
+                await _listingRealtimeNotifier.NotifyListingsChangedAsync(
+                    listing.ListingId,
+                    "status_changed",
+                    "active");
+            }
+
+            return new RentalResponseDto
+            {
+                RentalId = rental.RentalId,
+                ListingId = rental.ListingId,
+                ListingTitle = listing?.Title,
+                ListingAddress = BuildListingAddress(listing),
+                ListingThumbnail = listing?.Image0,
+                TenantId = conv.TenantId,
+                TenantName = conv.Tenant.FullName,
+                TenantPhone = conv.Tenant.Phone,
+                TenantAvatar = conv.Tenant.AvatarUrl,
+                LandlordId = landlordId,
+                LandlordName = conv.Landlord.FullName,
+                StartDate = rental.StartDate,
+                EndDate = rental.EndDate,
+                Status = rental.Status,
+                CreatedAt = rental.CreatedAt
+            };
+        }
+
         public async Task EnsureRentalsAndUpgradeReviewsTableAsync()
         {
             if (_context.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")

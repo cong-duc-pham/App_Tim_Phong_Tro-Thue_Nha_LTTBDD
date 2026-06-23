@@ -105,4 +105,36 @@ class ViewingAppointment {
         return 'Đang chờ';
     }
   }
+
+  ViewingAppointment copyWith({
+    String? status,
+    String? landlordNote,
+    DateTime? updatedAt,
+    bool? canConfirm,
+    bool? canDecline,
+    bool? canCancel,
+  }) {
+    return ViewingAppointment(
+      appointmentId: appointmentId,
+      listingId: listingId,
+      listingTitle: listingTitle,
+      listingImage: listingImage,
+      listingAddress: listingAddress,
+      tenantId: tenantId,
+      tenantName: tenantName,
+      tenantPhone: tenantPhone,
+      landlordId: landlordId,
+      landlordName: landlordName,
+      landlordPhone: landlordPhone,
+      scheduledAt: scheduledAt,
+      status: status ?? this.status,
+      tenantNote: tenantNote,
+      landlordNote: landlordNote ?? this.landlordNote,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      canConfirm: canConfirm ?? this.canConfirm,
+      canDecline: canDecline ?? this.canDecline,
+      canCancel: canCancel ?? this.canCancel,
+    );
+  }
 }

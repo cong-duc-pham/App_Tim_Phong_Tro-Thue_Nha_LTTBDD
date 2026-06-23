@@ -19,6 +19,7 @@ class _ViewingAppointmentsScreenState extends State<ViewingAppointmentsScreen> {
   final ViewingAppointmentRepository _repository =
       ViewingAppointmentRepository();
   final List<ViewingAppointment> _appointments = [];
+  final Set<int> _updatingAppointmentIds = {};
   bool _isLoading = true;
   String? _error;
   String _roleFilter = '';
@@ -59,19 +60,37 @@ class _ViewingAppointmentsScreenState extends State<ViewingAppointmentsScreen> {
     ViewingAppointment appointment,
     String action,
   ) async {
+    if (_updatingAppointmentIds.contains(appointment.appointmentId)) return;
+
     final note = await _showNoteSheet(action);
     if (!mounted || note == null) return;
 
+    setState(() => _updatingAppointmentIds.add(appointment.appointmentId));
+
     try {
+      late final ViewingAppointment updated;
       if (action == 'confirm') {
-        await _repository.confirm(appointment.appointmentId, note: note);
+        updated =
+            await _repository.confirm(appointment.appointmentId, note: note);
       } else if (action == 'decline') {
-        await _repository.decline(appointment.appointmentId, note: note);
+        updated =
+            await _repository.decline(appointment.appointmentId, note: note);
       } else {
-        await _repository.cancel(appointment.appointmentId, note: note);
+        updated =
+            await _repository.cancel(appointment.appointmentId, note: note);
       }
 
       if (!mounted) return;
+      setState(() {
+        _updatingAppointmentIds.remove(appointment.appointmentId);
+        final index = _appointments.indexWhere(
+          (item) => item.appointmentId == appointment.appointmentId,
+        );
+        if (index != -1) {
+          _appointments[index] = updated;
+        }
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_successMessage(action)),
@@ -79,9 +98,9 @@ class _ViewingAppointmentsScreenState extends State<ViewingAppointmentsScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      _loadAppointments();
     } catch (e) {
       if (!mounted) return;
+      setState(() => _updatingAppointmentIds.remove(appointment.appointmentId));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_cleanError(e)),
@@ -89,6 +108,11 @@ class _ViewingAppointmentsScreenState extends State<ViewingAppointmentsScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(
+            () => _updatingAppointmentIds.remove(appointment.appointmentId));
+      }
     }
   }
 
@@ -185,7 +209,7 @@ class _ViewingAppointmentsScreenState extends State<ViewingAppointmentsScreen> {
         );
       },
     );
-    controller.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
     return result;
   }
 
@@ -316,6 +340,8 @@ class _ViewingAppointmentsScreenState extends State<ViewingAppointmentsScreen> {
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) => _AppointmentCard(
         appointment: _appointments[index],
+        isUpdating: _updatingAppointmentIds
+            .contains(_appointments[index].appointmentId),
         onConfirm: () => _updateStatus(_appointments[index], 'confirm'),
         onDecline: () => _updateStatus(_appointments[index], 'decline'),
         onCancel: () => _updateStatus(_appointments[index], 'cancel'),
@@ -366,12 +392,14 @@ class _ViewingAppointmentsScreenState extends State<ViewingAppointmentsScreen> {
 
 class _AppointmentCard extends StatelessWidget {
   final ViewingAppointment appointment;
+  final bool isUpdating;
   final VoidCallback onConfirm;
   final VoidCallback onDecline;
   final VoidCallback onCancel;
 
   const _AppointmentCard({
     required this.appointment,
+    required this.isUpdating,
     required this.onConfirm,
     required this.onDecline,
     required this.onCancel,
@@ -481,7 +509,7 @@ class _AppointmentCard extends StatelessWidget {
               const Spacer(),
               if (appointment.canDecline)
                 TextButton(
-                  onPressed: onDecline,
+                  onPressed: isUpdating ? null : onDecline,
                   child: const Text(
                     'Từ chối',
                     style: TextStyle(color: AppColors.error),
@@ -489,7 +517,7 @@ class _AppointmentCard extends StatelessWidget {
                 ),
               if (appointment.canCancel)
                 TextButton(
-                  onPressed: onCancel,
+                  onPressed: isUpdating ? null : onCancel,
                   child: const Text(
                     'Hủy',
                     style: TextStyle(color: AppColors.error),
@@ -497,8 +525,14 @@ class _AppointmentCard extends StatelessWidget {
                 ),
               if (appointment.canConfirm)
                 ElevatedButton(
-                  onPressed: onConfirm,
-                  child: const Text('Xác nhận'),
+                  onPressed: isUpdating ? null : onConfirm,
+                  child: isUpdating
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Xác nhận'),
                 ),
             ],
           ),

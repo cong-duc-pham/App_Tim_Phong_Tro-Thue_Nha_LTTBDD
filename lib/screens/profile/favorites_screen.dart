@@ -15,7 +15,7 @@ import '../../repositories/favorite_repository.dart';
 import '../../repositories/listing_realtime_repository.dart';
 import '../../services/api_service.dart';
 
-// â”€â”€â”€ Model â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Model ────────────────────────────────────────────────────────────────────
 
 class FavoriteListing {
   final String id;
@@ -51,77 +51,77 @@ class FavoriteListing {
   });
 }
 
-// â”€â”€â”€ Mock data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Mock data ────────────────────────────────────────────────────────────────
 
 /*
 final _mockFavorites = [
   FavoriteListing(
     id: '1',
-    title: 'PhÃ²ng Ä‘áº¹p full ná»™i tháº¥t BÃ¬nh Tháº¡nh',
-    address: 'BÃ¬nh Tháº¡nh, TP.HCM',
+    title: 'Phòng đẹp full nội thất Bình Thạnh',
+    address: 'Bình Thạnh, TP.HCM',
     price: 3500000,
     area: 25,
-    type: 'PhÃ²ng trá» SV',
+    type: 'Phòng trọ SV',
     isVerified: true,
-    tags: ['Wifi', 'Äiá»u hÃ²a', 'Ban cÃ´ng'],
+    tags: ['Wifi', 'Điều hòa', 'Ban công'],
     bgColor: AppColors.illus1,
-    emoji: 'ðŸ›‹ï¸',
+    emoji: '🛋️',
     savedAt: DateTime(2026, 5, 10),
   ),
   FavoriteListing(
     id: '2',
-    title: 'Studio cao cáº¥p Quáº­n 1 view Ä‘áº¹p',
-    address: 'Quáº­n 1, TP.HCM',
+    title: 'Studio cao cấp Quận 1 view đẹp',
+    address: 'Quận 1, TP.HCM',
     price: 5200000,
     area: 30,
-    type: 'CÄƒn há»™ DV',
+    type: 'Căn hộ DV',
     isNew: true,
-    tags: ['Thang mÃ¡y', 'Báº£o vá»‡'],
+    tags: ['Thang máy', 'Bảo vệ'],
     bgColor: AppColors.illus2,
-    emoji: 'ðŸ¢',
+    emoji: '🏢',
     savedAt: DateTime(2026, 5, 8),
   ),
   FavoriteListing(
     id: '3',
-    title: 'PhÃ²ng gáº§n ÄH BÃ¡ch Khoa yÃªn tÄ©nh',
-    address: 'Quáº­n 10, TP.HCM',
+    title: 'Phòng gần ĐH Bách Khoa yên tĩnh',
+    address: 'Quận 10, TP.HCM',
     price: 2800000,
     area: 20,
-    type: 'PhÃ²ng trá» SV',
-    tags: ['Wifi', 'MÃ¡y giáº·t'],
+    type: 'Phòng trọ SV',
+    tags: ['Wifi', 'Máy giặt'],
     bgColor: AppColors.illus3,
-    emoji: 'ðŸ ',
+    emoji: '🏠',
     savedAt: DateTime(2026, 5, 5),
   ),
   FavoriteListing(
     id: '4',
-    title: 'NhÃ  nguyÃªn cÄƒn GÃ² Váº¥p 3 phÃ²ng ngá»§',
-    address: 'GÃ² Váº¥p, TP.HCM',
+    title: 'Nhà nguyên căn Gò Vấp 3 phòng ngủ',
+    address: 'Gò Vấp, TP.HCM',
     price: 12000000,
     area: 70,
-    type: 'NhÃ  nguyÃªn cÄƒn',
+    type: 'Nhà nguyên căn',
     isVerified: true,
-    tags: ['SÃ¢n vÆ°á»n', 'Wifi', 'MÃ¡y giáº·t'],
+    tags: ['Sân vườn', 'Wifi', 'Máy giặt'],
     bgColor: AppColors.illus4,
-    emoji: 'ðŸ¡',
+    emoji: '🏡',
     savedAt: DateTime(2026, 5, 1),
   ),
   FavoriteListing(
     id: '5',
-    title: 'CÄƒn há»™ dá»‹ch vá»¥ TÃ¢n BÃ¬nh Ä‘áº§y Ä‘á»§ tiá»‡n nghi',
-    address: 'TÃ¢n BÃ¬nh, TP.HCM',
+    title: 'Căn hộ dịch vụ Tân Bình đầy đủ tiện nghi',
+    address: 'Tân Bình, TP.HCM',
     price: 6500000,
     area: 35,
-    type: 'CÄƒn há»™ DV',
+    type: 'Căn hộ DV',
     isVerified: true,
-    tags: ['Äiá»u hÃ²a', 'Thang mÃ¡y'],
+    tags: ['Điều hòa', 'Thang máy'],
     bgColor: AppColors.illus2,
-    emoji: 'ðŸ¢',
+    emoji: '🏢',
     savedAt: DateTime(2026, 4, 28),
   ),
 ];
 
-// â”€â”€â”€ Sort options â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Sort options ─────────────────────────────────────────────────────────────
 
 */
 enum _SortOption { newest, priceAsc, priceDesc, areaAsc }
@@ -141,7 +141,7 @@ extension _SortOptionExt on _SortOption {
   }
 }
 
-// â”€â”€â”€ Vietnamese diacritic normalization â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Vietnamese diacritic normalization ─────────────────────────────────────
 
 String _removeDiacritics(String s) {
   const map = {
@@ -162,7 +162,7 @@ String _removeDiacritics(String s) {
   return result;
 }
 
-// â”€â”€â”€ FavoritesScreen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── FavoritesScreen ──────────────────────────────────────────────────────────
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -530,7 +530,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     );
   }
 
-  // â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Header ────────────────────────────────────────────────────────────────
 
   Widget _buildHeader(int count) {
     return Container(
@@ -600,7 +600,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     );
   }
 
-  // â”€â”€ Search & Sort bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Search & Sort bar ─────────────────────────────────────────────────────
 
   Widget _buildSearchAndSort() {
     return Padding(
@@ -670,7 +670,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     );
   }
 
-  // â”€â”€ List â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── List ──────────────────────────────────────────────────────────────────
 
   Widget _buildList(List<FavoriteListing> list) {
     return ListView.builder(
@@ -702,7 +702,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     );
   }
 
-  // â”€â”€ Empty states â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Empty states ──────────────────────────────────────────────────────────
 
   Widget _buildErrorState() {
     return Center(
@@ -782,7 +782,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                   borderRadius: BorderRadius.circular(AppConstants.radiusXxl),
                 ),
                 alignment: Alignment.center,
-                child: const Text('ðŸ’”', style: TextStyle(fontSize: 44)),
+                child: const Text('💔', style: TextStyle(fontSize: 44)),
               ),
             ),
           ),
@@ -836,7 +836,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
             borderRadius: BorderRadius.circular(AppConstants.radiusXl),
           ),
           alignment: Alignment.center,
-          child: const Text('ðŸ”', style: TextStyle(fontSize: 32)),
+          child: const Text('🔍', style: TextStyle(fontSize: 32)),
         ),
         const SizedBox(height: 16),
         Text('favorites_no_result'.tr,
@@ -853,7 +853,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
   }
 }
 
-// â”€â”€â”€ Favorite Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Favorite Card ────────────────────────────────────────────────────────────
 
 class _FavoriteCard extends StatelessWidget {
   final FavoriteListing item;
@@ -1161,7 +1161,7 @@ class _FavoriteCard extends StatelessWidget {
   }
 }
 
-// â”€â”€â”€ Sort Sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Sort Sheet ───────────────────────────────────────────────────────────────
 
 class _SortSheet extends StatelessWidget {
   final _SortOption current;

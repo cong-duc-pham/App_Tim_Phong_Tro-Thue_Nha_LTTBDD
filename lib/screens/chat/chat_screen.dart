@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../models/conversation.dart';
@@ -28,13 +29,15 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _textCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   final bool _isTyping = false;
-  final bool _isSending = false;
+  bool _isSending = false;
   String? _errorMessage;
   bool _showListingHeader = true;
   int _currentUserId = 999; // Lấy từ SharedPreferences hoặc fallback 999
   int? _listingLandlordId;
   double? _listingPrice;
   double? _listingArea;
+  bool _isListingRented = false;
+  bool _canConfirmRental = false;
   bool _isConnected = true;
   bool _isLoading = true;
   final _messageRepo = MessageRepository();
@@ -46,6 +49,10 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    _isListingRented =
+        widget.conversation.listingStatusName?.toLowerCase().trim() == 'rented';
+    _canConfirmRental =
+        widget.conversation.canConfirmRental ?? !_isListingRented;
     _loadCurrentUserId().then((_) {
       _loadRealMessages();
       _setupRealTimeChat();
@@ -60,10 +67,15 @@ class _ChatScreenState extends State<ChatScreen> {
         final repo = ListingRepository();
         final listing = await repo.getListing(listingId);
         if (listing != null && mounted) {
+          final isRented = listing.statusName.toLowerCase().trim() == 'rented';
           setState(() {
             _listingLandlordId = listing.landlordId;
             _listingPrice = listing.price;
             _listingArea = listing.area;
+            _isListingRented = isRented;
+            _canConfirmRental =
+                (widget.conversation.canConfirmRental ?? !isRented) &&
+                    !isRented;
           });
         }
       } catch (_) {}
@@ -134,11 +146,7 @@ class _ChatScreenState extends State<ChatScreen> {
         onMessageReceived: (msg) {
           if (msg.convId == widget.conversation.convId) {
             if (!mounted) return;
-            setState(() {
-              if (!_messages.any((m) => m.messageId == msg.messageId)) {
-                _messages.add(msg);
-              }
-            });
+            setState(() => _upsertMessage(msg));
             _scrollToBottom();
             _messageRepo.markAsRead(widget.conversation.convId);
           }
@@ -146,18 +154,7 @@ class _ChatScreenState extends State<ChatScreen> {
         onMessageSentConfirm: (msg) {
           if (msg.convId == widget.conversation.convId) {
             if (!mounted) return;
-            setState(() {
-              final index = _messages.indexWhere((m) =>
-                  m.messageId == msg.messageId ||
-                  (m.senderId == _currentUserId &&
-                      m.content == msg.content &&
-                      m.messageId > 900000000000));
-              if (index != -1) {
-                _messages[index] = msg;
-              } else {
-                _messages.add(msg);
-              }
-            });
+            setState(() => _upsertMessage(msg, replacePending: true));
             _scrollToBottom();
           }
         },
@@ -184,6 +181,50 @@ class _ChatScreenState extends State<ChatScreen> {
     return message.startsWith('Exception: ')
         ? message.substring('Exception: '.length)
         : message;
+  }
+
+  bool _isPendingLocalMessage(Message message) {
+    return message.senderId == _currentUserId &&
+        message.messageId > 900000000000;
+  }
+
+  bool _sameMessagePayload(Message a, Message b) {
+    return a.convId == b.convId &&
+        a.senderId == b.senderId &&
+        a.msgType == b.msgType &&
+        a.fileUrl == b.fileUrl &&
+        a.content == b.content;
+  }
+
+  void _upsertMessage(Message msg, {bool replacePending = false}) {
+    final existingIndex =
+        _messages.indexWhere((message) => message.messageId == msg.messageId);
+    if (existingIndex != -1) {
+      _messages[existingIndex] = msg;
+      return;
+    }
+
+    final duplicateIndex =
+        _messages.indexWhere((message) => _sameMessagePayload(message, msg));
+    if (duplicateIndex != -1) {
+      _messages[duplicateIndex] = msg;
+      return;
+    }
+
+    if (replacePending && msg.senderId == _currentUserId) {
+      final pendingIndex = _messages.lastIndexWhere((message) =>
+          _isPendingLocalMessage(message) &&
+          message.convId == msg.convId &&
+          message.msgType == msg.msgType &&
+          message.fileUrl == msg.fileUrl);
+      if (pendingIndex != -1) {
+        _messages[pendingIndex] = msg;
+        return;
+      }
+    }
+
+    _messages.add(msg);
+    _messages.sort((a, b) => a.sentAt.compareTo(b.sentAt));
   }
 
   void _loadMockMessages() {
@@ -265,6 +306,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (text.isEmpty || _isSending) return;
 
     _textCtrl.clear();
+    setState(() => _isSending = true);
     final tempId = DateTime.now().millisecondsSinceEpoch;
     final tempMessage = Message(
       messageId: tempId,
@@ -289,8 +331,11 @@ class _ChatScreenState extends State<ChatScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      final stillPending =
+          _messages.any((message) => message.messageId == tempId);
+      if (!stillPending) return;
       setState(() {
-        _messages.remove(tempMessage);
+        _messages.removeWhere((message) => message.messageId == tempId);
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -301,6 +346,7 @@ class _ChatScreenState extends State<ChatScreen> {
             textColor: Colors.white,
             onPressed: () {
               setState(() {
+                _isSending = true;
                 _messages.add(tempMessage);
               });
               _scrollToBottom();
@@ -311,8 +357,12 @@ class _ChatScreenState extends State<ChatScreen> {
               )
                   .catchError((err) {
                 if (mounted) {
+                  final retryStillPending =
+                      _messages.any((message) => message.messageId == tempId);
+                  if (!retryStillPending) return;
                   setState(() {
-                    _messages.remove(tempMessage);
+                    _messages
+                        .removeWhere((message) => message.messageId == tempId);
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -321,11 +371,15 @@ class _ChatScreenState extends State<ChatScreen> {
                             .replaceAll('{error}', _cleanError(err)))),
                   );
                 }
+              }).whenComplete(() {
+                if (mounted) setState(() => _isSending = false);
               });
             },
           ),
         ),
       );
+    } finally {
+      if (mounted) setState(() => _isSending = false);
     }
   }
 
@@ -369,16 +423,23 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _confirmRentalAction() async {
+    if (!_canConfirmRental || _isListingRented) return;
+
+    final otherUserName = widget.conversation.otherUserName.split(" (").first;
+    const title = 'Xác nhận cho thuê';
+    final content =
+        'Xác nhận rằng bạn đã cho $otherUserName thuê phòng trọ này?';
+    const successMessage =
+        'Đã xác nhận cho thuê thành công! Người thuê hiện đã có quyền đánh giá phòng trọ này.';
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: context.profileCard,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppConstants.radiusLg)),
-        title: const Text('Xác nhận cho thuê',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-        content: Text(
-            'Xác nhận rằng bạn đã cho ${_messages.isNotEmpty ? widget.conversation.otherUserName.split(" (").first : "người dùng này"} thuê phòng trọ này?',
+        title: const Text(title, style: TextStyle(fontWeight: FontWeight.w700)),
+        content: Text(content,
             style: TextStyle(color: context.profileTextSecondary)),
         actions: [
           TextButton(
@@ -403,10 +464,13 @@ class _ChatScreenState extends State<ChatScreen> {
       final repo = ConversationRepository();
       await repo.confirmRental(widget.conversation.convId);
       if (!mounted) return;
+      setState(() {
+        _isListingRented = true;
+        _canConfirmRental = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-              'Đã xác nhận cho thuê thành công! Người thuê hiện đã có quyền đánh giá phòng trọ này.'),
+          content: Text(successMessage),
           backgroundColor: AppColors.success,
         ),
       );
@@ -757,9 +821,11 @@ class _ChatScreenState extends State<ChatScreen> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (_currentUserId == widget.conversation.landlordId ||
-                  (_listingLandlordId != null &&
-                      _currentUserId == _listingLandlordId)) ...[
+              if ((_currentUserId == widget.conversation.landlordId ||
+                      (_listingLandlordId != null &&
+                          _currentUserId == _listingLandlordId)) &&
+                  _canConfirmRental &&
+                  !_isListingRented) ...[
                 GestureDetector(
                   onTap: _confirmRentalAction,
                   child: Container(
@@ -1275,35 +1341,166 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  String? _getContactPhone() {
+    final rawPhone = widget.conversation.otherUserPhone?.trim();
+    if (rawPhone == null || rawPhone.isEmpty) return null;
+
+    final normalized = rawPhone.replaceAll(RegExp(r'[^0-9+]'), '');
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  String _getZaloPhone(String phone) {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('84') && digits.length > 2) {
+      return '0${digits.substring(2)}';
+    }
+    return digits;
+  }
+
+  void _showContactError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _openPhoneDialer(String phone) async {
+    final phoneUri = Uri(scheme: 'tel', path: phone);
+
+    try {
+      final launched = await launchUrl(
+        phoneUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        _showContactError('Không mở được ứng dụng Điện thoại.');
+      }
+    } catch (_) {
+      _showContactError('Không mở được ứng dụng Điện thoại.');
+    }
+  }
+
+  Future<void> _openZalo(String phone) async {
+    final zaloPhone = _getZaloPhone(phone);
+    if (zaloPhone.isEmpty) {
+      _showContactError('Số điện thoại không hợp lệ.');
+      return;
+    }
+
+    final zaloUri = Uri.https('zalo.me', '/$zaloPhone');
+
+    try {
+      final launched = await launchUrl(
+        zaloUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        _showContactError(
+          'Không tìm thấy Zalo cho số điện thoại này hoặc chưa cài Zalo.',
+        );
+      }
+    } catch (_) {
+      _showContactError(
+        'Không tìm thấy Zalo cho số điện thoại này hoặc chưa cài Zalo.',
+      );
+    }
+  }
+
   void _showCallDialog() {
-    showDialog(
+    final phone = _getContactPhone();
+    if (phone == null) {
+      _showContactError('Người dùng chưa cập nhật số điện thoại.');
+      return;
+    }
+
+    final displayName =
+        widget.conversation.otherUserName.split(' (').first.trim();
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: context.profileCard,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppConstants.radiusLg)),
-        title: Text('chat_call_title'.tr,
-            style: TextStyle(
-                fontWeight: FontWeight.w700, color: context.profileText)),
-        content: Text(
-            'chat_call_desc'.tr.replaceAll('{username}',
-                widget.conversation.otherUserName.split(' (').first),
-            style: TextStyle(color: context.profileTextSecondary)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('common_cancel'.tr),
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        decoration: BoxDecoration(
+          color: context.profileCard,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppConstants.radiusXxl),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('chat_call_starting'.tr)),
-              );
-            },
-            child: Text('chat_call_now'.tr),
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.profileBorder,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                displayName,
+                style: TextStyle(
+                  color: context.profileText,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                phone,
+                style: TextStyle(
+                  color: context.profileTextSecondary,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 14),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFFE8F5E9),
+                  child: Icon(Icons.phone_rounded, color: Color(0xFF16A34A)),
+                ),
+                title: Text(
+                  'Gọi bằng điện thoại',
+                  style: TextStyle(
+                    color: context.profileText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: const Text('Mở ứng dụng Điện thoại với số đã nhập'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _openPhoneDialer(phone);
+                },
+              ),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFFE8F1FF),
+                  child:
+                      Icon(Icons.chat_bubble_rounded, color: Color(0xFF0068FF)),
+                ),
+                title: Text(
+                  'Liên hệ qua Zalo',
+                  style: TextStyle(
+                    color: context.profileText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: const Text(
+                  'Zalo sẽ báo nếu số này không có tài khoản',
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _openZalo(phone);
+                },
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

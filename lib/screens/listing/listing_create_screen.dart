@@ -245,9 +245,11 @@ class _PostListingScreenState extends State<PostListingScreen> {
       );
       setState(() {
         _provinceOptions = options;
-        _provinces
-          ..clear()
-          ..addAll(options.map((item) => item.name));
+        if (options.isNotEmpty) {
+          _provinces
+            ..clear()
+            ..addAll(options.map((item) => item.name));
+        }
         _selectedProvinceId = selected?.id;
         _selectedProvince = selected?.name ?? _selectedProvince;
       });
@@ -277,13 +279,15 @@ class _PostListingScreenState extends State<PostListingScreen> {
           : null;
       setState(() {
         _districtOptions = options;
-        _districts
-          ..clear()
-          ..addAll(options.map((item) => item.name));
+        if (options.isNotEmpty) {
+          _districts
+            ..clear()
+            ..addAll(options.map((item) => item.name));
+        }
         _selectedDistrictId = selected?.id;
         _selectedDistrict = selected?.name;
         _wardOptions = [];
-        _wards.clear();
+        if (options.isNotEmpty) _wards.clear();
         _selectedWardId = null;
         if (!preserveSelection) _selectedWard = null;
       });
@@ -307,9 +311,11 @@ class _PostListingScreenState extends State<PostListingScreen> {
           : null;
       setState(() {
         _wardOptions = options;
-        _wards
-          ..clear()
-          ..addAll(options.map((item) => item.name));
+        if (options.isNotEmpty) {
+          _wards
+            ..clear()
+            ..addAll(options.map((item) => item.name));
+        }
         _selectedWardId = selected?.id;
         _selectedWard = selected?.name;
       });
@@ -332,6 +338,15 @@ class _PostListingScreenState extends State<PostListingScreen> {
       if (_addressKey(option.name) == _addressKey(target)) return option;
     }
     return null;
+  }
+
+  bool _hasText(String? value) => value?.trim().isNotEmpty == true;
+
+  void _ensureDropdownItem(List<String> items, String? value) {
+    final text = value?.trim();
+    if (text == null || text.isEmpty) return;
+    if (items.any((item) => _addressKey(item) == _addressKey(text))) return;
+    items.add(text);
   }
 
   Future<void> _selectProvince(String? name) async {
@@ -1103,9 +1118,15 @@ class _PostListingScreenState extends State<PostListingScreen> {
         }
         return null;
       case 2:
-        if (_selectedProvinceId == null) return 'post_validation_province'.tr;
-        if (_selectedDistrictId == null) return 'post_validation_district'.tr;
-        if (_selectedWardId == null) return 'post_validation_ward'.tr;
+        if (_selectedProvinceId == null && !_hasText(_selectedProvince)) {
+          return 'post_validation_province'.tr;
+        }
+        if (_selectedDistrictId == null && !_hasText(_selectedDistrict)) {
+          return 'post_validation_district'.tr;
+        }
+        if (_selectedWardId == null && !_hasText(_selectedWard)) {
+          return 'post_validation_ward'.tr;
+        }
         if (_streetCtrl.text.trim().isEmpty) {
           return 'post_validation_street'.tr;
         }
@@ -1348,17 +1369,12 @@ class _PostListingScreenState extends State<PostListingScreen> {
       final street = _composeStreetAddress(address);
 
       if (!mounted) return;
-      setState(() {
-        _selectedProvince = province;
-        _selectedDistrict = district;
-        _selectedWard = ward;
-        _selectedProvinceId = null;
-        _selectedDistrictId = null;
-        _selectedWardId = null;
-        if (street.isNotEmpty) _streetCtrl.text = street;
-        _markDraftChanged();
-      });
-      _loadLocations();
+      await _applyResolvedAddress(
+        province: province,
+        district: district,
+        ward: ward,
+        street: street,
+      );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1369,6 +1385,86 @@ class _PostListingScreenState extends State<PostListingScreen> {
       );
     } finally {
       if (mounted) setState(() => _isResolvingAddress = false);
+    }
+  }
+
+  Future<void> _applyResolvedAddress({
+    required String province,
+    required String? district,
+    required String? ward,
+    required String street,
+  }) async {
+    final provinceName = province.trim();
+    final districtName = district?.trim();
+    final wardName = ward?.trim();
+
+    if (!mounted) return;
+    setState(() {
+      _ensureDropdownItem(_provinces, provinceName);
+      _ensureDropdownItem(_districts, districtName);
+      _ensureDropdownItem(_wards, wardName);
+      if (street.isNotEmpty) _streetCtrl.text = street;
+      _markDraftChanged();
+    });
+
+    final matchedProvince =
+        _findLocationByIdOrName(_provinceOptions, null, provinceName);
+    if (matchedProvince != null) {
+      setState(() {
+        _selectedProvinceId = matchedProvince.id;
+        _selectedProvince = matchedProvince.name;
+        _selectedDistrictId = null;
+        _selectedDistrict = districtName;
+        _selectedWardId = null;
+        _selectedWard = wardName;
+      });
+      await _loadDistricts(matchedProvince.id, preserveSelection: true);
+    } else {
+      setState(() {
+        _selectedProvinceId = null;
+        _selectedProvince =
+            provinceName.isEmpty ? _selectedProvince : provinceName;
+        _selectedDistrictId = null;
+        _selectedDistrict = districtName;
+        _selectedWardId = null;
+        _selectedWard = wardName;
+      });
+    }
+
+    final matchedDistrict =
+        _findLocationByIdOrName(_districtOptions, null, districtName);
+    if (matchedDistrict != null) {
+      setState(() {
+        _selectedDistrictId = matchedDistrict.id;
+        _selectedDistrict = matchedDistrict.name;
+        _selectedWardId = null;
+        _selectedWard = wardName;
+      });
+      await _loadWards(matchedDistrict.id, preserveSelection: true);
+    } else if (_hasText(districtName)) {
+      setState(() {
+        _ensureDropdownItem(_districts, districtName);
+        _selectedDistrictId = null;
+        _selectedDistrict = districtName;
+      });
+    }
+
+    final matchedWard = _findLocationByIdOrName(_wardOptions, null, wardName);
+    if (matchedWard != null) {
+      setState(() {
+        _selectedWardId = matchedWard.id;
+        _selectedWard = matchedWard.name;
+      });
+    } else if (_hasText(wardName)) {
+      setState(() {
+        _ensureDropdownItem(_wards, wardName);
+        _selectedWardId = null;
+        _selectedWard = wardName;
+      });
+    }
+
+    if (mounted) {
+      setState(() => _markDraftChanged());
     }
   }
 
@@ -1910,7 +2006,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
               label: 'post_district_label'.tr,
               value: _selectedDistrict,
               items: _districts,
-              enabled: _selectedProvinceId != null && !_isLoadingLocations,
+              enabled: _hasText(_selectedProvince) && !_isLoadingLocations,
               onChanged: _selectDistrict,
             ),
             const SizedBox(height: 14),
@@ -1918,7 +2014,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
               label: 'post_ward_label'.tr,
               value: _selectedWard,
               items: _wards,
-              enabled: _selectedDistrictId != null && !_isLoadingLocations,
+              enabled: _hasText(_selectedDistrict) && !_isLoadingLocations,
               onChanged: _selectWard,
             ),
             const SizedBox(height: 14),

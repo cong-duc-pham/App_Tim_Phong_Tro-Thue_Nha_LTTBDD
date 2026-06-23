@@ -158,7 +158,7 @@ namespace Backend_API.Controllers.API
             }
             catch (UnauthorizedAccessException)
             {
-                return Unauthorized(new { success = false, message = "ChÆ°a Ä‘Äƒng nháº­p." });
+                return Unauthorized(new { success = false, message = "Chưa đăng nhập." });
             }
             catch (Exception ex)
             {
